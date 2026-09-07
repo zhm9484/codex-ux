@@ -2,33 +2,42 @@ import { createServer } from 'node:http';
 import { join } from 'node:path';
 import { ZodError } from 'zod';
 import { createServer as createViteServer, type ViteDevServer } from 'vite';
-import { openDatabase } from './storage/database.ts';
+import { VideoStore } from './video/store.ts';
+import { readApps, validateApps, type HostedApp } from './apps.ts';
 import { WorkspaceStore } from './storage/workspaces.ts';
-import { Collaboration } from './collaboration.ts';
+import { VideoCollaboration } from './video/collaboration.ts';
 import { RenderJobs } from './video/jobs.ts';
 import { Thumbnails } from './video/thumbnails.ts';
 import { api, type Services } from './routes.ts';
 import { mediaRoutes } from './media-routes.ts';
 import { serveFile } from './static.ts';
-import { contained } from './video/files.ts';
+import { contained } from './storage/paths.ts';
 import { json } from './http.ts';
 import { HttpError } from './errors.ts';
 import { NativeProjects } from './native/projects.ts';
 import { repositoryRoot } from './config.ts';
 
-export async function startServer(root: string, port: number, dev = false) {
+export async function startServer(
+  root: string,
+  port: number,
+  dev = false,
+  hostedApps: HostedApp[] = readApps(),
+) {
   const origin = `http://127.0.0.1:${port}`;
-  const db = openDatabase(root);
-  const store = new WorkspaceStore(db);
-  const initial = !store.list().length ? store.create('A little room') : null;
+  const apps = validateApps(hostedApps);
+  const workspaces = new WorkspaceStore(root);
+  const store = new VideoStore(workspaces);
   const native = new NativeProjects(root, store);
-  if (initial) await native.enable(initial.id);
   const services: Services = {
-    native,
-    store,
-    collaboration: new Collaboration(store, root, origin, native),
-    jobs: new RenderJobs(root),
-    root,
+    workspaces,
+    apps,
+    video: {
+      native,
+      store,
+      root,
+      collaboration: new VideoCollaboration(store, root, origin, native),
+      jobs: new RenderJobs(root),
+    },
   };
   const thumbnails = new Thumbnails(root, origin);
   let vite: ViteDevServer | undefined;
@@ -45,7 +54,7 @@ export async function startServer(root: string, port: number, dev = false) {
       const url = new URL(req.url ?? '/', origin);
       const path = url.pathname;
       if (path === '/api/health') {
-        json(res, { service: 'codex-ux', version: 1, dataRoot: root });
+        json(res, { service: 'codex-ux', version: 2, dataRoot: root });
         return;
       }
       if (path.startsWith('/api/')) {
@@ -54,18 +63,35 @@ export async function startServer(root: string, port: number, dev = false) {
       }
       if (req.method !== 'GET' && req.method !== 'HEAD')
         throw new HttpError(405, 'Method not allowed.');
-      if (await mediaRoutes(req, res, url, services, thumbnails)) return;
-      if (vite) {
+      if (await mediaRoutes(req, res, url, services.video, thumbnails)) return;
+      if (path === '/') {
+        const escape = (text: string) =>
+          text.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('"', '&quot;');
+        res.setHeader('Content-Type', 'text/html');
+        res.end(
+          `<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>Codex UX</title><body><h1>Codex UX</h1><ul>${apps.map((app) => `<li><a href="/apps/${app.id}/">${escape(app.name)}</a></li>`).join('')}</ul></body></html>`,
+        );
+        return;
+      }
+      if (vite && (path.startsWith('/apps/video-editor/') || path.startsWith('/@'))) {
         vite.middlewares(req, res, () => {
           json(res, { error: 'Not found' }, 404);
         });
         return;
       }
-      const dist = join(repositoryRoot, 'apps/video-editor/dist');
+      const match = /^\/apps\/([a-z0-9-]+)(\/.*)?$/.exec(path);
+      const app = apps.find((app) => app.id === match?.[1]);
+      if (!app) throw new HttpError(404, 'App not found.');
+      if (!match?.[2]) {
+        res.writeHead(302, { Location: `/apps/${app.id}/` });
+        res.end();
+        return;
+      }
+      const relative = decodeURIComponent(match[2]);
       const file =
-        path === '/' || path.startsWith('/w/')
-          ? join(dist, 'index.html')
-          : contained(dist, decodeURIComponent(path.slice(1)));
+        relative === '/' || /^\/w\/[a-zA-Z0-9-]+$/.test(relative)
+          ? join(app.distDirectory, 'index.html')
+          : contained(app.distDirectory, relative.slice(1));
       await serveFile(req, res, file);
     })().catch((error: unknown) => {
       if (res.headersSent) {
@@ -102,13 +128,14 @@ export async function startServer(root: string, port: number, dev = false) {
   return {
     server,
     store,
+    workspaces,
     close: async () => {
       await thumbnails.close();
       await vite?.close();
       await new Promise<void>((resolve, reject) =>
         server.close((e) => (e ? reject(e) : resolve())),
       );
-      db.close();
+      store.close();
     },
   };
 }

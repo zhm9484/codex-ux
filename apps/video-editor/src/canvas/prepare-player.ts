@@ -23,7 +23,11 @@ export function preparePlayer(
     if (element) patchText(element, edit.selection, edit.next, doc);
   }
   if (!compare) instance.setAttribute('interactive', '');
-  if (!previous) instance.setAttribute('src', `/preview/${workspaceId}/${revisionId}/index.html`);
+  if (!previous)
+    instance.setAttribute(
+      'src',
+      `/media/video-editor/preview/${workspaceId}/${revisionId}/index.html`,
+    );
   instance.setAttribute('width', String(doc.width));
   instance.setAttribute('height', String(doc.height));
   return instance;

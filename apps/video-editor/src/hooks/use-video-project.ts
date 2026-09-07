@@ -1,48 +1,57 @@
 import { useCallback, useEffect, useEffectEvent, useRef, useState } from 'react';
-import type { Asset, VideoDocument, Workspace } from '@codex-ux/video-domain';
+import type { Asset, VideoDocument, VideoProject } from '@codex-ux/video-domain';
 import type { FeedbackAnchor } from '@codex-ux/protocol';
-import { api, post, workspacePath } from '../lib/api';
+import { api, post, videoPath } from '../lib/api';
 
-export function useWorkspace(id: string, deferPreview: () => boolean = () => false) {
+export function useVideoProject(id: string, deferPreview: () => boolean = () => false) {
   const shouldDefer = useEffectEvent(deferPreview);
-  const [workspace, setWorkspace] = useState<Workspace | null>(null);
+  const [project, setProject] = useState<VideoProject | null>(null);
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
-  const current = useRef(workspace);
+  const current = useRef(project);
   const pending = useRef(false);
   const mutation = useRef(0);
-  const base = workspacePath(id);
+  const base = videoPath(id);
   const refresh = useCallback(async () => {
-    const next = await api<Workspace>(base);
+    const next = await api<VideoProject>(base);
     if (!pending.current) {
       current.current = next;
-      setWorkspace(next);
+      setProject(next);
     }
   }, [base]);
   useEffect(() => {
     let active = true;
+    let opened = false;
     const load = () => {
-      if (document.hidden || pending.current) return;
+      if (!opened || document.hidden || pending.current) return;
       const generation = mutation.current;
-      void api<Workspace>(base)
+      void api<VideoProject>(base)
         .then((w) => {
           if (active && !pending.current && generation === mutation.current && !shouldDefer()) {
             current.current = w;
-            setWorkspace((prev) => (prev && JSON.stringify(prev) === JSON.stringify(w) ? prev : w));
+            setProject((prev) => (prev && JSON.stringify(prev) === JSON.stringify(w) ? prev : w));
           }
         })
         .catch((e: unknown) => {
-          if (active) setError(e instanceof Error ? e.message : 'Could not load the workspace.');
+          if (active) setError(e instanceof Error ? e.message : 'Could not load the project.');
         });
     };
-    load();
+    void post<VideoProject>(base, {})
+      .then(() => {
+        opened = true;
+        if (active) load();
+      })
+      .catch((error: unknown) => {
+        if (active)
+          setError(error instanceof Error ? error.message : 'Could not open the video project.');
+      });
     const timer = setInterval(load, 1800);
     return () => {
       active = false;
       clearInterval(timer);
     };
   }, [base]);
-  const run = useCallback(async (task: () => Promise<Workspace>) => {
+  const run = useCallback(async (task: () => Promise<VideoProject>) => {
     if (pending.current) return false;
     pending.current = true;
     mutation.current += 1;
@@ -51,7 +60,7 @@ export function useWorkspace(id: string, deferPreview: () => boolean = () => fal
     try {
       const next = await task();
       current.current = next;
-      setWorkspace(next);
+      setProject(next);
       return true;
     } catch (e) {
       setError(e instanceof Error ? e.message : 'The change could not be saved.');
@@ -66,7 +75,7 @@ export function useWorkspace(id: string, deferPreview: () => boolean = () => fal
       const w = current.current;
       if (!w) return Promise.resolve(false);
       return run(() =>
-        post<Workspace>(`${base}/revisions`, {
+        post<VideoProject>(`${base}/revisions`, {
           baseRevision: w.revisionId,
           requestId: crypto.randomUUID(),
           document,
@@ -78,14 +87,12 @@ export function useWorkspace(id: string, deferPreview: () => boolean = () => fal
   );
   const travel = (direction: 'undo' | 'redo') =>
     run(() =>
-      post<Workspace>(`${base}/${direction}`, { baseRevision: current.current?.revisionId }),
+      post<VideoProject>(`${base}/${direction}`, { baseRevision: current.current?.revisionId }),
     );
   const addNote = (text: string, anchor: FeedbackAnchor) =>
-    run(() => post<Workspace>(`${base}/notes`, { text, anchor }));
+    run(() => post<VideoProject>(`${base}/notes`, { text, anchor }));
   const removeNote = (noteId: string) =>
-    run(() => api<Workspace>(`${base}/notes/${noteId}`, { method: 'DELETE' }));
-  const bind = (threadId: string | null) =>
-    run(() => post<Workspace>(`${base}/binding`, { threadId }));
+    run(() => api<VideoProject>(`${base}/notes/${noteId}`, { method: 'DELETE' }));
   const upload = async (file: File) => {
     const fonts: Record<string, string> = {
       woff2: 'font/woff2',
@@ -108,14 +115,13 @@ export function useWorkspace(id: string, deferPreview: () => boolean = () => fal
     return asset;
   };
   return {
-    workspace,
+    project,
     error,
     saving,
     save,
     travel,
     addNote,
     removeNote,
-    bind,
     upload,
     refresh,
     setError,

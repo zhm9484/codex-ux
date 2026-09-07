@@ -2,13 +2,14 @@ import { createHash } from 'node:crypto';
 import { mkdir, readFile, readdir, stat, writeFile, copyFile, realpath } from 'node:fs/promises';
 import { join, relative, resolve, sep } from 'node:path';
 import { nativeMetadata, videoSchema, type VideoDocument } from '@codex-ux/video-domain';
-import { contained, workspaceDirectory } from '../video/files.ts';
+import { videoDirectory } from '../video/files.ts';
+import { contained, workspaceFiles } from '../storage/paths.ts';
 import { HttpError } from '../errors.ts';
 
 export const digest = (data: string | Buffer) => createHash('sha256').update(data).digest('hex');
 export const sourceDirectory = (root: string, id: string) =>
-  join(workspaceDirectory(root, id), 'project');
-const blobsDirectory = (root: string, id: string) => join(workspaceDirectory(root, id), 'blobs');
+  join(workspaceFiles(root, id), 'video');
+const blobsDirectory = (root: string, id: string) => join(videoDirectory(root, id), 'blobs');
 
 export async function inventory(directory: string) {
   const root = await realpath(directory);
@@ -90,7 +91,7 @@ export async function prepareNative(root: string, id: string, document: VideoDoc
   for (const asset of doc.assets) {
     const path = `assets/${asset.file}`;
     if (!doc.native!.files[path]) {
-      const bytes = await readFile(contained(workspaceDirectory(root, id), 'assets', asset.file));
+      const bytes = await readFile(contained(videoDirectory(root, id), 'assets', asset.file));
       const hash = digest(bytes);
       await writeFile(join(blobs, hash), bytes);
       doc.native!.files[path] = { hash, size: bytes.length };

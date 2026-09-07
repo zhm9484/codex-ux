@@ -4,7 +4,7 @@ import { access, mkdir, readFile, writeFile, rename } from 'node:fs/promises';
 import { join } from 'node:path';
 import type { ExportJob, Revision } from '@codex-ux/video-domain';
 import { HttpError } from '../errors.ts';
-import { materialize, workspaceDirectory } from './files.ts';
+import { materialize, videoDirectory } from './files.ts';
 
 const require = createRequire(import.meta.url);
 export function configureRenderer() {
@@ -25,7 +25,7 @@ export class RenderJobs {
     try {
       const job = JSON.parse(
         await readFile(
-          join(workspaceDirectory(this.root, workspaceId), 'exports', `${id}.json`),
+          join(videoDirectory(this.root, workspaceId), 'exports', `${id}.json`),
           'utf8',
         ),
       ) as ExportJob;
@@ -44,7 +44,7 @@ export class RenderJobs {
     this.busy = true;
     const id = randomUUID();
     const job: ExportJob = { id, revisionId: revision.id, state: 'rendering', progress: 0 };
-    const dir = join(workspaceDirectory(this.root, workspaceId), 'exports');
+    const dir = join(videoDirectory(this.root, workspaceId), 'exports');
     try {
       await mkdir(dir, { recursive: true });
       await this.writeJob(dir, job);
@@ -62,7 +62,7 @@ export class RenderJobs {
     return job;
   }
   private async run(workspaceId: string, revision: Revision, job: ExportJob) {
-    const dir = join(workspaceDirectory(this.root, workspaceId), 'exports');
+    const dir = join(videoDirectory(this.root, workspaceId), 'exports');
     try {
       configureRenderer();
       await access(process.env.HYPERFRAMES_FFMPEG_PATH!);
@@ -79,7 +79,7 @@ export class RenderJobs {
       await executeRenderJob(render, source, join(dir, `${job.id}.mp4`));
       job.state = 'complete';
       job.progress = 1;
-      job.url = `/exports/${workspaceId}/${job.id}.mp4`;
+      job.url = `/media/video-editor/exports/${workspaceId}/${job.id}.mp4`;
     } catch (e) {
       job.state = 'failed';
       job.error = e instanceof Error ? e.message : 'Export failed.';

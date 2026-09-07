@@ -1,16 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import { ArrowDownToLine, Check, X, Film } from 'lucide-react';
-import { durationOf, formatTime, type ExportJob, type Workspace } from '@codex-ux/video-domain';
+import { durationOf, formatTime, type ExportJob, type VideoProject } from '@codex-ux/video-domain';
 import { api, post } from '../lib/api';
 import { IconButton } from '../components/ui';
 
-export function ExportDialog({
-  workspace,
-  onClose,
-}: {
-  workspace: Workspace;
-  onClose: () => void;
-}) {
+export function ExportDialog({ project, onClose }: { project: VideoProject; onClose: () => void }) {
   const dialog = useRef<HTMLDialogElement>(null);
   const [job, setJob] = useState<ExportJob | null>(null);
   const [busy, setBusy] = useState(false);
@@ -22,22 +16,22 @@ export function ExportDialog({
   useEffect(() => {
     if (!job || job.state !== 'rendering') return;
     const timer = setInterval(() => {
-      void api<ExportJob>(`/workspaces/${workspace.id}/exports/${job.id}`)
+      void api<ExportJob>(`/workspaces/${project.workspaceId}/apps/video-editor/exports/${job.id}`)
         .then(setJob)
         .catch((error: unknown) => {
           setError(error instanceof Error ? error.message : 'Could not check export.');
         });
     }, 2000);
     return () => clearInterval(timer);
-  }, [job, workspace.id]);
+  }, [job, project.workspaceId]);
 
   async function start() {
     setBusy(true);
     setError('');
     try {
       setJob(
-        await post<ExportJob>(`/workspaces/${workspace.id}/exports`, {
-          revisionId: workspace.revisionId,
+        await post<ExportJob>(`/workspaces/${project.workspaceId}/apps/video-editor/exports`, {
+          revisionId: project.revisionId,
         }),
       );
     } catch (error) {
@@ -47,7 +41,7 @@ export function ExportDialog({
     }
   }
 
-  const document = workspace.revision.document;
+  const document = project.revision.document;
   return (
     <dialog
       ref={dialog}
@@ -69,7 +63,7 @@ export function ExportDialog({
       <h2>{job?.state === 'complete' ? 'Ready to share.' : 'Take it with you.'}</h2>
       <p className="dialog-description">A finished video, from this exact version.</p>
       <div className="export-specs">
-        <span>{workspace.name}</span>
+        <span>{project.name}</span>
         <span>
           {document.width} × {document.height}
         </span>
@@ -83,7 +77,7 @@ export function ExportDialog({
         </p>
       )}
       {job?.state === 'complete' ? (
-        <a className="primary-button full-width" href={job.url} download={`${workspace.name}.mp4`}>
+        <a className="primary-button full-width" href={job.url} download={`${project.name}.mp4`}>
           <ArrowDownToLine size={15} />
           Download video
         </a>

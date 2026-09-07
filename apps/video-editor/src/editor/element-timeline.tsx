@@ -6,7 +6,7 @@ import { timelineItems, type TimelineItem } from './timeline-items';
 import { updateElementTiming } from './element-edits';
 
 export function ElementTimeline({ state }: { state: EditorState }) {
-  const doc = state.workspace!.revision.document;
+  const doc = state.project!.revision.document;
   const items = timelineItems(doc).filter(
     (item) => item.clip.id === state.selectedId && item.clip.kind === 'text',
   );

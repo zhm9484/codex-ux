@@ -7,9 +7,9 @@ import { HistoryPanel } from '../panels/history';
 
 export function SidePanel({ state }: { state: EditorState }) {
   const popup = useFloatingPosition(!!state.panel, state.panelAnchor);
-  const workspace = state.workspace;
-  if (!workspace || !state.panel) return null;
-  const document = workspace.revision.document;
+  const project = state.project;
+  if (!project || !state.panel) return null;
+  const document = project.revision.document;
   const close = () => state.setPanel(null);
   return (
     <aside
@@ -20,7 +20,9 @@ export function SidePanel({ state }: { state: EditorState }) {
       <div className="sheet-handle" />
       {state.panel === 'notes' && (
         <NotesPanel
-          workspace={workspace}
+          project={project}
+          session={state.session}
+          target={state.target}
           disabled={state.saving}
           onClose={close}
           onRemove={state.removeNote}
@@ -42,7 +44,7 @@ export function SidePanel({ state }: { state: EditorState }) {
       )}
       {state.panel === 'assets' && (
         <AssetsPanel
-          workspaceId={workspace.id}
+          workspaceId={project.workspaceId}
           document={document}
           disabled={state.saving}
           onClose={close}
@@ -52,7 +54,7 @@ export function SidePanel({ state }: { state: EditorState }) {
       )}
       {state.panel === 'history' && (
         <HistoryPanel
-          workspace={workspace}
+          project={project}
           disabled={state.saving}
           onClose={close}
           onCompare={(revision) => {

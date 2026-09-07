@@ -4,9 +4,10 @@ import { createRequire } from 'node:module';
 import { dirname, join } from 'node:path';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { durationOf } from '@codex-ux/video-domain';
-import type { Services } from './routes.ts';
+import type { VideoServices } from './video/routes.ts';
 import type { Thumbnails } from './video/thumbnails.ts';
-import { contained, materialize, readCandidate, workspaceDirectory } from './video/files.ts';
+import { materialize, readCandidate, videoDirectory } from './video/files.ts';
+import { contained } from './storage/paths.ts';
 import { compositionHtml, sceneHtml } from './video/composition.ts';
 import { serveFile } from './static.ts';
 import { HttpError } from './errors.ts';
@@ -17,10 +18,11 @@ export async function mediaRoutes(
   req: IncomingMessage,
   res: ServerResponse,
   url: URL,
-  s: Services,
+  s: VideoServices,
   thumbs: Thumbnails,
 ) {
-  const path = decodeURIComponent(url.pathname);
+  if (!url.pathname.startsWith('/media/video-editor/')) return false;
+  const path = decodeURIComponent(url.pathname.slice('/media/video-editor'.length));
   if (path === '/engine/runtime.js') {
     await serveFile(
       req,
@@ -51,7 +53,7 @@ export async function mediaRoutes(
       Math.min(durationOf(r.document), Number(url.searchParams.get('time')) || 0),
     );
     res.setHeader('Content-Type', 'text/html');
-    res.end(playerPage(`/preview/${id}/${rev}/index.html`, r.document, t));
+    res.end(playerPage(`/media/video-editor/preview/${id}/${rev}/index.html`, r.document, t));
     return true;
   }
   const thumbnail = /^\/thumbnails\/([\w-]+)\/([\w-]+)$/.exec(path);
@@ -87,11 +89,13 @@ export async function mediaRoutes(
     const doc = base.document.native ? base.document : await readCandidate(s.root, id!, requestId!);
     if (file === 'preview.html') {
       res.setHeader('Content-Type', 'text/html');
-      res.end(playerPage(`/candidate/${id}/${requestId}/index.html`, doc, 0, true));
+      res.end(
+        playerPage(`/media/video-editor/candidate/${id}/${requestId}/index.html`, doc, 0, true),
+      );
       return true;
     }
     if (doc.native) {
-      const directory = contained(workspaceDirectory(s.root, id!), 'requests', requestId!);
+      const directory = contained(videoDirectory(s.root, id!), 'requests', requestId!);
       if (file === 'index.html') {
         res.setHeader('Content-Type', 'text/html');
         res.end(nativePreview(await readFile(contained(directory, file), 'utf8')));
@@ -115,7 +119,7 @@ export async function mediaRoutes(
       return true;
     }
     if (file?.startsWith('assets/')) {
-      await serveFile(req, res, contained(workspaceDirectory(s.root, id!), file));
+      await serveFile(req, res, contained(videoDirectory(s.root, id!), file));
       return true;
     }
     throw new HttpError(404, 'Candidate resource not found.');
@@ -124,7 +128,7 @@ export async function mediaRoutes(
   if (resource) {
     const [, kind, id, file] = resource;
     s.store.row(id!);
-    await serveFile(req, res, contained(workspaceDirectory(s.root, id!), kind!, file!), true);
+    await serveFile(req, res, contained(videoDirectory(s.root, id!), kind!, file!), true);
     return true;
   }
   return false;

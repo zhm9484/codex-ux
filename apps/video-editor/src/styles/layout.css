@@ -330,3 +330,17 @@
   backdrop-filter: blur(12px);
   animation: arrive 200ms var(--motion);
 }
+
+.workspace-picker {
+  width: min(480px, calc(100% - 48px));
+  margin: 10vh auto;
+}
+.workspace-list {
+  display: grid;
+  gap: 8px;
+  margin: 24px 0;
+}
+.workspace-picker form {
+  display: grid;
+  gap: 12px;
+}

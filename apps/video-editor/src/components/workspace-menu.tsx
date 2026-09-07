@@ -1,13 +1,13 @@
 import { useEffect, useState } from 'react';
 import { Check, ChevronDown, ArrowUpRight } from 'lucide-react';
-import type { WorkspaceSummary } from '@codex-ux/video-domain';
+import type { Workspace } from '@codex-ux/protocol';
 
 export function WorkspaceMenu({
   workspaces,
   current,
   onSelect,
 }: {
-  workspaces: WorkspaceSummary[];
+  workspaces: Workspace[];
   current: string;
   onSelect: (id: string) => void;
 }) {
@@ -21,7 +21,12 @@ export function WorkspaceMenu({
   }, []);
   return (
     <div className="workspace-menu">
-      <button className="project-switcher" onClick={() => setOpen(!open)} aria-expanded={open}>
+      <button
+        className="workspace-switcher"
+        aria-label="Select workspace"
+        onClick={() => setOpen(!open)}
+        aria-expanded={open}
+      >
         <span>{workspaces.find((w) => w.id === current)?.name ?? 'video-editor'}</span>
         <ChevronDown size={14} />
       </button>
@@ -34,7 +39,7 @@ export function WorkspaceMenu({
           />
           <div className="workspace-popover">
             <div className="popover-label">
-              PROJECTS <ArrowUpRight size={13} />
+              WORKSPACES <ArrowUpRight size={13} />
             </div>
             {workspaces.map((w) => (
               <button

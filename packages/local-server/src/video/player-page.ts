@@ -8,10 +8,10 @@ export function playerPage(source: string, document: VideoDocument, time = 0, co
     <meta charset="utf-8">
     <title>Codex UX · Video preview</title>
     <style>body{margin:0;background:#f0f2ec}hyperframes-player{display:block;width:100vw;height:100vh}</style>
-    <script type="module" src="/engine/player.js"></script>
+    <script type="module" src="/media/video-editor/engine/player.js"></script>
   </head>
   <body>
-    <hyperframes-player runtime-src="/engine/runtime.js" src="${source}"
+    <hyperframes-player runtime-src="/media/video-editor/engine/runtime.js" src="${source}"
       width="${document.width}" height="${document.height}" ${controls ? 'controls' : ''}>
     </hyperframes-player>
     <script>

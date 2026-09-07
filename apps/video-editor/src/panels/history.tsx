@@ -1,17 +1,17 @@
 import { Clock3, Check, ArrowUpLeft, Columns2 } from 'lucide-react';
-import type { Revision, Workspace } from '@codex-ux/video-domain';
+import type { Revision, VideoProject } from '@codex-ux/video-domain';
 import { PanelHeader } from '../components/ui';
 import { api } from '../lib/api';
 import { useState } from 'react';
 
 export function HistoryPanel({
-  workspace,
+  project,
   disabled,
   onClose,
   onCompare,
   onRestore,
 }: {
-  workspace: Workspace;
+  project: VideoProject;
   disabled: boolean;
   onClose: () => void;
   onCompare: (revision: Revision) => void;
@@ -21,7 +21,9 @@ export function HistoryPanel({
   const revision = async (id: string, action: (r: Revision) => void | Promise<unknown>) => {
     setError('');
     try {
-      const r = await api<Revision>(`/workspaces/${workspace.id}/revisions/${id}`);
+      const r = await api<Revision>(
+        `/workspaces/${project.workspaceId}/apps/video-editor/revisions/${id}`,
+      );
       await action(r);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not load version.');
@@ -36,18 +38,18 @@ export function HistoryPanel({
             {error}
           </p>
         )}
-        {workspace.history.map((r, i) => (
+        {project.history.map((r, i) => (
           <article
-            className={`history-entry ${r.id === workspace.revisionId ? 'current' : ''}`}
+            className={`history-entry ${r.id === project.revisionId ? 'current' : ''}`}
             key={r.id}
           >
             <div className="history-marker">
-              {r.id === workspace.revisionId ? <Check size={12} /> : <Clock3 size={12} />}
+              {r.id === project.revisionId ? <Check size={12} /> : <Clock3 size={12} />}
             </div>
             <div className="history-body">
               <div className="history-topline">
-                <span>Version {workspace.history.length - i}</span>
-                {r.id === workspace.revisionId && <span className="current-label">Current</span>}
+                <span>Version {project.history.length - i}</span>
+                {r.id === project.revisionId && <span className="current-label">Current</span>}
               </div>
               <strong>{r.label}</strong>
               <p>
@@ -57,7 +59,7 @@ export function HistoryPanel({
                   minute: '2-digit',
                 })}
               </p>
-              {r.id !== workspace.revisionId && (
+              {r.id !== project.revisionId && (
                 <div className="history-actions">
                   <button className="text-button" onClick={() => void revision(r.id, onCompare)}>
                     <Columns2 size={13} />

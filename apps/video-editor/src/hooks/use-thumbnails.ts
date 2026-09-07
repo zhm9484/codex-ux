@@ -25,7 +25,7 @@ export function useThumbnails(workspaceId: string, revisionId: string, clips: Cl
         if (controller.signal.aborted) return;
         try {
           const response = await fetch(
-            `/thumbnails/${workspaceId}/${revisionId}?time=${frame.time}`,
+            `/media/video-editor/thumbnails/${workspaceId}/${revisionId}?time=${frame.time}`,
             {
               signal: controller.signal,
               priority: 'low',

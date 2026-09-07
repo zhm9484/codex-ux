@@ -86,7 +86,7 @@ export function AssetsPanel({
               <article className="asset-card" key={a.id}>
                 <div className="asset-preview">
                   {a.mime.startsWith('image/') ? (
-                    <img src={`/assets/${workspaceId}/${a.file}`} alt={a.name} />
+                    <img src={`/media/video-editor/assets/${workspaceId}/${a.file}`} alt={a.name} />
                   ) : a.mime.startsWith('audio/') ? (
                     <Music2 size={20} />
                   ) : a.mime.startsWith('font/') ? (

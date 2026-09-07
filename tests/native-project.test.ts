@@ -4,7 +4,7 @@ import { mkdtemp, mkdir, writeFile, readFile, rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { randomUUID } from 'node:crypto';
-import { openDatabase } from '../packages/local-server/src/storage/database.ts';
+import { VideoStore } from '../packages/local-server/src/video/store.ts';
 import { WorkspaceStore } from '../packages/local-server/src/storage/workspaces.ts';
 import { NativeProjects } from '../packages/local-server/src/native/projects.ts';
 import { materialize } from '../packages/local-server/src/video/files.ts';
@@ -34,13 +34,13 @@ void test('native source snapshots preserve arbitrary dependencies, synchronize 
   );
   await writeFile(join(input, 'asset.bin'), Buffer.from([0, 255, 45, 10]));
   await writeFile(join(input, 'project.json'), '{"custom":"Not an editor document"}');
-  const db = openDatabase(join(root, 'data'));
-  const store = new WorkspaceStore(db);
+  const workspaces = new WorkspaceStore(join(root, 'data'));
+  const store = new VideoStore(workspaces);
   const native = new NativeProjects(join(root, 'data'), store);
   try {
-    const initial = store.create('Native project');
-    const imported = await native.enable(initial.id, input);
-    const id = imported.id;
+    const initial = store.create(workspaces.create('Native project').id);
+    const imported = await native.importSource(initial.workspaceId, initial.revisionId, input);
+    const id = imported.workspaceId;
     const directory = native.status(id).directory;
     assert.equal(imported.revision.document.native!.files['index.html']!.text, html);
     assert.equal(imported.revision.document.clips.length, 0);
@@ -119,7 +119,7 @@ void test('native source snapshots preserve arbitrary dependencies, synchronize 
     assert.equal(native.status(id).error, undefined);
     assert.equal(await readFile(join(input, 'index.html'), 'utf8'), html);
   } finally {
-    db.close();
+    store.close();
     await rm(root, { recursive: true, force: true });
   }
 });

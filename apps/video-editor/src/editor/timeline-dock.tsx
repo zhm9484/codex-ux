@@ -5,16 +5,16 @@ import { useThumbnails } from '../hooks/use-thumbnails';
 import { SceneStrip } from './scene-strip';
 
 export function TimelineDock({ state }: { state: EditorState }) {
-  const workspace = state.workspace!;
+  const project = state.project!;
   const thumbnail = useThumbnails(
-    workspace.id,
-    workspace.revisionId,
-    previewScenes(workspace.revision.document),
+    project.workspaceId,
+    project.revisionId,
+    previewScenes(project.revision.document),
   );
   return (
     <div className="timeline-dock">
       <SceneStrip
-        document={workspace.revision.document}
+        document={project.revision.document}
         time={state.time}
         clock={state.clock}
         range={state.range}

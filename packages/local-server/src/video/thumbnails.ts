@@ -2,7 +2,7 @@ import { chromium, type Browser } from 'playwright-core';
 import { access, mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import type { Revision } from '@codex-ux/video-domain';
-import { workspaceDirectory } from './files.ts';
+import { videoDirectory } from './files.ts';
 
 export class Thumbnails {
   readonly root: string;
@@ -17,7 +17,7 @@ export class Thumbnails {
   async get(workspaceId: string, revision: Revision, time: number) {
     const frame = Math.max(0, Math.round(time * revision.document.fps));
     const file = join(
-      workspaceDirectory(this.root, workspaceId),
+      videoDirectory(this.root, workspaceId),
       'thumbnails',
       `${revision.id}-${frame}.png`,
     );
@@ -48,7 +48,7 @@ export class Thumbnails {
       });
       try {
         await page.goto(
-          `${this.origin}/capture/${workspaceId}/${revision.id}?time=${frame / revision.document.fps}`,
+          `${this.origin}/media/video-editor/capture/${workspaceId}/${revision.id}?time=${frame / revision.document.fps}`,
         );
         await page.waitForFunction(
           "document.documentElement.dataset.ready === 'true'",
@@ -57,7 +57,7 @@ export class Thumbnails {
         );
         await page.waitForTimeout(120);
         const bytes = await page.screenshot();
-        await mkdir(join(workspaceDirectory(this.root, workspaceId), 'thumbnails'), {
+        await mkdir(join(videoDirectory(this.root, workspaceId), 'thumbnails'), {
           recursive: true,
         });
         await writeFile(file, bytes);

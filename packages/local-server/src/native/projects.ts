@@ -1,11 +1,11 @@
 import { randomUUID } from 'node:crypto';
-import { cp, mkdir, rename, rm } from 'node:fs/promises';
+import { cp, mkdir, rename, rm, readdir } from 'node:fs/promises';
 import { join, isAbsolute } from 'node:path';
 import type { ChangeRequest } from '@codex-ux/protocol';
-import type { VideoDocument } from '@codex-ux/video-domain';
-import type { WorkspaceStore } from '../storage/workspaces.ts';
+import { sampleDocument, type VideoDocument } from '@codex-ux/video-domain';
+import type { VideoStore } from '../video/store.ts';
 import { HttpError } from '../errors.ts';
-import { materialize, workspaceDirectory } from '../video/files.ts';
+import { materialize, videoDirectory } from '../video/files.ts';
 import {
   inventory,
   prepareNative,
@@ -18,8 +18,8 @@ import {
 /** One serialized file transaction per workspace; filesystem saves become ordinary revisions. */
 export class NativeProjects {
   readonly root: string;
-  readonly store: WorkspaceStore;
-  constructor(root: string, store: WorkspaceStore) {
+  readonly store: VideoStore;
+  constructor(root: string, store: VideoStore) {
     this.root = root;
     this.store = store;
   }
@@ -42,14 +42,55 @@ export class NativeProjects {
   status(id: string) {
     return { directory: sourceDirectory(this.root, id), error: this.errors.get(id) };
   }
-  async enable(id: string, directory?: string) {
+  async open(id: string, format: 'native' | 'structured' = 'native') {
+    return this.exclusive(id, async () => {
+      if (this.store.has(id)) return this.store.get(id);
+      const document = sampleDocument(this.store.workspaces.get(id).name);
+      const directory = sourceDirectory(this.root, id);
+      const entries = await readdir(directory).catch((error: NodeJS.ErrnoException) => {
+        if (error.code !== 'ENOENT') throw error;
+        return [];
+      });
+      if (format === 'structured') {
+        if (entries.length)
+          throw new HttpError(
+            409,
+            'Video source files already exist. Open this workspace in native format.',
+          );
+        return this.store.create(id, document);
+      }
+      const source = entries.length
+        ? directory
+        : await materialize(this.root, id, {
+            id: randomUUID(),
+            parentId: null,
+            label: 'Starter',
+            author: 'user',
+            createdAt: new Date().toISOString(),
+            document,
+          });
+      const doc = await snapshot(this.root, id, source, document);
+      if (!entries.length) {
+        delete doc.native!.files['.ready'];
+        await this.checkout(id, doc);
+      }
+      return this.store.create(id, doc);
+    });
+  }
+  async importSource(id: string, baseRevision: string, directory?: string) {
     return this.exclusive(id, async () => {
       const w = this.store.get(id);
+      if (baseRevision !== w.revisionId)
+        throw new HttpError(
+          409,
+          'This video has changed. Refresh before importing.',
+          'stale_revision',
+        );
       if (!directory && w.revision.document.native) return w;
       if (directory && !isAbsolute(directory))
         throw new HttpError(400, 'Use an absolute project directory.');
       const source = directory ?? (await materialize(this.root, id, w.revision));
-      const stage = join(workspaceDirectory(this.root, id), `import-${randomUUID()}`);
+      const stage = join(videoDirectory(this.root, id), `import-${randomUUID()}`);
       try {
         await mkdir(stage, { recursive: true });
         if (directory) {
@@ -61,6 +102,7 @@ export class NativeProjects {
           await rm(join(stage, '.ready'), { force: true });
         }
         const doc = await snapshot(this.root, id, stage, w.revision.document);
+        if (w.revision.document.native) await this.assertUnchanged(id, w.revision.document);
         return await this.commitFiles(
           id,
           {
@@ -119,9 +161,10 @@ export class NativeProjects {
   ) {
     return this.exclusive(id, async () => {
       if (
-        this.store.db
-          .prepare('SELECT revision_id FROM operations WHERE workspace_id=? AND request_id=?')
-          .get(id, change.requestId)
+        this.store
+          .database(id)
+          .prepare('SELECT revision_id FROM operations WHERE request_id=?')
+          .get(change.requestId)
       )
         return this.store.get(id);
       const current = this.store.get(id);

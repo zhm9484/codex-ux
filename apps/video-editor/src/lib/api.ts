@@ -9,4 +9,4 @@ export async function api<T>(path: string, options: RequestInit = {}): Promise<T
 }
 export const post = <T>(path: string, body: unknown) =>
   api<T>(path, { method: 'POST', body: JSON.stringify(body) });
-export const workspacePath = (id: string) => `/workspaces/${id}`;
+export const videoPath = (id: string) => `/workspaces/${id}/apps/video-editor`;

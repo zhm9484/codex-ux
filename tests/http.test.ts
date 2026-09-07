@@ -6,7 +6,7 @@ import { join } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { get } from 'node:http';
 import { startServer } from '../packages/local-server/src/server.ts';
-import type { Workspace } from '../packages/video-domain/src/schema.ts';
+import type { VideoProject } from '../packages/video-domain/src/schema.ts';
 
 void test('HTTP rejects cross-origin writes, stale edits and cross-workspace references', async () => {
   const root = await mkdtemp(join(tmpdir(), 'codex-ux-http-'));
@@ -19,15 +19,17 @@ void test('HTTP rejects cross-origin writes, stale edits and cross-workspace ref
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
     });
+  const create = async (name: string) => {
+    const workspace = (await (await post('/api/workspaces', { name })).json()) as { id: string };
+    return (await (
+      await post(`/api/workspaces/${workspace.id}/apps/video-editor`, { format: 'structured' })
+    ).json()) as VideoProject;
+  };
   try {
-    const first = (await (
-      await post('/api/workspaces', { name: 'HTTP test', native: false })
-    ).json()) as Workspace;
-    const second = (await (
-      await post('/api/workspaces', { name: 'Other video', native: false })
-    ).json()) as Workspace;
-    const base = `/api/workspaces/${first.id}`;
-    const blocked = await fetch(origin + base + '/binding', {
+    const first = await create('HTTP test');
+    const second = await create('Other video');
+    const base = `/api/workspaces/${first.workspaceId}/apps/video-editor`;
+    const blocked = await fetch(origin + base + '/notes', {
       method: 'POST',
       headers: { Origin: 'https://untrusted.example' },
       body: '{}',
@@ -61,16 +63,49 @@ void test('HTTP rejects cross-origin writes, stale edits and cross-workspace ref
       (await post(base + '/revisions', { ...change, requestId: randomUUID() })).status,
       409,
     );
-    const preview = await fetch(origin + `/preview/${first.id}/${first.revisionId}/index.html`);
+    const preview = await fetch(
+      origin + `/media/video-editor/preview/${first.workspaceId}/${first.revisionId}/index.html`,
+    );
     assert.equal(preview.status, 200);
     assert.match(await preview.text(), /data-composition-id="main"/);
-    const player = await fetch(origin + '/engine/player.js');
+    const player = await fetch(origin + '/media/video-editor/engine/player.js');
     assert.match(player.headers.get('content-type') ?? '', /javascript/);
     assert.match(await player.text(), /export/);
-    const runtime = await fetch(origin + '/engine/runtime.js');
+    const runtime = await fetch(origin + '/media/video-editor/engine/runtime.js');
     assert.equal(runtime.status, 200);
     assert.match(runtime.headers.get('content-type') ?? '', /javascript/);
     assert.ok((await runtime.text()).length > 1000);
+    const generic = (await (
+      await fetch(origin + `/api/workspaces/${first.workspaceId}`)
+    ).json()) as Record<string, unknown>;
+    assert.equal(generic.name, 'HTTP test');
+    assert.equal(generic.revision, undefined);
+    assert.equal(generic.threadId, undefined);
+    assert.equal((await post('/api/workspaces', { name: 'Invalid', native: false })).status, 400);
+    assert.equal(
+      (await post(`/api/workspaces/${first.workspaceId}/binding`, { threadId: randomUUID() }))
+        .status,
+      404,
+    );
+    assert.equal((await post(base + '/binding', { threadId: randomUUID() })).status, 404);
+    assert.equal(
+      (await fetch(origin + `/api/workspaces/${first.workspaceId}/revisions/${first.revisionId}`))
+        .status,
+      404,
+    );
+    assert.equal((await post(base + '/requests', { noteIds: [randomUUID()] })).status, 400);
+    assert.equal(
+      (
+        await post(base + '/requests', {
+          noteIds: [randomUUID()],
+          target: {
+            instanceId: randomUUID(),
+            session: { provider: 'unsupported', sessionId: randomUUID() },
+          },
+        })
+      ).status,
+      400,
+    );
     const invalid = await fetch(origin + base + '/notes', { method: 'POST', body: '{broken' });
     assert.equal(invalid.status, 400);
   } finally {

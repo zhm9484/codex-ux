@@ -1,21 +1,15 @@
 import { mkdir, writeFile, readFile, copyFile, access } from 'node:fs/promises';
-import { resolve, join, sep } from 'node:path';
+import { join } from 'node:path';
 import { createRequire } from 'node:module';
 import { videoSchema, type Revision, type VideoDocument } from '@codex-ux/video-domain';
 import { compositionHtml, sceneHtml } from './composition.ts';
 import { writeNative } from '../native/files.ts';
-import { HttpError } from '../errors.ts';
+import { contained, appDirectory } from '../storage/paths.ts';
 
 const require = createRequire(import.meta.url);
-export function contained(root: string, ...parts: string[]) {
-  const target = resolve(root, ...parts);
-  if (!target.startsWith(resolve(root) + sep))
-    throw new HttpError(403, 'Path is outside the workspace.');
-  return target;
-}
-export const workspaceDirectory = (root: string, id: string) => contained(root, 'workspaces', id);
+export const videoDirectory = (root: string, id: string) => appDirectory(root, id, 'video-editor');
 export async function materialize(root: string, workspaceId: string, revision: Revision) {
-  const dir = contained(workspaceDirectory(root, workspaceId), 'revisions', revision.id);
+  const dir = contained(videoDirectory(root, workspaceId), 'revisions', revision.id);
   try {
     await access(join(dir, '.ready'));
     return dir;
@@ -35,7 +29,7 @@ export async function materialize(root: string, workspaceId: string, revision: R
   await copyFile(require.resolve('gsap/dist/gsap.min.js'), join(dir, 'vendor/gsap.js'));
   for (const asset of doc.assets)
     await copyFile(
-      contained(workspaceDirectory(root, workspaceId), 'assets', asset.file),
+      contained(videoDirectory(root, workspaceId), 'assets', asset.file),
       join(dir, 'assets', asset.file),
     );
   for (const c of doc.clips) {
@@ -55,7 +49,7 @@ export async function writeCandidate(
   requestId: string,
   revision: Revision,
 ) {
-  const dir = contained(workspaceDirectory(root, workspaceId), 'requests', requestId);
+  const dir = contained(videoDirectory(root, workspaceId), 'requests', requestId);
   await mkdir(join(dir, 'scenes'), { recursive: true });
   if (revision.document.native) await writeNative(root, workspaceId, revision.document, dir);
   else await writeFile(join(dir, 'project.json'), JSON.stringify(revision.document, null, 2));
@@ -68,7 +62,7 @@ export async function readCandidate(
   workspaceId: string,
   requestId: string,
 ): Promise<VideoDocument> {
-  const dir = contained(workspaceDirectory(root, workspaceId), 'requests', requestId);
+  const dir = contained(videoDirectory(root, workspaceId), 'requests', requestId);
   const doc = videoSchema.parse(JSON.parse(await readFile(join(dir, 'project.json'), 'utf8')));
   for (const id of Object.keys(doc.sources))
     doc.sources[id] = await readFile(contained(dir, 'scenes', `${id}.html`), 'utf8');
