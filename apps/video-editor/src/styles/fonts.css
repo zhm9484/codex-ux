@@ -1,0 +1,114 @@
+.font-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  min-width: 116px;
+  max-width: 160px;
+  padding: 8px;
+  background: transparent;
+  border: 0;
+  border-radius: 7px;
+  font-size: 12px;
+  color: #555;
+}
+.font-trigger:hover {
+  background: #f1f1f1;
+}
+.font-trigger > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.font-popover {
+  position: fixed;
+  z-index: 70;
+  width: 300px;
+  max-width: calc(100vw - 24px);
+  background: #fff;
+  border: 1px solid #e5e5e5;
+  border-radius: 14px;
+  box-shadow:
+    0 14px 50px #0000001a,
+    0 2px 8px #00000006;
+  overflow: hidden;
+  animation: arrive 160ms var(--motion);
+}
+.font-search {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 13px 15px;
+  border-bottom: 1px solid #eee;
+  color: #888;
+}
+.font-search input {
+  width: 100%;
+  outline: none;
+  border: 0;
+  background: transparent;
+  font-size: 13px;
+}
+.font-options {
+  max-height: 285px;
+  overflow: auto;
+  padding: 5px 6px 8px;
+  scrollbar-width: thin;
+}
+.font-group {
+  color: #8a8a8a;
+  font-size: 10px;
+  padding: 12px 10px 5px;
+}
+.font-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  border-radius: 7px;
+  padding: 8px 10px;
+  font-size: 12px;
+  min-height: 37px;
+}
+.font-option.highlighted {
+  background: #f3f3f3;
+}
+.font-specimen {
+  margin-left: auto;
+  font-size: 19px;
+  color: #696969;
+  line-height: 1;
+}
+.font-check {
+  width: 14px;
+  display: flex;
+  color: #666;
+}
+.font-empty {
+  padding: 24px 12px;
+  color: #777;
+  font-size: 12px;
+  text-align: center;
+}
+.header-actions .icon-button {
+  position: relative;
+}
+.header-note-dot {
+  width: 4px;
+  height: 4px;
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  border-radius: 50%;
+  background: #9285be;
+}
+@media (max-width: 600px) {
+  .font-trigger {
+    min-width: 95px;
+    max-width: 120px;
+    font-size: 11px;
+  }
+}

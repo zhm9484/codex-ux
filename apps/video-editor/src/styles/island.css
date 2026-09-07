@@ -1,0 +1,91 @@
+.tool-island {
+  position: fixed;
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 5px;
+  width: 46px;
+  background: #fffffff0;
+  backdrop-filter: blur(24px);
+  border: 1px solid #e5e5e5c0;
+  border-radius: 17px;
+  box-shadow:
+    0 6px 25px #0000000a,
+    0 1px 3px #00000005;
+  user-select: none;
+}
+.tool-island.dragging {
+  box-shadow: 0 12px 32px #0002;
+  cursor: grabbing;
+}
+.tool-island .icon-button {
+  position: relative;
+  border-radius: 10px;
+  width: 34px;
+  height: 34px;
+  color: #727272;
+}
+.tool-island .icon-button:hover,
+.tool-island .icon-button.active {
+  color: #252525;
+  background: #efeeee;
+}
+.island-grip {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 1px 0 4px;
+  width: 100%;
+  border: 0;
+  background: transparent;
+  color: #b6b6b6;
+  cursor: grab;
+  touch-action: none;
+}
+.island-grip:active {
+  cursor: grabbing;
+}
+.island-divider {
+  width: 18px;
+  height: 1px;
+  margin: 3px 0;
+  background: #e9e9e9;
+}
+.island-dot {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: #998cad;
+}
+.side-panel.island-panel {
+  right: auto;
+  bottom: auto;
+  width: min(335px, calc(100vw - 24px));
+  max-height: min(540px, calc(100svh - 24px));
+}
+.is-focus-mode .app-header {
+  display: none;
+}
+:root:fullscreen {
+  background: #fcfcfc;
+}
+@media (max-width: 600px) {
+  .header-actions .undo-controls {
+    display: flex;
+  }
+  .tool-island {
+    width: 42px;
+    padding: 4px;
+    border-radius: 15px;
+    gap: 2px;
+  }
+  .tool-island .icon-button {
+    width: 32px;
+    height: 32px;
+  }
+}

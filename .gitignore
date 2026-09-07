@@ -1,0 +1,57 @@
+# Dependencies and package-manager state
+node_modules/
+.pnpm-store/
+.npm/
+.yarn/
+
+# Build output and tool caches
+dist/
+build/
+out/
+coverage/
+.nyc_output/
+*.tsbuildinfo
+.vite/
+.cache/
+.turbo/
+.eslintcache
+.stylelintcache
+*.lcov
+*.map
+
+# Local configuration and credentials
+.env
+.env.*
+!.env.example
+!.env.*.example
+*.local
+*.pem
+*.key
+*.p12
+
+# Local projects, assets, and generated media
+.codex-ux/
+artifacts/
+
+# Test output and logs
+playwright-report/
+blob-report/
+test-results/
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Temporary, operating-system, and editor files
+tmp/
+temp/
+*.tmp
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+.fleet/

@@ -1,0 +1,39 @@
+{
+  "name": "codex-ux",
+  "version": "0.0.0",
+  "private": true,
+  "description": "A shared workspace for people and agents, built on an open collaboration protocol.",
+  "license": "MIT",
+  "type": "module",
+  "packageManager": "pnpm@10.34.5",
+  "engines": {
+    "node": ">=24.0.0 <25",
+    "pnpm": ">=10.34.5 <11"
+  },
+  "scripts": {
+    "dev": "pnpm --filter @codex-ux/local-server dev",
+    "build": "pnpm -r --if-present run build",
+    "typecheck": "tsc --noEmit && pnpm -r --if-present run typecheck",
+    "lint": "eslint . --max-warnings 0",
+    "format": "prettier . --write",
+    "format:check": "prettier . --check",
+    "check": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test && pnpm build",
+    "start": "pnpm --filter @codex-ux/local-server start",
+    "test": "node --test tests/*.test.ts",
+    "test:browser": "playwright test"
+  },
+  "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "@playwright/test": "1.63.0",
+    "@types/node": "24.13.3",
+    "eslint": "10.10.0",
+    "eslint-config-prettier": "10.1.8",
+    "eslint-plugin-react-hooks": "7.1.1",
+    "eslint-plugin-react-refresh": "0.5.6",
+    "globals": "17.12.0",
+    "jiti": "2.7.0",
+    "prettier": "3.9.6",
+    "typescript": "6.0.3",
+    "typescript-eslint": "8.69.0"
+  }
+}

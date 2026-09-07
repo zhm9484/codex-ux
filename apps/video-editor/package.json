@@ -1,0 +1,27 @@
+{
+  "name": "@codex-ux/video-editor",
+  "version": "0.0.0",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@codex-ux/protocol": "workspace:*",
+    "@codex-ux/video-domain": "workspace:*",
+    "@hyperframes/player": "0.8.30",
+    "lucide-react": "1.41.0",
+    "react": "catalog:",
+    "react-dom": "catalog:"
+  },
+  "devDependencies": {
+    "@types/react": "catalog:",
+    "@types/react-dom": "catalog:",
+    "@vitejs/plugin-react": "catalog:",
+    "vite": "catalog:"
+  }
+}

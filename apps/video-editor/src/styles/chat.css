@@ -1,0 +1,224 @@
+.feedback-dock {
+  padding-top: 18px;
+}
+.feedback-composer {
+  border: 1px solid #e5e5e5;
+  border-radius: 20px;
+  padding: 14px 12px 10px;
+  background: #fff;
+  box-shadow:
+    0 3px 12px #00000003,
+    0 12px 35px -18px #00000013;
+  transition:
+    border-color 180ms,
+    box-shadow 180ms;
+}
+.feedback-composer:focus-within {
+  border-color: #ccc;
+  box-shadow:
+    0 3px 14px #00000005,
+    0 12px 35px -18px #00000020;
+}
+.feedback-composer textarea {
+  width: 100%;
+  display: block;
+  border: 0;
+  background: transparent;
+  padding: 0 6px;
+  min-height: 30px;
+  max-height: 100px;
+  font-size: 14px;
+  line-height: 1.7;
+  color: #333;
+  resize: none;
+  outline: none;
+  field-sizing: content;
+}
+.feedback-composer textarea::placeholder {
+  color: var(--muted);
+}
+.composer-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 5px;
+}
+.composer-actions .icon-button {
+  color: #828282;
+}
+.notes-trigger {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-left: auto;
+  border: 0;
+  background: transparent;
+  border-radius: 8px;
+  padding: 8px 9px;
+  font-size: 11px;
+  color: #858585;
+  transition: background 150ms;
+}
+.notes-trigger:hover {
+  background: #f4f4f4;
+}
+.unread-dot {
+  width: 4px;
+  height: 4px;
+  background: #847acb;
+  border-radius: 50%;
+}
+.save-note-button.icon-button {
+  width: 30px;
+  height: 30px;
+  background: #292929;
+  color: #fff;
+  border-radius: 50%;
+  margin-left: 4px;
+}
+.save-note-button.icon-button:disabled {
+  opacity: 1;
+  background: #ececec;
+  color: #bbb;
+}
+.save-note-button.icon-button:hover:not(:disabled) {
+  background: #444;
+  color: #fff;
+}
+.composer-reference {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: #7b7992;
+  font:
+    10px ui-monospace,
+    monospace;
+  margin: -3px 5px 10px;
+  animation: arrive 180ms var(--motion);
+}
+.reference-icon {
+  display: flex;
+  align-items: center;
+}
+.reference-detail {
+  color: var(--muted);
+  font:
+    10px -apple-system,
+    sans-serif;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.composer-reference .icon-button {
+  width: 20px;
+  height: 20px;
+  margin-left: auto;
+}
+.composer-hint {
+  display: block;
+  text-align: center;
+  font-size: 10px;
+  color: var(--muted);
+  margin-top: 11px;
+}
+
+.chat-dock {
+  position: fixed;
+  left: 24px;
+  bottom: 22px;
+  z-index: 35;
+}
+.chat-launcher {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  border: 1px solid #e7e7e7;
+  border-radius: 24px;
+  padding: 11px 16px;
+  font-size: 12px;
+  background: #fffffff2;
+  backdrop-filter: blur(18px);
+  box-shadow: 0 3px 16px #00000007;
+  transition:
+    background 180ms,
+    transform 180ms;
+}
+.chat-launcher:hover {
+  background: #f1f1f1;
+  transform: translateY(-1px);
+}
+.chat-dock.open .chat-launcher {
+  background: #ededed;
+}
+.chat-popover {
+  position: fixed;
+  max-height: calc(100svh - 24px);
+  overflow: auto;
+  width: 360px;
+  max-width: calc(100vw - 32px);
+  margin-bottom: 12px;
+  background: #fffffff7;
+  border: 1px solid #e4e4e4;
+  border-radius: 18px;
+  box-shadow:
+    0 16px 65px #00000018,
+    0 2px 8px #00000008;
+  animation: arrive 180ms var(--motion);
+  backdrop-filter: blur(24px);
+}
+.chat-popover[hidden] {
+  display: none;
+}
+.chat-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12px;
+  color: #777;
+  padding: 10px 12px 0 18px;
+}
+.chat-popover .feedback-dock {
+  padding: 0 8px 12px;
+}
+.chat-popover .feedback-composer {
+  border: 0;
+  box-shadow: none;
+  background: transparent;
+  padding-top: 10px;
+}
+.chat-popover textarea {
+  min-height: 80px;
+  font-size: 13px;
+}
+.chat-popover .composer-hint {
+  font-size: 9px;
+  line-height: 1.5;
+  margin: 0 8px;
+}
+.reference-icon img {
+  width: 45px;
+  height: 28px;
+  border-radius: 4px;
+  object-fit: cover;
+}
+.composer-reference {
+  cursor: pointer;
+}
+.chat-popover .reference-detail {
+  max-width: 100px;
+}
+@media (max-width: 600px) {
+  .chat-dock {
+    left: 16px;
+    bottom: 16px;
+  }
+  .chat-popover {
+    position: fixed;
+    max-height: calc(100svh - 24px);
+    overflow: auto;
+    width: calc(100vw - 32px);
+  }
+  .chat-launcher {
+    padding: 10px 14px;
+  }
+}

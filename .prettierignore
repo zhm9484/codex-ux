@@ -1,0 +1,9 @@
+node_modules/
+dist/
+coverage/
+pnpm-lock.yaml
+.codex-ux/
+artifacts/
+playwright-report/
+test-results/
+LICENSE
