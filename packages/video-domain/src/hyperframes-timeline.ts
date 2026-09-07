@@ -1,7 +1,7 @@
-import { attribute, htmlElements, nativeTextTargets } from './native-html.ts';
+import { attribute, htmlElements, htmlTextTargets } from './hyperframes-html.ts';
 import type { VideoDocument } from './schema.ts';
 
-export interface NativeTimelineItem {
+export interface HyperframesTimelineItem {
   id: string;
   path: string;
   index: number;
@@ -11,22 +11,22 @@ export interface NativeTimelineItem {
   offset: number;
   textIndex?: number;
 }
-const timelineCache = new WeakMap<VideoDocument, NativeTimelineItem[]>();
-export function nativeTimelineItems(doc: VideoDocument): NativeTimelineItem[] {
+const timelineCache = new WeakMap<VideoDocument, HyperframesTimelineItem[]>();
+export function hyperframesTimelineItems(doc: VideoDocument): HyperframesTimelineItem[] {
   const cached = timelineCache.get(doc);
   if (cached) return cached;
-  const items = readNativeTimeline(doc);
+  const items = readHyperframesTimeline(doc);
   timelineCache.set(doc, items);
   return items;
 }
-function readNativeTimeline(doc: VideoDocument): NativeTimelineItem[] {
-  if (!doc.native) return [];
-  const offsets = new Map<string, number>([['index.html', 0]]);
+function readHyperframesTimeline(doc: VideoDocument): HyperframesTimelineItem[] {
+  if (doc.source.kind !== 'hyperframes') return [];
+  const offsets = new Map<string, number>([[doc.source.entry, 0]]);
   const duplicated = new Set<string>();
   for (let depth = 0; depth < 12; depth++) {
     let added = false;
     for (const [path, offset] of [...offsets]) {
-      for (const element of htmlElements(doc.native.files[path]?.text ?? '')) {
+      for (const element of htmlElements(doc.files[path]?.text ?? '')) {
         const src = attribute(element, 'data-composition-src');
         if (!src || /^(?:[a-z]+:|\/)/i.test(src)) continue;
         const target = new URL(src, `https://project.local/${path}`).pathname.slice(1);
@@ -42,7 +42,7 @@ function readNativeTimeline(doc: VideoDocument): NativeTimelineItem[] {
   // Reused sub-compositions do not have a single editable global time.
   const mounts = new Map<string, number>();
   for (const path of offsets.keys())
-    for (const element of htmlElements(doc.native.files[path]?.text ?? '')) {
+    for (const element of htmlElements(doc.files[path]?.text ?? '')) {
       const src = attribute(element, 'data-composition-src');
       if (!src || /^(?:[a-z]+:|\/)/i.test(src)) continue;
       const target = new URL(src, `https://project.local/${path}`).pathname.slice(1);
@@ -51,8 +51,8 @@ function readNativeTimeline(doc: VideoDocument): NativeTimelineItem[] {
     }
   return [...offsets].flatMap(([path, offset]) => {
     if (duplicated.has(path)) return [];
-    const html = doc.native!.files[path]?.text ?? '';
-    const targets = nativeTextTargets(html);
+    const html = doc.files[path]?.text ?? '';
+    const targets = htmlTextTargets(html);
     return htmlElements(html).flatMap((element, index) => {
       if (
         attribute(element, 'data-composition-id') &&
@@ -81,7 +81,7 @@ function readNativeTimeline(doc: VideoDocument): NativeTimelineItem[] {
       const target = text.length === 1 ? text[0] : undefined;
       return [
         {
-          id: `native:${path}:${attribute(element, 'id') ?? index}`,
+          id: `hyperframes:${path}:${attribute(element, 'id') ?? index}`,
           path,
           index,
           name:
@@ -98,13 +98,13 @@ function readNativeTimeline(doc: VideoDocument): NativeTimelineItem[] {
     });
   });
 }
-export function updateNativeTiming(
+export function updateHyperframesTiming(
   doc: VideoDocument,
-  item: NativeTimelineItem,
+  item: HyperframesTimelineItem,
   start: number,
   duration: number,
 ) {
-  const file = doc.native!.files[item.path]!;
+  const file = doc.files[item.path]!;
   const element = htmlElements(file.text!)[item.index];
   const location = element?.sourceCodeLocation;
   if (!location?.attrs) throw new Error('This timing no longer has an explicit source target.');
@@ -127,16 +127,16 @@ export function updateNativeTiming(
   for (const edit of ranges) text = text.slice(0, edit.start) + edit.text + text.slice(edit.end);
   return {
     ...doc,
-    native: { ...doc.native!, files: { ...doc.native!.files, [item.path]: { ...file, text } } },
+    files: { ...doc.files, [item.path]: { ...file, text } },
   };
 }
-export function removeNativeElement(doc: VideoDocument, path: string, index: number) {
-  const file = doc.native!.files[path]!;
+export function removeHyperframesElement(doc: VideoDocument, path: string, index: number) {
+  const file = doc.files[path]!;
   const location = htmlElements(file.text!)[index]?.sourceCodeLocation;
   if (!location) throw new Error('This element no longer has a reliable source location.');
   const text = file.text!.slice(0, location.startOffset) + file.text!.slice(location.endOffset);
   return {
     ...doc,
-    native: { ...doc.native!, files: { ...doc.native!.files, [path]: { ...file, text } } },
+    files: { ...doc.files, [path]: { ...file, text } },
   };
 }

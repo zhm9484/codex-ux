@@ -1,20 +1,20 @@
 import {
-  clipSchema,
-  nativeTimelineItems,
-  nativeTextTargets,
-  replaceNativeText,
-  type Clip,
+  textElementSchema,
+  hyperframesTimelineItems,
+  htmlTextTargets,
+  replaceHtmlText,
+  type TextElement,
   type VideoDocument,
 } from '@codex-ux/video-domain';
 import type { CanvasText, TextBinding } from './text-model';
 
-export function nativeBindings(frame: Document, doc: VideoDocument) {
+export function hyperframesBindings(frame: Document, doc: VideoDocument) {
   const bindings = new Map<string, TextBinding>();
-  const timings = nativeTimelineItems(doc);
-  const sources = Object.entries(doc.native!.files).flatMap(([path, file]) =>
-    file.text === undefined
+  const timings = hyperframesTimelineItems(doc);
+  const sources = Object.entries(doc.files).flatMap(([path, file]) =>
+    file.text === undefined || !/\.html?$/i.test(path)
       ? []
-      : nativeTextTargets(file.text).map((target) => ({ path, original: file.text!, target })),
+      : htmlTextTargets(file.text).map((target) => ({ path, original: file.text!, target })),
   );
   const leaves = Array.from(frame.querySelectorAll<HTMLElement>('body *')).filter(
     (element) =>
@@ -38,32 +38,28 @@ export function nativeBindings(frame: Document, doc: VideoDocument) {
     if (matches.length !== 1 || sourceMatches.length !== 1) continue;
     const element = matches[0]!;
     const timing = timings.find((item) => item.path === path && item.textIndex === target.index);
-    const id = timing?.id ?? `native:${path}:${target.id ?? target.index}`;
+    const id = timing?.id ?? `hyperframes:${path}:${target.id ?? target.index}`;
     element.dataset.uxText = id;
     element.style.pointerEvents = 'auto';
-    const clip = clipSchema.parse({
-      id: 'native-text',
+    const clip = textElementSchema.parse({
+      id,
       name: target.text.trim().slice(0, 40),
-      kind: 'text',
-      trackId: doc.tracks[0]!.id,
-      start: timing?.start ?? 0,
-      duration: timing?.duration ?? doc.native!.duration,
     });
     clip.id = id;
     bindings.set(id, {
       element,
       clip,
-      source: { id: path, index: target.index, original, clipId: 'native-text', native: true },
+      source: { id: path, index: target.index, original },
     });
   }
   return bindings;
 }
-export function editNativeText(doc: VideoDocument, selection: CanvasText, next: Clip) {
-  const source = selection.source!;
-  const file = doc.native!.files[source.id];
+export function editHyperframesText(doc: VideoDocument, selection: CanvasText, next: TextElement) {
+  const source = selection.source;
+  const file = doc.files[source.id];
   if (file?.text !== source.original)
     throw new Error('This source changed. Select the text again before editing.');
-  const target = nativeTextTargets(file.text).find((item) => item.index === source.index);
+  const target = htmlTextTargets(file.text).find((item) => item.index === source.index);
   if (!target) throw new Error('This text no longer has a reliable source location.');
   const element = document.createElement('span');
   element.style.cssText = target.style;
@@ -74,9 +70,9 @@ export function editNativeText(doc: VideoDocument, selection: CanvasText, next: 
     element.style.display = 'inline-block';
   if (next.x !== source.x || next.y !== source.y)
     element.style.translate = `${source.translateX + ((next.x - source.x) * doc.width) / 100}px ${source.translateY + ((next.y - source.y) * doc.height) / 100}px`;
-  const text = replaceNativeText(file.text, source.index, next.text, element.style.cssText);
+  const text = replaceHtmlText(file.text, source.index, next.text, element.style.cssText);
   return {
     ...doc,
-    native: { ...doc.native!, files: { ...doc.native!.files, [source.id]: { ...file, text } } },
+    files: { ...doc.files, [source.id]: { ...file, text } },
   };
 }

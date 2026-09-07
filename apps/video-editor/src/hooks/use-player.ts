@@ -1,15 +1,12 @@
-import { sameEditableDocument, type LiveTextEdit } from '../canvas/live-edit';
-import { preparePlayer } from '../canvas/prepare-player';
 import { useEffect, useEffectEvent, useImperativeHandle, useRef, useState } from 'react';
-import { HyperframesPlayer } from '@hyperframes/player';
-import { durationOf, type Clip, type VideoDocument } from '@codex-ux/video-domain';
+import { clampTime, type TextElement, type VideoDocument } from '@codex-ux/video-domain';
+import type { PreviewController, PreviewWindow } from '@codex-ux/video-runtime';
 import type { Region } from '@codex-ux/protocol';
 import { bindAreaGesture } from '../canvas/area-gesture';
 import { createTextEditor } from '../canvas/text-editor';
 import type { CanvasText } from '../canvas/text-model';
 import { bindPlayerInteractions } from '../editor/player-interactions';
 import type { PlayerControl } from '../editor/types';
-
 export interface PlayerOptions {
   workspaceId: string;
   revisionId: string;
@@ -18,11 +15,10 @@ export interface PlayerOptions {
   selectedId: string | null;
   onTime: (time: number) => void;
   onPlaying: (playing: boolean) => void;
-  onSelect: (id: string) => void;
   onDisplayed?: (revisionId: string) => void;
   onTextRestore?: (selection: CanvasText) => void;
   onTextSelect?: (selection: CanvasText) => void;
-  onTextEdit?: (selection: CanvasText, next: Clip) => Promise<unknown>;
+  onTextEdit?: (selection: CanvasText, next: TextElement) => Promise<unknown>;
   onClear?: () => void;
   onArea?: (region: Region | null, active: boolean, point?: { x: number; y: number }) => void;
   onContext?: (position: { x: number; y: number }) => void;
@@ -30,226 +26,197 @@ export interface PlayerOptions {
   compare?: boolean;
   muted?: boolean;
 }
-
 export function usePlayer(p: PlayerOptions) {
-  const liveEdit = useRef<LiveTextEdit | null>(null);
   const host = useRef<HTMLDivElement>(null);
-  const player = useRef<HyperframesPlayer | null>(null);
+  const player = useRef<{
+    frame: HTMLIFrameElement;
+    controller: PreviewController;
+    release: () => void;
+  } | null>(null);
   const textEditor = useRef<ReturnType<typeof createTextEditor> | null>(null);
-  const [readyRevision, setReadyRevision] = useState('');
+  const [presentation, setPresentation] = useState<{ id: string; document: VideoDocument } | null>(
+    null,
+  );
+  const readyRevision = presentation?.id ?? '';
   const [failure, setFailure] = useState('');
+  const report = (error: unknown) =>
+    setFailure(
+      `Preview update failed: ${error instanceof Error ? error.message : String(error)}. The previous frame is kept.`,
+    );
   useImperativeHandle(
     p.control,
     () => ({
-      seek: (time) => player.current?.seek(time),
-      play: () => player.current?.play(),
-      pause: () => player.current?.pause(),
-      stageTextEdit: (edit) => {
-        liveEdit.current = edit;
+      seek: (time) => {
+        void player.current?.controller.seek(time).catch(report);
       },
+      play: () => player.current?.controller.play(),
+      pause: () => player.current?.controller.pause(),
+      setMuted: (value) => player.current?.controller.setMuted(value),
       selectText: (id) => textEditor.current?.select(id),
       editText: (id) => textEditor.current?.edit(id),
       isTextEditing: () =>
-        !!player.current?.iframeElement.contentDocument?.querySelector(
-          '[contenteditable="plaintext-only"]',
-        ),
+        !!player.current?.controller
+          .editingDocument?.()
+          ?.querySelector('[contenteditable="plaintext-only"]'),
       textBounds: (id) => textEditor.current?.describe(id)?.box,
       patchText: (selection, next) => textEditor.current?.patch(selection, next),
-      setMuted: (muted) => {
-        if (player.current) player.current.muted = muted;
-      },
-      patch: (clip) => {
-        const element = player.current?.iframeElement.contentDocument?.getElementById(clip.id);
-        if (!element || clip.kind !== 'text') return;
-        const span = element.querySelector('span');
-        if (span) span.textContent = clip.text;
-        Object.assign(element.style, {
-          fontSize: `${clip.fontSize}px`,
-          fontFamily: clip.fontFamily,
-          color: clip.color,
-          textAlign: clip.align,
-          left: `${clip.x}%`,
-          top: `${clip.y}%`,
-          width: `${clip.width}%`,
-        });
-      },
     }),
     [],
   );
-  const displayed = useEffectEvent((revisionId: string) => p.onDisplayed?.(revisionId));
-  const restoreText = useEffectEvent((selection: CanvasText) => p.onTextRestore?.(selection));
-  const selectText = useEffectEvent((selection: CanvasText) => p.onTextSelect?.(selection));
-  const editText = useEffectEvent(
-    (selection: CanvasText, next: Clip) =>
-      p.onTextEdit?.(selection, next) ?? Promise.resolve(false),
-  );
-  const setupText = useEffectEvent((instance: HyperframesPlayer) => {
-    const editor = createTextEditor(
-      instance.iframeElement.contentDocument!,
-      p.document,
-      selectText,
-      editText,
-      () => instance.pause(),
-      restoreText,
-    );
-    if (p.selectedId) editor.restore(p.selectedId);
-    return editor;
+  const current = useEffectEvent(() => p);
+  const tick = useEffectEvent((controller: PreviewController) => {
+    const state = controller.state();
+    p.onTime(state.time);
+    p.onPlaying(state.playing);
   });
-  const area = useEffectEvent(
-    (region: Region | null, active: boolean, point?: { x: number; y: number }) => {
-      const rect = player.current?.getBoundingClientRect();
-      p.onArea?.(
-        region,
-        active,
-        point && rect
-          ? {
-              x: rect.left + (point.x * rect.width) / p.document.width,
-              y: rect.top + (point.y * rect.width) / p.document.width,
-            }
-          : undefined,
-      );
-    },
-  );
-  const clear = useEffectEvent(() => p.onClear?.());
-  const context = useEffectEvent((position: { x: number; y: number }) => p.onContext?.(position));
-  const clipIds = useEffectEvent(() => p.document.clips.map((clip) => clip.id));
-  const select = useEffectEvent((id: string) => {
-    if (p.document.clips.some((clip) => clip.id === id)) p.onSelect(id);
-  });
-  const restore = useEffectEvent((instance: HyperframesPlayer) => {
-    instance.muted = p.compare || (p.muted ?? false);
-    instance.seek(Math.max(0, Math.min(p.time, durationOf(p.document) - 1 / p.document.fps)));
-    p.onPlaying(false);
-  });
-  const tick = useEffectEvent((instance: HyperframesPlayer) => p.onTime(instance.currentTime));
-  const playing = useEffectEvent((instance: HyperframesPlayer) => p.onPlaying(!instance.paused));
-  const source = useEffectEvent(() => p.document);
   useEffect(() => {
-    const doc = source();
-    const edit = liveEdit.current;
-    const reuse = !!(player.current && edit && sameEditableDocument(edit.document, doc));
-    liveEdit.current = null;
-    const instance = preparePlayer(
-      reuse ? player.current : null,
-      doc,
-      p.workspaceId,
-      p.revisionId,
-      p.compare,
-      edit,
-    );
+    const frame = document.createElement('iframe');
+    frame.title = p.compare ? 'Earlier video preview' : 'Video preview';
+    frame.dataset.revision = p.revisionId;
+    Object.assign(frame.style, {
+      position: 'absolute',
+      inset: '0',
+      width: '100%',
+      height: '100%',
+      border: '0',
+      opacity: '0',
+      pointerEvents: 'none',
+    });
+    frame.src = `/media/video-editor/preview/${p.workspaceId}/${p.revisionId}/player.html`;
+    host.current?.appendChild(frame);
     let stopped = false;
-    let swapping = false;
-    let failed = false;
-    let swapFrame = 0;
-    let unbind = () => {};
-    let unbindArea = () => {};
-    const ready = () => {
-      if (stopped || swapping || failed) return;
-      swapping = true;
-      restore(instance);
-      // The runtime may apply seek through postMessage. Keep the old frame for two paints.
-      swapFrame = requestAnimationFrame(() => {
-        swapFrame = requestAnimationFrame(reveal);
-      });
-    };
-    const reveal = () => {
-      if (stopped || failed) return;
+    const cleanups: (() => void)[] = [];
+    const wait = () => new Promise<void>((resolve) => setTimeout(resolve, 30));
+    const load = async () => {
+      const deadline = Date.now() + 45000;
+      let controller: PreviewController | undefined;
+      while (!stopped) {
+        const win: PreviewWindow | null = frame.contentWindow;
+        if (win?.__videoError) throw new Error(win.__videoError);
+        controller = win?.__videoPreview;
+        if (controller) break;
+        if (Date.now() > deadline) throw new Error('The preview did not become ready.');
+        await wait();
+      }
+      if (stopped || !controller) return;
+      await controller.ready;
+      while (!stopped && frame.contentDocument?.documentElement.dataset.ready !== 'true') {
+        const error = controller.state().error;
+        if (error) throw new Error(error);
+        if (Date.now() > deadline) throw new Error('The first frame did not become ready.');
+        await wait();
+      }
+      if (stopped) return;
+      const options = current();
+      controller.setMuted(options.compare || options.muted || false);
+      await controller.seek(clampTime(options.document, options.time));
+      if (stopped) return;
       const previous = player.current;
-      player.current = instance;
-
-      instance.style.opacity = '1';
-      instance.style.pointerEvents = '';
-      if (previous !== instance) previous?.remove();
-      displayed(p.revisionId);
-      setReadyRevision(p.revisionId);
+      previous?.release();
+      if (previous?.frame.isConnected) previous.controller.pause();
+      player.current = {
+        frame,
+        controller,
+        release: () => {
+          for (const cleanup of cleanups) cleanup();
+        },
+      };
+      frame.style.opacity = '1';
+      frame.style.pointerEvents = options.compare ? 'none' : '';
+      previous?.frame.remove();
+      setPresentation({ id: options.revisionId, document: options.document });
       setFailure('');
-      if (!p.compare) {
-        textEditor.current = setupText(instance);
-        unbindArea = bindAreaGesture(
-          instance.iframeElement.contentDocument!,
-          doc.width,
-          doc.height,
-          () => {
-            instance.pause();
-            clear();
-          },
-          area,
+      options.onDisplayed?.(options.revisionId);
+      cleanups.push(
+        controller.subscribe((state) => {
+          if (state.error) report(state.error);
+          if (player.current?.controller === controller) tick(controller);
+        }),
+      );
+      if (!options.compare) {
+        const editing = controller.editingDocument?.();
+        const surface = editing ?? frame.contentDocument!;
+        const width = () => (editing ? options.document.width : frame.clientWidth);
+        const height = () => (editing ? options.document.height : frame.clientHeight);
+        if (editing) {
+          textEditor.current = createTextEditor(
+            editing,
+            options.document,
+            (selection) => current().onTextSelect?.(selection),
+            (selection, next) => current().onTextEdit?.(selection, next) ?? Promise.resolve(false),
+            () => controller.pause(),
+            (selection) => current().onTextRestore?.(selection),
+          );
+          const editor = textEditor.current;
+          cleanups.push(() => {
+            editor.destroy();
+            if (textEditor.current === editor) textEditor.current = null;
+          });
+          if (options.selectedId) editor.restore(options.selectedId);
+        }
+        cleanups.push(
+          bindAreaGesture(
+            surface,
+            width,
+            height,
+            () => {
+              controller.pause();
+              current().onClear?.();
+            },
+            (region, active, point) => {
+              const rect = frame.getBoundingClientRect();
+              current().onArea?.(
+                region,
+                active,
+                point
+                  ? {
+                      x: rect.left + (point.x * rect.width) / width(),
+                      y: rect.top + (point.y * rect.height) / height(),
+                    }
+                  : undefined,
+              );
+            },
+          ),
         );
-        unbind = bindPlayerInteractions(
-          instance,
-          clipIds(),
-          select,
-          (id) => textEditor.current?.edit(id),
-          clear,
-          context,
+        cleanups.push(
+          bindPlayerInteractions(
+            surface,
+            frame,
+            width,
+            () => controller.pause(),
+            (id) => textEditor.current?.edit(id),
+            () => current().onClear?.(),
+            (point) => current().onContext?.(point),
+          ),
         );
       }
     };
-    const time = () => {
-      if (player.current === instance) tick(instance);
-    };
-    const playback = () => {
-      if (player.current === instance) playing(instance);
-    };
-    const error = () => {
-      failed = true;
-      setFailure('Preview unavailable. The previous frame is kept while you check this version.');
-    };
-    const report = (event: MessageEvent<unknown>) => {
-      const data = event.data;
-      if (
-        !data ||
-        typeof data !== 'object' ||
-        !('source' in data) ||
-        !('type' in data) ||
-        !('message' in data)
-      )
-        return;
-      if (
-        event.source !== instance.iframeElement.contentWindow ||
-        data.source !== 'video-editor' ||
-        data.type !== 'preview-error'
-      )
-        return;
-      failed = true;
-      setFailure(
-        `Preview update failed: ${String(data.message).slice(0, 300)}. The previous frame is kept.`,
-      );
-    };
-    window.addEventListener('message', report);
-    instance.addEventListener('ready', ready);
-    instance.addEventListener('timeupdate', time);
-    instance.addEventListener('play', playback);
-    instance.addEventListener('pause', playback);
-    instance.addEventListener('error', error);
-    if (reuse) ready();
-    else host.current?.appendChild(instance);
+    void load().catch((error) => {
+      if (!stopped) report(error);
+    });
     return () => {
       stopped = true;
-      cancelAnimationFrame(swapFrame);
-      window.removeEventListener('message', report);
-      instance.pause();
-      instance.removeEventListener('ready', ready);
-      instance.removeEventListener('timeupdate', time);
-      instance.removeEventListener('play', playback);
-      instance.removeEventListener('pause', playback);
-      instance.removeEventListener('error', error);
-      unbind();
-      unbindArea();
-      textEditor.current?.destroy();
-      textEditor.current = null;
-      instance.style.pointerEvents = 'none';
-      if (player.current !== instance) instance.remove();
+      if (player.current?.frame === frame) {
+        if (frame.isConnected) player.current.controller.pause();
+      } else {
+        for (const cleanup of cleanups) cleanup();
+        frame.remove();
+      }
     };
-  }, [p.workspaceId, p.revisionId, p.document.width, p.document.height, p.compare]);
+  }, [p.workspaceId, p.revisionId, p.compare]);
   useEffect(
     () => () => {
-      player.current?.remove();
+      player.current?.release();
+      player.current?.frame.remove();
       player.current = null;
     },
     [],
   );
-  return { host, ready: !!readyRevision, refreshing: readyRevision !== p.revisionId, failure };
+  return {
+    host,
+    document: presentation?.document ?? p.document,
+    ready: !!readyRevision,
+    refreshing: readyRevision !== p.revisionId,
+    failure,
+  };
 }
-
-void HyperframesPlayer;

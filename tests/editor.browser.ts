@@ -1,10 +1,25 @@
 /// <reference lib="dom" />
 import { test, expect, type APIRequestContext, type Locator, type Page } from '@playwright/test';
 import { createVideo } from './browser-helpers.ts';
+import { htmlTextTargets, hyperframesTimelineItems } from '../packages/video-domain/src/index.ts';
 import type { VideoProject } from '../packages/video-domain/src/schema.ts';
 
+function titleSource(project: VideoProject) {
+  return htmlTextTargets(project.revision.document.files['index.html']!.text!).find(
+    (target) => target.id === 'title-1',
+  );
+}
+function fontSize(project: VideoProject) {
+  return Number(titleSource(project)?.style.match(/font-size: ([\d.]+)px/)?.[1] ?? 100);
+}
+function titleTiming(project: VideoProject) {
+  return hyperframesTimelineItems(project.revision.document).find((item) =>
+    item.id.endsWith(':title-1'),
+  );
+}
+
 async function createWorkspace(request: APIRequestContext) {
-  return createVideo(request, 'Browser verification', 'structured');
+  return createVideo(request, 'Browser verification');
 }
 async function readWorkspace(request: APIRequestContext, id: string) {
   return (await (
@@ -14,11 +29,11 @@ async function readWorkspace(request: APIRequestContext, id: string) {
 
 async function readyPreview(page: Page, request: APIRequestContext, id: string) {
   const revision = (await readWorkspace(request, id)).revisionId;
-  await expect(page.locator(`hyperframes-player[data-revision="${revision}"]`).last()).toHaveCSS(
+  await expect(page.locator(`iframe[data-revision][data-revision="${revision}"]`).last()).toHaveCSS(
     'opacity',
     '1',
   );
-  await expect(page.locator('hyperframes-player')).toHaveCount(1);
+  await expect(page.locator('iframe[data-revision]')).toHaveCount(1);
 }
 
 test('canvas titles edit, drag, resize and undo without timeline editing controls', async ({
@@ -31,33 +46,23 @@ test('canvas titles edit, drag, resize and undo without timeline editing control
   page.on('pageerror', (error) => errors.push(error.message));
   await page.route('https://**', (route) => route.abort());
   await page.goto(`/apps/video-editor/w/${workspace.workspaceId}`);
-  const frame = page.frameLocator('iframe');
-  const title = () => frame.locator('#title-1 span');
+  await readyPreview(page, request, workspace.workspaceId);
+  const frame = page.frameLocator('iframe[data-revision]').frameLocator('iframe');
+  const title = () => frame.locator('#title-1');
   await expect(page.getByRole('textbox', { name: 'Feedback note' })).toBeHidden();
   await expect(page.getByRole('button', { name: 'Split at playhead' })).toHaveCount(0);
-  await page.locator('hyperframes-player').evaluate((element) => {
-    (element as HTMLElement).dataset.testIdentity = 'original-player';
-  });
   await title().dblclick();
   await frame.getByRole('textbox', { name: 'Canvas text' }).fill('Made together.');
   await page.locator('.app-header').click({ position: { x: 600, y: 30 } });
-  await expect
-    .poll(async () => (await read()).revision.document.clips.find((c) => c.id === 'title-1')?.text)
-    .toBe('Made together.');
+  await expect.poll(async () => titleSource(await read())?.text).toBe('Made together.');
   await readyPreview(page, request, workspace.workspaceId);
-  await expect(page.locator('hyperframes-player')).toHaveAttribute(
-    'data-test-identity',
-    'original-player',
-  );
   await title().click();
   let box = (await title().boundingBox())!;
   await page.mouse.move(box.x + 20, box.y + 15);
   await page.mouse.down();
   await page.mouse.move(box.x + 60, box.y + 45, { steps: 10 });
   await page.mouse.up();
-  await expect
-    .poll(async () => (await read()).revision.document.clips.find((c) => c.id === 'title-1')!.x)
-    .toBeGreaterThan(6);
+  await expect.poll(async () => titleSource(await read())!.style).toMatch(/translate: (?!0px 0px)/);
   await readyPreview(page, request, workspace.workspaceId);
   await page.getByRole('button', { name: 'Resize text se' }).click({ trial: true });
   box = (await page.getByRole('button', { name: 'Resize text se' }).boundingBox())!;
@@ -65,18 +70,10 @@ test('canvas titles edit, drag, resize and undo without timeline editing control
   await page.mouse.down();
   await page.mouse.move(box.x + 89, box.y + 9, { steps: 10 });
   await page.mouse.up();
-  await expect
-    .poll(
-      async () => (await read()).revision.document.clips.find((c) => c.id === 'title-1')!.fontSize,
-    )
-    .toBeGreaterThan(100);
+  await expect.poll(async () => fontSize(await read())).toBeGreaterThan(100);
   const enlargedWidth = (await page.locator('.text-selection').boundingBox())!.width;
   await page.getByRole('button', { name: 'Undo (⌘Z)', exact: true }).click();
-  await expect
-    .poll(
-      async () => (await read()).revision.document.clips.find((c) => c.id === 'title-1')!.fontSize,
-    )
-    .toBe(100);
+  await expect.poll(async () => fontSize(await read())).toBe(100);
   await readyPreview(page, request, workspace.workspaceId);
   expect((await page.locator('.text-selection').boundingBox())!.width).toBeLessThan(enlargedWidth);
   await page.locator('.app-header').click({ position: { x: 600, y: 30 } });
@@ -91,20 +88,21 @@ test('HTML scene captions are editable, movable, font-selectable and durable', a
   const workspace = await createWorkspace(request);
   const read = () => readWorkspace(request, workspace.workspaceId);
   await page.goto(`/apps/video-editor/w/${workspace.workspaceId}`);
-  const frame = page.frameLocator('iframe');
+  await readyPreview(page, request, workspace.workspaceId);
+  const frame = page.frameLocator('iframe[data-revision]').frameLocator('iframe');
   const edition = () => frame.locator('.art-opening .edition');
   await edition().dblclick();
   await frame.getByRole('textbox', { name: 'Canvas text' }).fill('FIELDNOTES / A NEW EDITION');
   await page.locator('.app-header').click({ position: { x: 600, y: 30 } });
   await expect
-    .poll(async () => (await read()).revision.document.sources.opening)
+    .poll(async () => (await read()).revision.document.files['scenes/opening.html']!.text)
     .toContain('A NEW EDITION');
   await readyPreview(page, request, workspace.workspaceId);
   await edition().click();
   await page.getByRole('button', { name: 'Typeface' }).click();
   await page.getByRole('option', { name: 'Avenir Next', exact: true }).click();
   await expect
-    .poll(async () => (await read()).revision.document.sources.opening)
+    .poll(async () => (await read()).revision.document.files['scenes/opening.html']!.text)
     .toContain('Avenir Next');
   await readyPreview(page, request, workspace.workspaceId);
   const box = (await edition().boundingBox())!;
@@ -113,9 +111,10 @@ test('HTML scene captions are editable, movable, font-selectable and durable', a
   await page.mouse.move(box.x + 60, box.y + 40, { steps: 10 });
   await page.mouse.up();
   await expect
-    .poll(async () => (await read()).revision.document.sources.opening)
+    .poll(async () => (await read()).revision.document.files['scenes/opening.html']!.text)
     .toMatch(/translate: (?!0px 0px)/);
   await page.reload();
+  await readyPreview(page, request, workspace.workspaceId);
   await expect(edition()).toHaveText('FIELDNOTES / A NEW EDITION');
   await expect(edition()).toHaveCSS('font-family', '"Avenir Next"');
   const footer = frame.locator('.art-opening .folio span').first();
@@ -131,6 +130,7 @@ test('range and region comments open chat on demand and keep their original refe
 }) => {
   const workspace = await createWorkspace(request);
   await page.goto(`/apps/video-editor/w/${workspace.workspaceId}`);
+  await readyPreview(page, request, workspace.workspaceId);
   await expect(page.locator('.scene-strip .clip-thumbnail')).toHaveCount(3, { timeout: 20000 });
   const strip = (await page.locator('.scene-strip').boundingBox())!;
   await page.mouse.move(strip.x + strip.width / 6, strip.y + 20);
@@ -178,6 +178,7 @@ test('playhead paints between runtime samples and replacement previews retain th
 }) => {
   const workspace = await createWorkspace(request);
   await page.goto(`/apps/video-editor/w/${workspace.workspaceId}`);
+  await readyPreview(page, request, workspace.workspaceId);
   await expect(page.locator('.preview-loading')).toHaveCount(0);
   await page.getByRole('button', { name: 'Play', exact: true }).click();
   const positions = await page.evaluate(async () => {
@@ -190,8 +191,8 @@ test('playhead paints between runtime samples and replacement previews retain th
   });
   expect(new Set(positions).size).toBeGreaterThan(18);
   await page.getByRole('button', { name: 'Pause', exact: true }).click();
-  const frame = page.frameLocator('iframe');
-  await frame.locator('#title-1 span').dblclick();
+  const frame = page.frameLocator('iframe[data-revision]').frameLocator('iframe');
+  await frame.locator('#title-1').dblclick();
   await frame.getByRole('textbox', { name: 'Canvas text' }).fill('Discard this.');
   await frame.getByRole('textbox', { name: 'Canvas text' }).press('Escape');
   expect((await readWorkspace(request, workspace.workspaceId)).revisionId).toBe(
@@ -203,7 +204,7 @@ test('playhead paints between runtime samples and replacement previews retain th
   });
   let pending = false;
   await page.route(
-    `**/media/video-editor/preview/${workspace.workspaceId}/*/index.html`,
+    `**/media/video-editor/preview/${workspace.workspaceId}/*/player.html`,
     async (route) => {
       pending = true;
       await gate;
@@ -218,18 +219,25 @@ test('playhead paints between runtime samples and replacement previews retain th
       label: 'External source update',
       document: {
         ...before.revision.document,
-        clips: before.revision.document.clips.map((clip) =>
-          clip.id === 'title-1' ? { ...clip, text: 'A clearer thought.' } : clip,
-        ),
+        files: {
+          ...before.revision.document.files,
+          'index.html': {
+            ...before.revision.document.files['index.html']!,
+            text: before.revision.document.files['index.html']!.text!.replace(
+              'Make room for\na good idea.',
+              'A clearer thought.',
+            ),
+          },
+        },
       },
     },
   });
   await expect.poll(() => pending).toBe(true);
-  await expect(page.locator('hyperframes-player')).toHaveCount(2);
-  await expect(page.locator('hyperframes-player').first()).toHaveCSS('opacity', '1');
+  await expect(page.locator('iframe[data-revision]')).toHaveCount(2);
+  await expect(page.locator('iframe[data-revision]').first()).toHaveCSS('opacity', '1');
   release();
   await readyPreview(page, request, workspace.workspaceId);
-  await expect(frame.locator('#title-1 span')).toHaveText('A clearer thought.');
+  await expect(frame.locator('#title-1')).toHaveText('A clearer thought.');
 });
 
 test('file drops import once, drafts survive closing chat and history compares saved edits', async ({
@@ -238,6 +246,7 @@ test('file drops import once, drafts survive closing chat and history compares s
 }) => {
   const workspace = await createWorkspace(request);
   await page.goto(`/apps/video-editor/w/${workspace.workspaceId}`);
+  await readyPreview(page, request, workspace.workspaceId);
   await expect(page.locator('.preview-loading')).toHaveCount(0);
   await page.getByRole('button', { name: 'Chat', exact: true }).click();
   const note = page.getByRole('textbox', { name: 'Feedback note' });
@@ -262,7 +271,10 @@ test('file drops import once, drafts survive closing chat and history compares s
         );
     }, name);
   }
-  await drop(page.frameLocator('iframe').locator('body'), 'Canvas.png');
+  await drop(
+    page.frameLocator('iframe[data-revision]').frameLocator('iframe').locator('body'),
+    'Canvas.png',
+  );
   await expect
     .poll(async () =>
       (await readWorkspace(request, workspace.workspaceId)).revision.document.assets.map(
@@ -290,7 +302,8 @@ test('failed scene-text saves restore the canvas and leave history intact', asyn
 }) => {
   const workspace = await createWorkspace(request);
   await page.goto(`/apps/video-editor/w/${workspace.workspaceId}`);
-  const frame = page.frameLocator('iframe');
+  await readyPreview(page, request, workspace.workspaceId);
+  const frame = page.frameLocator('iframe[data-revision]').frameLocator('iframe');
   const edition = frame.locator('.art-opening .edition');
   const original = await edition.innerText();
   await page.route(
@@ -314,16 +327,24 @@ test('focused text timeline retimes, locates, collapses and deletes with undo', 
   const workspace = await createWorkspace(request);
   const read = () => readWorkspace(request, workspace.workspaceId);
   await page.goto(`/apps/video-editor/w/${workspace.workspaceId}`);
-  const title = page.frameLocator('iframe').locator('#title-1 span');
+  await readyPreview(page, request, workspace.workspaceId);
+  const title = page
+    .frameLocator('iframe[data-revision]')
+    .frameLocator('iframe')
+    .locator('#title-1');
   await title.click();
   await expect(page.locator('.element-row')).toHaveCount(1);
   await page.keyboard.press('Escape');
   await expect(page.locator('.element-timeline')).toHaveCount(0);
   await title.dblclick();
-  await page.frameLocator('iframe').getByRole('textbox', { name: 'Canvas text' }).press('Escape');
+  await page
+    .frameLocator('iframe[data-revision]')
+    .frameLocator('iframe')
+    .getByRole('textbox', { name: 'Canvas text' })
+    .press('Escape');
   await expect(page.locator('.element-row')).toHaveCount(1);
   await expect(page.getByRole('button', { name: /^(Expand|Collapse) timeline$/ })).toHaveCount(0);
-  const block = page.getByRole('button', { name: 'Timeline: Opening title' });
+  const block = page.getByRole('button', { name: /^Timeline: Make room/ });
   await expect(block).toHaveAttribute('aria-pressed', 'true');
   await page.screenshot({ path: '.codex-ux/focused-timeline.png', animations: 'disabled' });
   await block.hover();
@@ -332,30 +353,18 @@ test('focused text timeline retimes, locates, collapses and deletes with undo', 
   await page.mouse.down();
   await page.mouse.move(box.x + 70, box.y + 10, { steps: 10 });
   await page.mouse.up();
-  await expect
-    .poll(
-      async () =>
-        (await read()).revision.document.clips.find((clip) => clip.id === 'title-1')!.start,
-    )
-    .toBeGreaterThan(0);
+  await expect.poll(async () => titleTiming(await read())!.start).toBeGreaterThan(0);
   await readyPreview(page, request, workspace.workspaceId);
   const edge = (await block.locator('[data-edge="end"]').boundingBox())!;
-  const duration = (await read()).revision.document.clips.find(
-    (clip) => clip.id === 'title-1',
-  )!.duration;
+  const duration = titleTiming(await read())!.duration;
   await page.mouse.move(edge.x + 4, edge.y + 10);
   await page.mouse.down();
   await page.mouse.move(edge.x + 34, edge.y + 10, { steps: 10 });
   await page.mouse.up();
-  await expect
-    .poll(
-      async () =>
-        (await read()).revision.document.clips.find((clip) => clip.id === 'title-1')!.duration,
-    )
-    .toBeGreaterThan(duration);
+  await expect.poll(async () => titleTiming(await read())!.duration).toBeGreaterThan(duration);
   await readyPreview(page, request, workspace.workspaceId);
   await block.dblclick();
-  const selected = (await read()).revision.document.clips.find((clip) => clip.id === 'title-1')!;
+  const selected = titleTiming(await read())!;
   await expect(page.getByRole('slider', { name: 'Video position' })).toHaveAttribute(
     'aria-valuenow',
     String(selected.start),
@@ -363,14 +372,10 @@ test('focused text timeline retimes, locates, collapses and deletes with undo', 
   await expect(page.locator('.text-selection')).toBeVisible();
   await block.click({ button: 'right' });
   await page.getByRole('menuitem', { name: 'Delete', exact: true }).click();
-  await expect
-    .poll(async () => (await read()).revision.document.clips.some((clip) => clip.id === 'title-1'))
-    .toBe(false);
+  await expect.poll(async () => !!titleSource(await read())).toBe(false);
   await expect(page.locator('.element-timeline')).toHaveCount(0);
   await page.getByRole('button', { name: 'Undo (⌘Z)', exact: true }).click();
-  await expect
-    .poll(async () => (await read()).revision.document.clips.some((clip) => clip.id === 'title-1'))
-    .toBe(true);
+  await expect.poll(async () => !!titleSource(await read())).toBe(true);
 });
 
 test('tool island moves, remembers its position, opens adjacent notes and supports fullscreen', async ({
@@ -379,8 +384,9 @@ test('tool island moves, remembers its position, opens adjacent notes and suppor
 }) => {
   const workspace = await createWorkspace(request);
   await page.goto(`/apps/video-editor/w/${workspace.workspaceId}`);
+  await readyPreview(page, request, workspace.workspaceId);
   await expect(page.locator('.preview-loading')).toHaveCount(0);
-  await expect(page.getByRole('button', { name: 'Assets', exact: true })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Assets', exact: true })).toHaveCount(1);
   await expect(page.getByRole('button', { name: 'HyperFrames project' })).toHaveCount(0);
   await expect(page.locator('.app-header').getByRole('button', { name: 'History' })).toBeVisible();
   const grip = page.getByRole('button', { name: 'Move video tools' });
@@ -401,6 +407,7 @@ test('tool island moves, remembers its position, opens adjacent notes and suppor
   await expect(page.getByRole('button', { name: 'Exit fullscreen', exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Exit fullscreen', exact: true }).click();
   await page.reload();
+  await readyPreview(page, request, workspace.workspaceId);
   await expect(page.locator('.tool-island')).toBeVisible();
   expect((await page.locator('.tool-island').boundingBox())!.x).toBeCloseTo(box.x, 0);
   await page.setViewportSize({ width: 390, height: 844 });
@@ -413,8 +420,9 @@ test('tool island moves, remembers its position, opens adjacent notes and suppor
 test('background revisions wait for unfinished canvas typing', async ({ page, request }) => {
   const workspace = await createWorkspace(request);
   await page.goto(`/apps/video-editor/w/${workspace.workspaceId}`);
-  const frame = page.frameLocator('iframe');
-  await frame.locator('#title-1 span').dblclick();
+  await readyPreview(page, request, workspace.workspaceId);
+  const frame = page.frameLocator('iframe[data-revision]').frameLocator('iframe');
+  await frame.locator('#title-1').dblclick();
   const input = frame.getByRole('textbox', { name: 'Canvas text' });
   await input.fill('Still writing this thought');
   const response = await request.post(
@@ -426,9 +434,16 @@ test('background revisions wait for unfinished canvas typing', async ({ page, re
         label: 'External edit while typing',
         document: {
           ...workspace.revision.document,
-          clips: workspace.revision.document.clips.map((clip) =>
-            clip.id === 'title-1' ? { ...clip, text: 'An external revision.' } : clip,
-          ),
+          files: {
+            ...workspace.revision.document.files,
+            'index.html': {
+              ...workspace.revision.document.files['index.html']!,
+              text: workspace.revision.document.files['index.html']!.text!.replace(
+                'Make room for\na good idea.',
+                'An external revision.',
+              ),
+            },
+          },
         },
       },
     },
@@ -442,8 +457,8 @@ test('background revisions wait for unfinished canvas typing', async ({ page, re
     );
     await expect(input).toHaveText('Still writing this thought');
   }
-  await expect(page.locator('hyperframes-player')).toHaveCount(1);
+  await expect(page.locator('iframe[data-revision]')).toHaveCount(1);
   await input.press('Escape');
   await readyPreview(page, request, workspace.workspaceId);
-  await expect(frame.locator('#title-1 span')).toHaveText('An external revision.');
+  await expect(frame.locator('#title-1')).toHaveText('An external revision.');
 });

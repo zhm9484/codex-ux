@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useEffectEvent, useRef, useState } from 'react';
-import type { Asset, VideoDocument, VideoProject } from '@codex-ux/video-domain';
+import type { Asset, VideoIntent, VideoDocument, VideoProject } from '@codex-ux/video-domain';
 import type { FeedbackAnchor } from '@codex-ux/protocol';
 import { api, post, videoPath } from '../lib/api';
 
@@ -59,6 +59,8 @@ export function useVideoProject(id: string, deferPreview: () => boolean = () => 
     setError('');
     try {
       const next = await task();
+      if (!next.source && current.current?.source)
+        next.source = { directory: current.current.source.directory };
       current.current = next;
       setProject(next);
       return true;
@@ -89,8 +91,8 @@ export function useVideoProject(id: string, deferPreview: () => boolean = () => 
     run(() =>
       post<VideoProject>(`${base}/${direction}`, { baseRevision: current.current?.revisionId }),
     );
-  const addNote = (text: string, anchor: FeedbackAnchor) =>
-    run(() => post<VideoProject>(`${base}/notes`, { text, anchor }));
+  const addNote = (text: string, anchor: FeedbackAnchor, intent: VideoIntent) =>
+    run(() => post<VideoProject>(`${base}/notes`, { text, anchor, intent }));
   const removeNote = (noteId: string) =>
     run(() => api<VideoProject>(`${base}/notes/${noteId}`, { method: 'DELETE' }));
   const upload = async (file: File) => {
@@ -114,8 +116,26 @@ export function useVideoProject(id: string, deferPreview: () => boolean = () => 
     }
     return asset;
   };
+  const importSource = (path: string) =>
+    run(() =>
+      post<VideoProject>(`${base}/source`, { path, baseRevision: current.current?.revisionId }),
+    );
+  const replaceMedia = (file: File) =>
+    run(() =>
+      api<VideoProject>(`${base}/source/media`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': file.type || (file.name.endsWith('.webm') ? 'video/webm' : 'video/mp4'),
+          'X-File-Name': encodeURIComponent(file.name),
+          'X-Base-Revision': current.current!.revisionId,
+        },
+        body: file,
+      }),
+    );
   return {
     project,
+    importSource,
+    replaceMedia,
     error,
     saving,
     save,

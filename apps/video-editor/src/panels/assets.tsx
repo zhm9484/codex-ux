@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react';
-import { Upload, Plus, Image, Music2, Film, Type } from 'lucide-react';
+import { Upload, Image, Music2, Film, Type } from 'lucide-react';
 import type { Asset, VideoDocument } from '@codex-ux/video-domain';
-import { EmptyState, PanelHeader, IconButton } from '../components/ui';
+import { EmptyState, PanelHeader } from '../components/ui';
 
 export function AssetsPanel({
   workspaceId,
@@ -9,14 +9,12 @@ export function AssetsPanel({
   disabled,
   onClose,
   onUpload,
-  onAdd,
 }: {
   workspaceId: string;
   document: VideoDocument;
   disabled: boolean;
   onClose: () => void;
   onUpload: (file: File) => Promise<Asset>;
-  onAdd: (asset: Asset) => void;
 }) {
   const input = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
@@ -97,22 +95,8 @@ export function AssetsPanel({
                 </div>
                 <div className="asset-info">
                   <strong title={a.name}>{a.name}</strong>
-                  <span>
-                    {(a.size / 1024 / 1024).toFixed(1)} MB ·{' '}
-                    {document.clips.some((c) => c.assetId === a.id)
-                      ? 'In the video'
-                      : 'Ready to use'}
-                  </span>
+                  <span>{(a.size / 1024 / 1024).toFixed(1)} MB · Ready for the agent</span>
                 </div>
-                {!document.native && !a.mime.startsWith('font/') && (
-                  <IconButton
-                    label={`Add ${a.name} to timeline`}
-                    disabled={disabled || busy}
-                    onClick={() => onAdd(a)}
-                  >
-                    <Plus size={16} />
-                  </IconButton>
-                )}
               </article>
             ))}
           </div>

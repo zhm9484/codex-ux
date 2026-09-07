@@ -8,9 +8,10 @@ customized through code and saved for later use.
 
 ## Status
 
-The first preset is a local video editor: HyperFrames playback and export, multitrack arrangement,
-text editing, assets, anchored notes, saved history and existing-task Codex delivery. The minimal
-collaboration contract and browser instance helpers are implemented. Apps share file-based
+The first preset is a local video collaboration container for Hyperframes source, Remotion source
+and MP4/WebM files. It provides playback, source updates, supported HTML text edits, assets,
+anchored change/transition notes, saved history, export and existing-task Codex delivery. The
+minimal collaboration contract and browser instance helpers are implemented. Apps share file-based
 workspaces; agent bindings are independent per page and workspace. 3D and automatic custom app
 builds remain reserved.
 
@@ -34,7 +35,8 @@ apps/
   scene-3d/         Reserved for 3D scene assembly
 packages/
   protocol/         Shared collaboration contract
-  video-domain/     Video document and timeline operations
+  video-domain/     Source documents, feedback intents and timeline operations
+  video-runtime/    Hyperframes, Remotion and media playback adapters
   sdk/              Browser app instance and session-binding helpers
   adapter-codex/    Codex-specific connection
   local-server/     TypeScript backend

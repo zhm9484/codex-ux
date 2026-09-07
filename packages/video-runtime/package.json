@@ -1,0 +1,24 @@
+{
+  "name": "@codex-ux/video-runtime",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/types.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@codex-ux/video-domain": "workspace:*",
+    "@hyperframes/player": "0.8.30",
+    "@remotion/player": "4.0.522",
+    "remotion": "4.0.522",
+    "react": "catalog:",
+    "react-dom": "catalog:"
+  },
+  "devDependencies": {
+    "@types/react": "catalog:",
+    "@types/react-dom": "catalog:"
+  }
+}

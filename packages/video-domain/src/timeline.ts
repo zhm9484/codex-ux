@@ -1,43 +1,38 @@
-import type { Clip, VideoDocument } from './schema.ts';
-export const durationOf = (doc: VideoDocument) =>
-  doc.native?.duration ?? Math.max(1, ...doc.clips.map((c) => c.start + c.duration));
-export const roundFrame = (time: number, fps: number) => Math.round(time * fps) / fps;
-export function formatTime(time: number, frames = false, fps = 30) {
+import type { TimelineItem, VideoDocument } from './schema.ts';
+export const durationOf = (doc: VideoDocument) => doc.duration;
+export const timeStep = (fps: number | null) => (fps === null ? 0.1 : 1 / fps);
+export const lastTime = (doc: VideoDocument) =>
+  Math.max(0, doc.duration - (doc.fps === null ? 0.001 : 1 / doc.fps));
+export const clampTime = (doc: VideoDocument, time: number) =>
+  Math.max(0, Math.min(lastTime(doc), time));
+export const roundFrame = (time: number, fps: number | null) =>
+  fps === null ? time : Math.round(time * fps) / fps;
+export function formatTime(time: number, precise = false, fps: number | null = null) {
   const safe = Math.max(0, time);
-  const minutes = Math.floor(safe / 60);
-  const seconds = Math.floor(safe % 60);
-  return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}${frames ? `:${String(Math.floor((safe % 1) * fps + 0.001)).padStart(2, '0')}` : ''}`;
-}
-export function moveClip(
-  clip: Clip,
-  delta: number,
-  fps: number,
-  edge: 'move' | 'start' | 'end',
-  trackId = clip.trackId,
-): Clip {
-  const min = 1 / fps;
-  if (edge === 'move')
-    return { ...clip, start: Math.max(0, roundFrame(clip.start + delta, fps)), trackId };
-  if (edge === 'end')
-    return { ...clip, duration: Math.max(0.1, roundFrame(clip.duration + delta, fps)) };
-  const timedSource = ['scene', 'video', 'audio'].includes(clip.kind);
-  const change = Math.max(
-    -clip.start,
-    timedSource ? -clip.offset : -clip.start,
-    Math.min(clip.duration - Math.max(min, 0.1), roundFrame(delta, fps)),
+  const base = `${String(Math.floor(safe / 60)).padStart(2, '0')}:${String(Math.floor(safe % 60)).padStart(2, '0')}`;
+  if (!precise) return base;
+  return (
+    base +
+    (fps === null
+      ? `.${String(Math.floor((safe % 1) * 1000 + 0.001)).padStart(3, '0')}`
+      : `:${String(Math.floor((safe % 1) * fps + 0.001)).padStart(2, '0')}`)
   );
-  return {
-    ...clip,
-    start: clip.start + change,
-    duration: clip.duration - change,
-    offset: timedSource ? clip.offset + change : clip.offset,
-  };
 }
-export function splitClip(clip: Clip, at: number, id: string): [Clip, Clip] | null {
-  const left = at - clip.start;
-  if (left < 0.1 || clip.duration - left < 0.1) return null;
-  return [
-    { ...clip, duration: left },
-    { ...clip, id, start: at, duration: clip.duration - left, offset: clip.offset + left },
-  ];
+export function moveTiming(
+  item: TimelineItem,
+  delta: number,
+  fps: number | null,
+  edge: 'move' | 'start' | 'end',
+): TimelineItem {
+  const min = Math.max(0.1, fps === null ? 0.1 : 1 / fps);
+  const offset = item.target?.offset ?? 0;
+  if (edge === 'move')
+    return { ...item, start: Math.max(offset, roundFrame(item.start + delta, fps)) };
+  if (edge === 'end')
+    return { ...item, duration: Math.max(min, roundFrame(item.duration + delta, fps)) };
+  const change = Math.max(
+    offset - item.start,
+    Math.min(item.duration - min, roundFrame(delta, fps)),
+  );
+  return { ...item, start: item.start + change, duration: item.duration - change };
 }

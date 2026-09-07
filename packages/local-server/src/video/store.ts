@@ -3,7 +3,6 @@ import type { DatabaseSync } from 'node:sqlite';
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import {
-  sampleDocument,
   videoSchema,
   type Revision,
   type VideoDocument,
@@ -31,6 +30,7 @@ interface NoteRow {
   id: string;
   text: string;
   anchor: string;
+  intent: string;
   created_at: string;
   request_id: string | null;
 }
@@ -102,6 +102,7 @@ export class VideoStore {
       id: n.id,
       text: n.text,
       anchor: JSON.parse(n.anchor) as Note['anchor'],
+      intent: JSON.parse(n.intent) as Note['intent'],
       createdAt: n.created_at,
       requestId: n.request_id,
     }));
@@ -116,9 +117,9 @@ export class VideoStore {
       canRedo: (JSON.parse(w.redo) as string[]).length > 0,
     };
   }
-  create(id: string, document?: VideoDocument) {
+  create(id: string, document: VideoDocument) {
     if (this.has(id)) return this.get(id);
-    const workspace = this.workspaces.get(id);
+    this.workspaces.get(id);
     const db = this.database(id);
     const rev = randomUUID();
     db.exec('BEGIN IMMEDIATE');
@@ -130,7 +131,7 @@ export class VideoStore {
         'First draft',
         'user',
         new Date().toISOString(),
-        JSON.stringify(videoSchema.parse(document ?? sampleDocument(workspace.name))),
+        JSON.stringify(videoSchema.parse(document)),
       );
       db.exec('COMMIT');
     } catch (error) {

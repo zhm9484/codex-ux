@@ -1,12 +1,11 @@
-import type { NativeProjects } from '../native/projects.ts';
-import { snapshot } from '../native/files.ts';
+import type { VideoProjects } from '../sources/projects.ts';
 import { randomUUID } from 'node:crypto';
 import { deliver, collaborationTarget } from '../agents.ts';
 import type { CollaborationTarget } from '@codex-ux/protocol';
 import { join } from 'node:path';
 import type { VideoStore } from './store.ts';
 import { HttpError } from '../errors.ts';
-import { readCandidate, writeCandidate, materialize, videoDirectory } from './files.ts';
+import { readCandidate, writeCandidate, videoDirectory } from './files.ts';
 
 interface RequestRow {
   id: string;
@@ -23,9 +22,9 @@ export class VideoCollaboration {
   readonly store: VideoStore;
   readonly root: string;
   readonly origin: string;
-  readonly native: NativeProjects;
-  constructor(store: VideoStore, root: string, origin: string, native: NativeProjects) {
-    this.native = native;
+  readonly projects: VideoProjects;
+  constructor(store: VideoStore, root: string, origin: string, projects: VideoProjects) {
+    this.projects = projects;
     this.store = store;
     this.root = root;
     this.origin = origin;
@@ -77,9 +76,7 @@ export class VideoCollaboration {
     try {
       const dir = await writeCandidate(this.root, id, requestId, w.revision);
       const endpoint = `${this.origin}/api/workspaces/${id}/apps/video-editor/requests/${requestId}`;
-      const sourceInstructions = w.revision.document.native
-        ? `This is a native HyperFrames project. Edit its index.html, JS, CSS, nested compositions and resources directly. Preserve files and stable IDs you are not changing. The working directory is ${this.native.status(id).directory}; for this request, edit the isolated candidate and publish it once.`
-        : 'project.json owns tracks, clip timing and assets; scenes/<sourceId>.html owns scene source (overriding sources fields at publication). Keep IDs stable and use __CLIP_ID__ for instance IDs.';
+      const sourceInstructions = `This is a ${w.revision.document.source.kind} source project. video.json describes the entry and playback metadata. Edit the ordinary source files or replace the media file in the candidate. Preserve unrelated files and stable IDs. Transition notes express user intent: implement them in the source or regenerate the media. The working directory is ${this.projects.status(id).directory}; edit the isolated candidate for this request and publish it once.`;
       const message = `Video Editor feedback request ${requestId} for workspace ${id}. Read the JSON context at ${endpoint} using HTTP GET. This request was explicitly submitted by the user. Edit the candidate at ${dir}. ${sourceInstructions} Do not modify immutable revision files. Preview the candidate, then POST JSON {"label":"A concise description"} to ${endpoint}/publish. Publication checks the base revision and records one undoable agent version. If blocked, POST {"message":"..."} to ${endpoint}/error. Do not queue another agent session.`;
       db.prepare("UPDATE requests SET state='sending' WHERE id=?").run(requestId);
       deliveryStarted = true;
@@ -117,9 +114,9 @@ export class VideoCollaboration {
       notes: JSON.parse(r.notes) as unknown,
       document: base.document,
       candidateDirectory: join(videoDirectory(this.root, id), 'requests', requestId),
-      previewUrl: `${this.origin}/media/video-editor/candidate/${id}/${requestId}/preview.html`,
+      previewUrl: `${this.origin}/media/video-editor/candidate/${id}/${requestId}/player.html`,
       publishUrl: `${this.origin}/api/workspaces/${id}/apps/video-editor/requests/${requestId}/publish`,
-      source: base.document.native ? this.native.status(id) : undefined,
+      source: this.projects.status(id),
       state: r.state,
       error: r.error,
     };
@@ -128,25 +125,8 @@ export class VideoCollaboration {
     const r = this.request(id, requestId);
     if (r.state === 'published') return this.store.get(id);
     const base = this.store.revision(id, r.base_revision);
-    const doc = base.document.native
-      ? await snapshot(
-          this.root,
-          id,
-          join(videoDirectory(this.root, id), 'requests', requestId),
-          base.document,
-        )
-      : await readCandidate(this.root, id, requestId);
-    // Materialize the candidate before changing the visible head; missing assets fail safely.
-    const candidate = {
-      id: `candidate-${randomUUID()}`,
-      parentId: r.base_revision,
-      label,
-      createdAt: new Date().toISOString(),
-      author: 'agent' as const,
-      document: doc,
-    };
-    await materialize(this.root, id, candidate);
-    const w = await this.native.commit(
+    const doc = await readCandidate(this.root, id, requestId, base.document);
+    const w = await this.projects.commit(
       id,
       { requestId, baseRevision: r.base_revision, label },
       doc,

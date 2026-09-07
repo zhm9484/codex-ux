@@ -1,7 +1,7 @@
 import { chromium, type Browser } from 'playwright-core';
 import { access, mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import type { Revision } from '@codex-ux/video-domain';
+import { clampTime, type Revision } from '@codex-ux/video-domain';
 import { videoDirectory } from './files.ts';
 
 export class Thumbnails {
@@ -15,7 +15,8 @@ export class Thumbnails {
     this.origin = origin;
   }
   async get(workspaceId: string, revision: Revision, time: number) {
-    const frame = Math.max(0, Math.round(time * revision.document.fps));
+    const position = clampTime(revision.document, time);
+    const frame = Math.round(position * 1000);
     const file = join(
       videoDirectory(this.root, workspaceId),
       'thumbnails',
@@ -48,7 +49,7 @@ export class Thumbnails {
       });
       try {
         await page.goto(
-          `${this.origin}/media/video-editor/capture/${workspaceId}/${revision.id}?time=${frame / revision.document.fps}`,
+          `${this.origin}/media/video-editor/capture/${workspaceId}/${revision.id}?time=${position}`,
         );
         await page.waitForFunction(
           "document.documentElement.dataset.ready === 'true'",

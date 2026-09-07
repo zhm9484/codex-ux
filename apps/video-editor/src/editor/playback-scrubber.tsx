@@ -1,5 +1,5 @@
 import { useRef } from 'react';
-import { formatTime } from '@codex-ux/video-domain';
+import { formatTime, timeStep } from '@codex-ux/video-domain';
 import { usePlaybackDisplay } from '../hooks/use-playback-display';
 import type { PlaybackClock } from '../lib/playback-clock';
 
@@ -12,7 +12,7 @@ export function PlaybackScrubber({
 }: {
   clock: PlaybackClock;
   duration: number;
-  fps: number;
+  fps: number | null;
   onSeek: (time: number) => void;
   onPlay: () => void;
 }) {
@@ -31,7 +31,7 @@ export function PlaybackScrubber({
       aria-label="Playback position"
       min={0}
       max={duration}
-      step={1 / fps}
+      step={timeStep(fps)}
       defaultValue={clock.sample()}
       onChange={(event) => onSeek(Number(event.currentTarget.value))}
       onKeyDown={(event) => {

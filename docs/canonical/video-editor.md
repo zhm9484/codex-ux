@@ -1,147 +1,137 @@
 # Video editor
 
-Video Editor manages one video project per workspace in a neutral canvas. The workspace selector
-switches the current app instance; other pages keep their own selections. Workspace names are
-independent of video titles. The app entry page lists workspaces and can create an empty workspace.
-Opening it in Video Editor initializes the video project. The timeline follows the preview and
-playback controls, with layout based on both pane dimensions and the video's aspect ratio.
+Video Editor is a collaboration container for Hyperframes source, Remotion source and finished video
+files. One video project lives in each workspace. Playback, timeline selection, notes, history and
+agent requests use the same interface for all three. An engine's authoring model stays in its
+ordinary files; the editor does not translate those files into a universal clip arrangement.
 
-Chat, Notes, Add text (structured projects) and app Fullscreen live in a movable vertical tool
-island. History is in the upper-right header alongside undo/redo and Export. Assets and project
-source have no toolbar buttons; project imports and source access remain available through the local
-API. Drag its grip or focus the grip and use arrow keys. Position is saved in local storage and
-clamped when the pane resizes. Notes has a direct entry. Native fullscreen uses the browser API;
-embedded browsers that reject it use an in-pane focus mode. Escape exits that mode. Export and
-undo/redo remain in the header. Floating surfaces close on outside click or Escape. Reduced-motion
-settings suppress animations.
+The workspace selector switches this app instance without changing other pages. Workspace names are
+independent of video titles. Chat, Notes, Video source, Assets and app Fullscreen live in a movable
+vertical tool island; history, undo/redo and Export are in the header. Drag the island grip or use
+its arrow keys; its position is saved locally and clamped to the pane. Floating surfaces close on
+outside click or Escape. Reduced-motion settings suppress animations.
 
-The playback controls also have a separate **Video fullscreen** button. It expands only the video
-with a dark background, playback/pause, mute, a seek bar and an exit button. The same player stays
-mounted, retaining time and playback state; scrubbing preserves whether it was playing or paused.
-Editing tools and comparison are hidden until exit. Escape or Exit video fullscreen returns to the
-editor. If an embedded browser refuses native fullscreen, the same player view fills the app pane.
+**Video fullscreen** expands just the video with playback, mute, seeking and an exit button. The
+same player stays mounted, retaining time and playback state; scrubbing preserves whether it was
+playing. Editing and comparison are hidden until exit. Both fullscreen controls fall back to filling
+the app pane when the browser rejects fullscreen. Escape exits the fallback.
 
-## Native HyperFrames projects
+## Source and engine capabilities
 
-New video projects default to a native HyperFrames directory at `files/video/` within the workspace.
-The local source API exposes its source location or imports an existing directory as a new revision.
-Import copies files; the original directory is not modified. A structured video can be converted
-using `POST /source` with its current `baseRevision`. That conversion materializes their existing
-arrangement; subsequent native revisions never regenerate a main timeline or wrap scenes from
-`project.json`.
+The working directory is `workspaces/<id>/files/video/`. First opening a video adopts existing
+source there, or creates an original 18-second Hyperframes sample if empty. **Video source** shows
+this directory, imports an absolute project directory/video path, or replaces the video with an
+uploaded MP4/WebM. Import copies files without modifying the original. A replacement is an undoable
+revision, including when it changes engine, dimensions or duration.
 
-Native `index.html`, scripts, styles, sub-compositions and binary resources are captured together.
-Files that the app cannot interpret are retained byte for byte and remain available for playback,
-export and agent edits. A native project's own `project.json`, if present, is just another file. The
-app's revision document stores metadata and a resource manifest, not an authoring replacement for
-the native project.
+An optional `video.json` manifest identifies the source. With no manifest, a root `index.html`
+identifies Hyperframes; otherwise a single root MP4/WebM identifies media. Remotion requires a
+manifest. The [local API](local-api.md) describes its fields.
 
-The entry is `index.html`, with positive `data-width`, `data-height`, `data-duration` and a
-`data-composition-id`, following HyperFrames conventions. Browser-ready relative module imports,
-CSS, nested composition paths and local resources are served under the same revision directory. The
-app adds only playback/error-reporting scripts to the preview response. Export uses the unchanged
-project files with HyperFrames Producer.
+| Source      | Playback and export                                              | Direct editing capability                               |
+| ----------- | ---------------------------------------------------------------- | ------------------------------------------------------- |
+| Hyperframes | HTML Player and Producer, pinned to 0.8.30                       | Unambiguous HTML text and explicit timing attributes    |
+| Remotion    | Player and Renderer, pinned to 4.0.522                           | Source editing by the user or agent                     |
+| Media       | Browser video playback; export copies the selected original file | Replace the file or ask the agent to edit/regenerate it |
 
-The source directory must be self-contained: root-absolute site URLs, external services, bare npm
-imports and build systems are not converted into local dependencies. Build those projects for a
-relative base or vendor their runtime dependencies first. Remote references remain remote and are
-not frozen by local history. Symbolic links are rejected explicitly; `.git` and `.DS_Store` are
-excluded. Current limits are 20,000 files, 2 GB total data, 4 MB of editable HTML, one hour, and
-240–3840 px dimensions. Arbitrary project code is trusted local code; this is not a sandbox for
-untrusted websites.
+Hyperframes entries declare `data-composition-id`, `data-width`, `data-height` and `data-duration`.
+Relative modules, CSS, nested compositions and local resources are preserved. The server injects
+playback/error reporting into the served entry only; export uses captured source. Browser-ready
+dependencies must be vendored or prebuilt for relative URLs; arbitrary Hyperframes build systems are
+not run.
 
-## Canvas and timing edits
+Remotion manifests select a component file and export, with explicit width, height, fps,
+`durationInFrames` and JSON `inputProps`. The server builds an isolated Player bundle and a
+registered `Video` composition for Renderer from the same snapshot. TS/TSX/JS/JSX, CSS imports,
+imported media and `staticFile()` resources under `public/` are supported. This convention does not
+run Remotion Studio, evaluate `remotion.config.ts`, or discover composition metadata dynamically.
+Projects supplying React, React DOM, Remotion or Player versions must match the pinned runtime
+(React/React DOM 19.2.8). Extra dependencies require `package.json` and a frozen `pnpm-lock.yaml`;
+installation uses pnpm 10.34.5 with lifecycle scripts and pnpmfile hooks disabled. Dependency
+installation and bundles are cached outside working source.
 
-- Click supported text to select it; double-click to type. Blur or Cmd/Ctrl+Enter saves; Escape
-  cancels inline typing. Drag text to reposition it and drag its corner handles to scale it. The
-  selection measures rendered text bounds, not the containing block's fixed width.
-- Typeface opens a searchable grouped picker with 22 system font choices and imported fonts. System
-  fonts depend on the machine. Color is also editable. Uploaded fonts are registered with local
-  font-face declarations in both structured and native projects.
-- Native UI editing requires an unambiguous plain HTML text node with a source location and a
-  matching rendered node. Edits replace only the target text/start-tag ranges; scripts and
-  surrounding source formatting are preserved. Ambiguous text, generated text, SVG/canvas content,
-  and unsupported markup remain agent-editable. Transparent or opaque layers can intercept canvas
-  selection; unsupported or occluded content remains accessible to the agent in source.
-- The compact timeline uses rendered thumbnails. Click to seek, drag to select a time range, use its
-  edge handles to adjust that range, or drag the playhead to scrub. Arrow keys step frames; I/O set
-  range boundaries. There is no loop or cut/split toolbar.
-- Selecting canvas text immediately shows a focused timing lane for that text alone. Clearing the
-  selection closes it. There is no expand/collapse control, and showing the lane does not move the
-  canvas beneath the pointer. Drag its block to move the start, drag its edges to change duration,
-  and double-click the block to seek to its exact start and select its text. Other elements are not
-  listed. Delete/Backspace or the right-click Delete action removes the selected source element;
-  undo restores it.
-- Native timing edits change explicit `data-start` and `data-duration` attributes. Offsets from
-  statically referenced sub-compositions are accounted for. Reused sub-compositions and dynamically
-  controlled timing cannot reliably map to a single editable block. Text without its own timing
-  follows its source animation and gets a clear explanation instead of invented clip controls.
-  Editing attributes does not rewrite authored GSAP keyframes; deleting a referenced node may
-  require an agent to update its script as well.
+Direct video accepts H.264 MP4 or browser-decodable VP8/VP9/AV1 WebM. FFprobe reads actual duration,
+dimensions and rotation. Media time is measured in seconds: the app does not infer a frame rate or
+promise frame-exact seeking for compressed or variable-frame-rate files. Code compositions use the
+manifest fps. Frame controls stop before the end; media arrow steps are 0.1 seconds.
 
-The API can explicitly initialize a structured video project. Structured documents support
-text/media clips and uniquely matched plain scene text. General clip operations are still available
-in the domain/API, without requiring a dense arrangement toolbar in the UI.
+Snapshots preserve relative paths and bytes, excluding `.git`, `.DS_Store`, `node_modules`, `dist`,
+`build`, `.cache`, `.next` and `.video-editor` at any depth. Other source symlinks are rejected.
+Limits are 20,000 files, 2 GB total, 8 MB editable HTML/JS/TS/CSS/JSON, one hour and 16–7680 px per
+dimension. Ignored tooling directories already in working source survive checkout and undo. Remote
+URLs remain remote; neither lockfiles nor source history guarantee identical remote assets, system
+fonts or browser behavior. Imported code executes as trusted local code, not in a security sandbox.
 
-## Notes and synchronization
+## Canvas and timeline
 
-Drag empty canvas space to mark a region directly. The selected region or time range offers **Add
-note**; right-clicking the canvas and the text toolbar offer the same action. The input opens near
-the action, constrained to the visible pane. Chat opens it without replacing an existing draft
-reference. Closing and reopening preserves the draft. Drafts survive background revision updates but
-are not persisted across a full page reload.
+The timeline uses rendered scene thumbnails for static Hyperframes scenes and evenly spaced frame
+samples otherwise. Click to seek, drag to select a range, use range edges to adjust it, or drag the
+playhead to scrub. Arrow keys step by a composition frame or 0.1 seconds for media; I/O set range
+boundaries. Empty canvas space can be dragged to select a normalized rectangle on every engine.
+Selections offer **Add note**, also available from the canvas context menu.
 
-A note captures revision, time/range, optional object reference and normalized rectangle. Its
-reference is pinned when the input is opened. Saving stores it locally; selecting notes and pressing
-Send explicitly delivers them to this app instance’s connected Codex session. Submitted and unsent
-notes keep their original revision anchors. Locating an older note opens that version for
-comparison; the app never silently rebinds it to new content.
+Hyperframes text editing requires one plain HTML source target matching one rendered element. Stable
+IDs distinguish repeated captions. Click to select, double-click to type, blur or Cmd/Ctrl+Enter to
+save, and Escape to cancel typing. Drag text to reposition and corner handles to scale. Typeface and
+color controls edit the source; the font picker offers system and uploaded fonts. Text edits patch
+target text/start-tag ranges while preserving surrounding source and scripts. Generated, ambiguous,
+occluded or unsupported text remains available to the agent in source.
 
-The visible page polls every 1.8 seconds. Native source changes must be stable across two scans
-(separated by at least 650 ms) before capture. Each accepted external save becomes an agent-authored
-revision; incomplete or invalid snapshots retain the current revision and report an error. Stale UI
-writes are rejected instead of overwriting external files.
+Selecting supported text opens its focused timing lane. Explicit `data-start` and `data-duration`
+attributes can be moved/resized, including offsets from statically referenced sub-compositions.
+Double-clicking a block seeks to its start. Delete removes the source element; undo restores it.
+Reused compositions and script-controlled timing do not receive invented timing controls. Attribute
+edits do not rewrite GSAP keyframes; deleting a node may require a related script edit by the agent.
+Clearing selection closes the lane. Remotion and media use range feedback instead of inferred
+layers.
 
-UI text changes reuse the current player when the committed document exactly matches the staged text
-edit (apart from normalized resource hashes). Structural, timing, resource and external code changes
-load a replacement behind the old frame. It is sought to the paused position and allowed two paints
-before becoming visible. Early script/resource errors retain the previous frame and show an error;
-later script failures are reported on the active preview. Updates pause playback. While the user is
-typing directly in canvas text, preview adoption waits until typing ends, preserving the unsubmitted
-text. A conflicting save still reports a stale-write error. Selection, notes, note drafts, range and
-timeline expansion/scroll state stay in the editor. The playback indicator paints with
-requestAnimationFrame between runtime samples, and thumbnails remain visible while newer images are
-generated.
+## Notes, versions and synchronization
 
-Each app instance remembers its own session binding for each workspace. A → B → A restores A's
-connection; refreshing preserves it. A new or copied page starts unbound. Other pages are unaffected
-by switching or disconnecting. Requests retain the workspace, instance, session and base revision
-selected at submission, even if the originating page changes or closes. The browser SDK stores
-bindings in session storage and prevents two live pages from claiming the same instance identity.
+A note records text, revision, seconds/range, optional object reference/region and an intent:
+`change` or `transition`, with optional transition duration. A transition is an instruction for the
+agent to implement in source or regenerated media. Saving it does not composite a transition. Notes
+are stored locally until the user selects them and explicitly sends them to the connected Codex
+session. The draft pins its reference when opened; closing/reopening and background updates preserve
+typed drafts and their original anchors. Drafts are not persisted across reload.
 
-The connection accepts an existing Codex session/task ID or `codex://threads/<id>` link. Codex
-receives an HTTP context and an isolated candidate directory. Native candidates are edited as
-ordinary HyperFrames files and explicitly published as one revision; direct edits to the working
-project are picked up by polling. No MCP, internal-reasoning stream, multi-agent scheduler or
-concurrent merge is required. Files attached to Codex are not automatically imported; the agent can
-upload them through the local API. See [local API](local-api.md).
+The visible page polls every 1.8 seconds. Files must be stable across two observations at least 650
+ms apart. Capture validates source and builds Remotion before committing an external revision.
+Incomplete saves, invalid manifests and failed builds retain the current head and report an error.
+UI writes, imports, publication and checkout are serialized; stale or unobserved working edits cause
+409 rather than overwriting files. Undo/redo restores working source as well as the head.
 
-## History, media and output
+Every accepted revision loads a replacement player behind the previous frame. The new player must
+acknowledge readiness and seek to the paused position before the editor adopts its picture,
+metadata, timeline and note revision together. Early runtime/resource errors retain the prior
+presentation; later errors are reported on the active player. Updates pause playback. Direct text
+editing is rejected while the displayed revision differs from the head. Unfinished inline typing
+defers incoming previews, while a conflicting save still fails. The playhead interpolates runtime
+samples; thumbnails belong to the displayed revision and are loaded separately.
 
-History includes UI edits, source edits and agent publications. Undo/redo restores the native file
-snapshot as well as the revision head; restoring an older version creates a new revision. Compare
-shows old and current previews at the same time. Files and old versions are retained without
-automatic garbage collection.
+Old notes never rebind to replacement content. Locating an older note opens that revision for
+comparison. The selected export version is pinned when the export dialog opens. History retains all
+revisions even when editing after undo creates a new branch.
 
-Assets accepts images, video, audio and fonts up to 100 MB each, including drops on the iframe.
-Native uploads are copied into the project's assets directory for the agent to use. In native mode,
-adding arbitrary media or text is an authoring action, not an automatic generated-layer operation.
+Each instance remembers its own Codex session binding per workspace; switching A → B → A and
+refreshing restore it. New/copied pages start unbound. Requests capture instance, workspace, app,
+session, notes and base revision before delivery, so later switching cannot retarget them. The agent
+receives HTTP context plus an isolated candidate directory containing ordinary project files. It
+previews and publishes a candidate as one revision, or edits working files for polling to capture.
+See [local API](local-api.md) for the publication contract.
 
-Export renders a saved revision as H.264 MP4. The service permits one export at a time, retains its
-result and download, and reports errors without changing the editing revision. Interrupted exports
-are marked failed after restart. Preview and export use the same immutable local project resources.
+## Assets and output
 
-The starter video is an original 18-second, three-scene composition derived from
-`packages/video-domain/src/sample.ts`. It includes text, deterministic GSAP animation and
-overlapping artwork. There is no waveform/keyframe editor, stock library or general inference of
-script behavior.
+Assets accepts images, video, audio and fonts up to 100 MB each, including iframe file drops.
+Uploaded resources become `assets/` files for the agent to use. Hyperframes fonts also receive local
+font-face declarations. Assets do not automatically become timeline layers. Files attached to a
+Codex task are not discovered automatically; the agent can upload them through the local API.
+
+Hyperframes and Remotion render the selected saved snapshot to H.264 MP4. Direct media exports its
+original MP4/WebM bytes, preserving audio and encoding. One export runs at a time; errors do not
+change the editing revision. A service restart marks interrupted exports failed. Source versions,
+prepared previews, dependency caches, thumbnails and exports have no automatic garbage collection.
+
+There is no waveform/keyframe editor, stock library, automatic transition compositor or general
+inference of script behavior. The previous structured arrangement format and native-mode aliases
+have been removed. Existing unsupported video databases are rejected without resetting them; import
+their ordinary source into a new workspace.

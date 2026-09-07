@@ -4,7 +4,14 @@ import { durationOf, formatTime, type ExportJob, type VideoProject } from '@code
 import { api, post } from '../lib/api';
 import { IconButton } from '../components/ui';
 
-export function ExportDialog({ project, onClose }: { project: VideoProject; onClose: () => void }) {
+export function ExportDialog({
+  project: initialProject,
+  onClose,
+}: {
+  project: VideoProject;
+  onClose: () => void;
+}) {
+  const [project] = useState(initialProject);
   const dialog = useRef<HTMLDialogElement>(null);
   const [job, setJob] = useState<ExportJob | null>(null);
   const [busy, setBusy] = useState(false);
@@ -42,6 +49,8 @@ export function ExportDialog({ project, onClose }: { project: VideoProject; onCl
   }
 
   const document = project.revision.document;
+  const media = document.source.kind === 'media';
+  const extension = media ? document.source.entry.split('.').at(-1)!.toLowerCase() : 'mp4';
   return (
     <dialog
       ref={dialog}
@@ -68,7 +77,9 @@ export function ExportDialog({ project, onClose }: { project: VideoProject; onCl
           {document.width} × {document.height}
         </span>
         <span>
-          {formatTime(durationOf(document))} · {document.fps} fps · MP4
+          {formatTime(durationOf(document))} ·{' '}
+          {document.fps === null ? 'Original video' : `${document.fps} fps`} ·{' '}
+          {extension.toUpperCase()}
         </span>
       </div>
       {(error || job?.error) && (
@@ -77,7 +88,11 @@ export function ExportDialog({ project, onClose }: { project: VideoProject; onCl
         </p>
       )}
       {job?.state === 'complete' ? (
-        <a className="primary-button full-width" href={job.url} download={`${project.name}.mp4`}>
+        <a
+          className="primary-button full-width"
+          href={job.url}
+          download={`${project.name}.${extension}`}
+        >
           <ArrowDownToLine size={15} />
           Download video
         </a>
@@ -99,7 +114,11 @@ export function ExportDialog({ project, onClose }: { project: VideoProject; onCl
           )}
         </button>
       )}
-      <p className="panel-footnote">Rendered locally with HyperFrames.</p>
+      <p className="panel-footnote">
+        {media
+          ? 'Original file from this version.'
+          : `Rendered locally with ${document.source.kind === 'remotion' ? 'Remotion' : 'Hyperframes'}.`}
+      </p>
     </dialog>
   );
 }

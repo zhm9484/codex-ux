@@ -1,4 +1,12 @@
-import { MessageCircle, StickyNote, Maximize, Minimize, GripHorizontal, Type } from 'lucide-react';
+import {
+  MessageCircle,
+  StickyNote,
+  Maximize,
+  Minimize,
+  GripHorizontal,
+  FolderOpen,
+  Image,
+} from 'lucide-react';
 import type { EditorState } from '../hooks/use-editor';
 import { useIslandPosition } from '../hooks/use-island-position';
 import { IconButton } from '../components/ui';
@@ -56,11 +64,16 @@ export function ToolIsland({
         {state.project?.notes.some((note) => !note.requestId) && <span className="island-dot" />}
       </IconButton>
       <span className="island-divider" />
-      {!state.project?.revision.document.native && (
-        <IconButton label="Add text" disabled={state.saving} onClick={state.addText}>
-          <Type size={17} />
-        </IconButton>
-      )}
+      <IconButton
+        data-panel-trigger
+        label="Video source"
+        onClick={(event) => panel('source', event)}
+      >
+        <FolderOpen size={17} />
+      </IconButton>
+      <IconButton data-panel-trigger label="Assets" onClick={(event) => panel('assets', event)}>
+        <Image size={17} />
+      </IconButton>
       <span className="island-divider" />
       <IconButton label={fullscreen ? 'Exit fullscreen' : 'Fullscreen'} onClick={onFullscreen}>
         {fullscreen ? <Minimize size={17} /> : <Maximize size={17} />}

@@ -43,7 +43,7 @@ export function Editor({ id, workspaces, onSelect }: EditorProps) {
         <p>{state.error || 'Opening video…'}</p>
       </div>
     );
-  const document = project.revision.document;
+  const document = state.document!;
   const comparison = state.comparison;
   async function drop(event: React.DragEvent) {
     event.preventDefault();
@@ -145,7 +145,6 @@ export function Editor({ id, workspaces, onSelect }: EditorProps) {
                 region={null}
                 onTime={() => undefined}
                 onPlaying={() => undefined}
-                onSelect={() => undefined}
                 onNote={() => undefined}
                 control={state.compareControl}
                 compare
@@ -157,7 +156,7 @@ export function Editor({ id, workspaces, onSelect }: EditorProps) {
             <PlayerStage
               workspaceId={id}
               revisionId={project.revisionId}
-              document={document}
+              document={project.revision.document}
               time={state.time}
               selectedId={state.selectedId}
               marking={state.marking}
@@ -165,10 +164,9 @@ export function Editor({ id, workspaces, onSelect }: EditorProps) {
               onTime={state.onTime}
               onPlaying={state.setPlaying}
               muted={state.muted}
-              onSelect={state.select}
               onNote={state.openNotes}
               onDisplayed={state.setDisplayedRevision}
-              onTextRestore={state.setCanvasText}
+              onTextRestore={state.restoreText}
               onTextSelect={state.selectText}
               onTextEdit={state.updateText}
               onClear={state.clearSelection}
@@ -194,6 +192,7 @@ export function Editor({ id, workspaces, onSelect }: EditorProps) {
           />
         )}
         <Transport
+          disabled={!state.displayedRevision}
           time={state.time}
           duration={durationOf(document)}
           fps={document.fps}
@@ -231,7 +230,10 @@ export function Editor({ id, workspaces, onSelect }: EditorProps) {
         </div>
       )}
       {state.exporting && (
-        <ExportDialog project={project} onClose={() => state.setExporting(false)} />
+        <ExportDialog
+          project={state.presentedProject ?? project}
+          onClose={() => state.setExporting(false)}
+        />
       )}
     </main>
   );

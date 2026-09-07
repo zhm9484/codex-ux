@@ -26,59 +26,101 @@ Agent references use `{ provider, sessionId }`; the server currently accepts onl
 
 The following paths are relative to `/workspaces/:id/apps/video-editor`.
 
-| Method and path                     | Behavior                                                                                                                                        |
-| ----------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
-| `POST` (base path)                  | Open a video project, initializing it once if needed; `{ format: "native" \| "structured" }`, default native                                    |
-| `GET` (base path) or `GET /context` | `VideoProject`: workspace ID, video title, current revision/document, notes, history and source status                                          |
-| `GET /revisions/:revisionId`        | Historical document and sources                                                                                                                 |
-| `GET /source`                       | Working source directory and last scan error                                                                                                    |
-| `POST /source`                      | `{ baseRevision, directory? }` imports an absolute native source directory; omitting directory materializes a structured video as native source |
-| `POST /revisions`                   | Commit `{ requestId, baseRevision, label, document }`                                                                                           |
-| `POST /undo` or `/redo`             | Move video history using `{ baseRevision }`                                                                                                     |
-| `POST /notes`                       | Save `{ text, anchor }`                                                                                                                         |
-| `DELETE /notes/:noteId`             | Remove an unsubmitted note                                                                                                                      |
-| `POST /assets`                      | Upload raw bytes with MIME Content-Type and percent-encoded `X-File-Name`                                                                       |
-| `POST /requests`                    | Submit `{ noteIds, target: { instanceId, session: { provider, sessionId } } }`                                                                  |
-| `GET /requests/:requestId`          | Submission snapshot, current context, target, state and candidate paths                                                                         |
-| `POST /requests/:requestId/publish` | Publish candidate with `{ label }`                                                                                                              |
-| `POST /requests/:requestId/error`   | Record `{ message }` on a request                                                                                                               |
-| `POST /exports`                     | Start rendering `{ revisionId }`                                                                                                                |
-| `GET /exports/:jobId`               | Export result or error                                                                                                                          |
+| Method and path                     | Behavior                                                                                               |
+| ----------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| `POST` (base path)                  | Open/initialize a video project with `{}`                                                              |
+| `GET` (base path) or `GET /context` | VideoProject: workspace, title, revision/document, notes, history and source status                    |
+| `GET /revisions/:revisionId`        | Immutable historical document and file manifest                                                        |
+| `GET /source`                       | Absolute working directory and last scan error                                                         |
+| `POST /source`                      | Import `{ baseRevision, path }`, an absolute project directory or MP4/WebM file                        |
+| `POST /source/media`                | Replace from raw MP4/WebM bytes; `Content-Type`, percent-encoded `X-File-Name`, UUID `X-Base-Revision` |
+| `POST /revisions`                   | Commit `{ requestId, baseRevision, label, document }`                                                  |
+| `POST /undo` or `/redo`             | Move history using `{ baseRevision }`                                                                  |
+| `POST /notes`                       | Save `{ text, anchor, intent }`                                                                        |
+| `DELETE /notes/:noteId`             | Remove an unsubmitted note                                                                             |
+| `POST /assets`                      | Upload raw bytes with MIME Content-Type and percent-encoded `X-File-Name`                              |
+| `POST /requests`                    | Submit `{ noteIds, target: { instanceId, session: { provider, sessionId } } }`                         |
+| `GET /requests/:requestId`          | Submission snapshot, target, state and candidate paths                                                 |
+| `POST /requests/:requestId/publish` | Publish candidate with `{ label }`                                                                     |
+| `POST /requests/:requestId/error`   | Record `{ message }` on a request                                                                      |
+| `POST /exports`                     | Export `{ revisionId }`                                                                                |
+| `GET /exports/:jobId`               | Export result or error                                                                                 |
 
-`POST` on the video base path is idempotent: two pages opening the same workspace receive the same
-project; opening an existing project does not change its format. First native open adopts
-`files/video/` when nonempty and creates a starter otherwise. Invalid existing source fails without
-being overwritten or creating a video head. Structured initialization refuses a nonempty native
-source directory.
+Opening is idempotent. It adopts nonempty `files/video/`, or creates starter files in an empty
+source directory. Invalid existing source fails without overwriting files or creating a head.
+Imports copy files and leave the original directory, sibling workspace files and other apps alone.
+The old initialization `format`, native conversion and unscoped video routes are not supported.
 
-Mutation IDs and base revisions are UUIDs. Replaying a committed mutation does not add a version and
-returns the current video snapshot. A new write must name the current video head. Native saves and
-imports also check unobserved source changes before writing. App writes are serialized per video
-project; the service does not merge concurrent edits. Video title edits do not rename the workspace.
+Mutation IDs and base revisions are UUIDs. Replaying a committed mutation returns the current
+snapshot without another version. Writes must name the current head and cannot overwrite unobserved
+working source changes. Writes, imports, publication, scans and checkout are serialized per project;
+there is no automatic merge. A video title change does not rename the workspace.
 
-The previous unscoped video routes and workspace binding route do not exist. Workspace creation does
-not accept a video-format flag. No API compatibility aliases are provided.
+## Source documents and versions
 
-## Native source and versions
+The strict version-1 video document is:
 
-`POST /source` copies a self-contained project into `workspaces/<id>/files/video/`; it never
-modifies the imported directory. Sibling files under `files/` and other apps' data remain
-independent. Context includes `source.directory` and an optional source error. Visible pages poll
-every 1.8 seconds; reading video context captures source changes after two stable observations at
-least 650 ms apart. There is no separate background watcher.
+```ts
+{
+  version: 1,
+  name: string,
+  source: VideoSource,
+  files: Record<string, { hash: string; size: number; text?: string }>,
+  width: number,
+  height: number,
+  duration: number,       // seconds
+  fps: number | null,    // null for direct media
+  assets: Asset[]
+}
+```
 
-Native video documents contain `native: { entry: "index.html", duration, files }`. Relative file
-paths map to `{ hash, size, text? }`; editable HTML includes text, and binary resources refer to
-SHA-256 blobs in `apps/video-editor/blobs/`. Commits normalize HTML hashes and verify resources
-within this video project's blob store. A resource cannot be borrowed from another workspace.
-Preview, history, candidates and export reconstruct those files unchanged. A native `project.json`
-is an ordinary file, not an editor document.
+`source` is resolved from ordinary source files. A `video.json` manifest accepts one of:
 
-The source can also be edited directly by an agent. Stable working edits become revisions through
-polling, without a publish call. Choose either direct working edits or candidate publication for a
-change: working edits can make a candidate stale. Never edit immutable `revisions/` files. Native UI
-timing edits patch explicit HTML attributes rather than reinterpret arbitrary JavaScript timelines.
-See [video editor](video-editor.md) for import limits and edit capabilities.
+```json
+{ "kind": "hyperframes", "entry": "index.html", "fps": 30 }
+```
+
+```json
+{
+  "kind": "remotion",
+  "entry": "src/Video.tsx",
+  "exportName": "default",
+  "width": 1920,
+  "height": 1080,
+  "fps": 30,
+  "durationInFrames": 180,
+  "inputProps": {}
+}
+```
+
+```json
+{ "kind": "media", "entry": "video.mp4" }
+```
+
+`exportName` and `inputProps` default to `default` and `{}`; Hyperframes fps defaults to 30. Without
+a manifest, a root `index.html` selects Hyperframes, or one root MP4/WebM selects media. Hyperframes
+dimensions/duration come from entry HTML metadata. Remotion metadata is explicit; Studio
+registration, dynamic composition discovery and config execution are not supported. Media metadata
+is probed, with no inferred fps. Incoming document metadata is re-derived at commit; change the
+source manifest/files to change the video.
+
+File paths are relative and traversal-free. HTML, JS/JSX, TS/TSX, CSS and JSON include editable
+text; other resources refer to SHA-256 blobs under `apps/video-editor/blobs/`. Commits normalize
+text hashes and verify binary hashes/sizes within this workspace. Lockfiles are preserved as binary
+resources. Generated/tooling paths are excluded and cannot be submitted as revision source. See
+[video editor](video-editor.md) for limits, dependency rules and supported capabilities.
+
+`GET` context observes working source. Two stable scans at least 650 ms apart capture an external
+edit as an agent-authored revision. The visible app polls every 1.8 seconds; there is no independent
+background watcher. Validated snapshots and Remotion bundles are prepared before changing the head.
+An invalid save or failed build reports `source.error` while retaining the head. Runtime failure can
+still occur after a structurally valid commit; the UI retains the prior visible presentation until
+the new player acknowledges readiness.
+
+Ordinary working edits use polling; candidate edits use explicit publication. Mixing both for one
+change can make the candidate stale. Never edit app-private `presentations/`, blobs or SQLite files.
+Preview and rendering use immutable prepared source; undo/redo reconstructs working files from the
+saved snapshot. Ignored tooling directories survive checkout and are not historical content.
 
 ## Requests and publication
 
@@ -88,12 +130,11 @@ The target is stored in the video project's database, not resolved from a curren
 Switching workspaces, reconnecting, disconnecting or closing the originating page cannot retarget or
 cancel that request.
 
-Candidates live at `workspaces/<id>/apps/video-editor/requests/<requestId>/`. Native candidates
-contain all captured project files. Structured candidates contain `project.json` and
-`scenes/<sourceId>.html`; scene files override the corresponding JSON source strings at publication.
-Add both a source key and its file for a new scene. Use stable object IDs and register deterministic
-paused scene timelines under `window.__timelines`; structured source fragments use `__CLIP_ID__` for
-instance selectors.
+Candidates live at `workspaces/<id>/apps/video-editor/requests/<requestId>/` and contain the
+captured ordinary source files for every engine. Edit component/HTML/CSS files, update `video.json`,
+or replace the media file there. A project's own `project.json` has no editor-specific meaning.
+Preserve stable IDs for source-backed text references. Hyperframes timelines follow engine
+conventions; Remotion candidates use the component manifest above.
 
 The adapter invokes `codex queue --thread <sessionId> --message <instructions>` using an argument
 array, without a shell. It resolves `CODEX_UX_CODEX_BIN`, the bundled macOS executable, or `codex`
@@ -108,32 +149,50 @@ CLI delivery is `delivery-unknown`; notes stay reserved and there is no automati
 external session before resubmitting. The CLI timeout is 15 seconds. The app does not create or
 terminate sessions, schedule agents or resume interrupted delivery.
 
-Publication reads the full candidate, validates resources, checks its base and records one
-agent-authored revision. Repeated publication does not create duplicate revisions. Structural
-validation does not guarantee visual correctness; the agent should inspect playback. Syntax/runtime
-errors in arbitrary scene code are not fully preflighted.
+Publication reads the full candidate, validates resources, prepares required bundles, checks its
+base and working source, then records one agent-authored revision. Repeated publication does not
+create duplicate revisions. Structural validation does not guarantee visual correctness; the agent
+should inspect playback. Remotion compile errors fail preparation; arbitrary runtime errors and
+visual correctness still require preview inspection.
 
 Notes retain the revision where they were made, which can predate a request's base. Region
 coordinates are normalized to the composition (`x`, `y`, `width`, `height` in 0–1); times are
-seconds, and object IDs refer to video objects. Consult historical revisions when interpreting older
-notes.
+seconds, and object IDs identify supported source elements. A note must stay within its revision
+duration. Intent is `{ kind: "change" }` or `{ kind: "transition", duration?: number }`; transition
+duration is positive and at most 60 seconds. It describes requested behavior, not an applied edit.
+Consult historical revisions when interpreting older notes.
 
 ## Media routes and limits
 
 Media routes are under `/media/video-editor` on the same origin, outside `/api`:
 
-| Path                                      | Content                           |
-| ----------------------------------------- | --------------------------------- |
-| `/preview/:id/:revisionId/index.html`     | Saved composition preview         |
-| `/candidate/:id/:requestId/preview.html`  | Candidate player wrapper          |
-| `/candidate/:id/:requestId/index.html`    | Candidate composition             |
-| `/capture/:id/:revisionId?time=...`       | Frame capture wrapper             |
-| `/thumbnails/:id/:revisionId?time=...`    | Cached PNG frame                  |
-| `/assets/:id/:file`                       | Uploaded media                    |
-| `/exports/:id/:file`                      | Rendered MP4                      |
-| `/engine/player.js`, `/engine/runtime.js` | Shared HyperFrames player/runtime |
+| Path                                     | Content                                                                   |
+| ---------------------------------------- | ------------------------------------------------------------------------- |
+| `/preview/:id/:revisionId/player.html`   | Saved version's common player                                             |
+| `/preview/:id/:revisionId/source/:path`  | Captured source resource                                                  |
+| `/preview/:id/:revisionId/preview/:path` | Derived preview bundle/resource                                           |
+| `/candidate/:id/:requestId/player.html`  | Snapshot/build candidate and redirect to its immutable prepared player    |
+| `/prepared/:id/:contentHash/player.html` | Prepared candidate player, with the same source/preview resource subpaths |
+| `/capture/:id/:revisionId?time=...`      | Redirect to a saved player sought to seconds                              |
+| `/thumbnails/:id/:revisionId?time=...`   | Cached PNG frame after player readiness                                   |
+| `/assets/:id/:file`                      | Uploaded resource                                                         |
+| `/exports/:id/:file`                     | Exported MP4/WebM                                                         |
+| `/engine/preview.js`                     | Shared Hyperframes/media playback adapters                                |
+| `/engine/runtime.js`                     | Hyperframes runtime                                                       |
 
-Preview and candidate directories also serve referenced resources. Local media supports byte ranges.
-Uploading returns an asset record but does not add it to a revision automatically; add it to
-`document.assets` and reference it in the document. Audio/video assets include probed duration.
-Codex attachments must be explicitly uploaded; attachment discovery is not implemented.
+Only manifest-listed source files and derived preview output are exposed; source `node_modules` and
+render bundles are not preview resource routes. Byte ranges support local video playback. Candidate
+previews are immutable per captured content, so module caching cannot show an old build under a new
+source version. All player pages expose `window.__videoPreview`: readiness, seeking,
+play/pause/mute, state subscription and optional HTML editing document. Frame captures wait for
+`document.documentElement.dataset.ready === "true"` after loading and seeking.
+
+An asset upload returns a record without adding a revision. Add it to `document.assets` in a commit
+to copy it into source resources for agent use. Audio/video assets include probed duration. A media
+replacement upload directly creates a source revision. Neither operation automatically creates
+compositor layers. Codex attachments must be explicitly uploaded; attachment discovery is absent.
+
+Exports pin a saved revision. Hyperframes and Remotion produce H.264 MP4 from its prepared files;
+media export copies original bytes. Jobs report `rendering`, `complete` or `failed`, retain results,
+and reject concurrent exports. Interrupted jobs are failed on restart. Source snapshots and caches
+are retained without automatic garbage collection.

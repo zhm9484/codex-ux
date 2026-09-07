@@ -1,9 +1,9 @@
 # Architecture
 
 Codex UX provides a local collaboration protocol and web apps that share a data directory. The first
-app is Video Editor, built around HyperFrames HTML compositions. Multiple app instances can open the
-same workspace; accepted changes are shared, and stale writes are rejected without automatic
-merging.
+app is Video Editor, a collaboration container for Hyperframes, Remotion and finished videos.
+Multiple app instances can open the same workspace; accepted changes are shared, and stale writes
+are rejected without automatic merging.
 
 ## Concepts and ownership
 
@@ -40,20 +40,21 @@ session and base revision when submitted; subsequent switching cannot retarget t
 | Module                               | Implemented responsibility                                                              |
 | ------------------------------------ | --------------------------------------------------------------------------------------- |
 | `apps/video-editor/src/`             | React editor, workspace selection, canvas, playback, notes and export UI                |
-| `packages/video-domain/`             | Video documents, native HTML source operations, timing and starter sample               |
+| `packages/video-domain/`             | Source manifests, video revisions, feedback intents, HTML operations and timing         |
 | `packages/protocol/`                 | Portable workspace, app, instance, session, revision and operation references           |
 | `packages/sdk/`                      | Framework-independent browser instance identity and workspace-specific session bindings |
 | `packages/adapter-codex/`            | Delivery to an existing Codex task through `codex queue`                                |
 | `packages/local-server/src/storage/` | Workspace metadata, directory creation and path boundaries                              |
 | `packages/local-server/src/video/`   | Video databases, revision history, collaboration routes, assets and rendering           |
-| `packages/local-server/src/native/`  | Native source import, file snapshots, polling and preview bridge                        |
+| `packages/local-server/src/sources/` | Source import, snapshots, polling, dependency preparation and Remotion builds           |
+| `packages/video-runtime/`            | Common browser playback controller with Hyperframes, Remotion and media adapters        |
 | `packages/local-server/src/`         | HTTP hosting, app registration, workspace routes, agent dispatch and process lifecycle  |
 
 The protocol imports no React, Node.js, Codex or video engine. The browser SDK imports only portable
 protocol types. The frontend cannot import local-server, adapter-codex or `node:*`; ESLint enforces
 these restrictions. Packages expose TypeScript source and use Node.js 24 type stripping. React +
-Vite builds the frontend and splits React and the HTML parser into cacheable chunks. Native timeline
-metadata is cached per immutable document.
+Vite builds the frontend and splits React and the HTML parser into cacheable chunks. Hyperframes
+timeline metadata is cached per immutable document.
 
 `apps/scene-3d/` remains reserved. There is no runtime-generated UI, automatic custom app build
 manager, multi-agent coordinator or generic domain editing SDK.
@@ -75,7 +76,8 @@ manager, multi-agent coordinator or generic domain editing SDK.
           blobs/
           assets/
           requests/
-          revisions/
+          presentations/
+          dependencies/
           thumbnails/
           exports/
 ```
@@ -87,16 +89,20 @@ IDs, files and app history together.
 
 `files/` contains user- and agent-editable working content. Video Editor operates on `files/video/`;
 its checkouts leave sibling files and other apps' state untouched. First opening a video project
-adopts existing native source there, or creates a starter if the directory is empty. App-private
+adopts existing supported source there, or creates a starter if the directory is empty. App-private
 state belongs under `apps/<appId>/`, shared by instances of that app rather than duplicated per
 page. Video Editor keeps its SQLite database, SHA-256 blobs, uploaded assets, candidates, immutable
-preview inputs, thumbnail cache and exports there. Native uploads also become project resources.
+source and derived preview/render bundles, dependency caches, thumbnails and exports there. Uploads
+also become project resources.
 
 Each video database owns one document head, revisions, undo/redo, notes, delivery records and
 mutation deduplication IDs. Transactions record edits and move the head together. Editing after undo
 clears the redo stack but retains all revisions. Restoring a historical revision creates a new edit.
 Source checkouts and app writes are serialized per video project; stale writes fail with 409.
-Workspace metadata has no video document, revision head or session binding.
+Workspace metadata has no video document, revision head or session binding. Prepared artifacts are
+keyed by source hashes, the manifest and pinned adapter versions. Build output never overwrites
+working files. A common iframe controller acknowledges readiness and seeking before the editor
+adopts a replacement presentation and its revision metadata.
 
 These are user data, not Git content. Versions and media are retained without automatic garbage
 collection. The current directory layout and namespaced API replace the previous workspace-as-video
@@ -124,38 +130,41 @@ currently has domain API handlers. A build update leaves workspace data in place
 The service uses a PID lock and health check to reuse the service for a data directory. All apps and
 workspaces share its HTTP port. Chromium and FFmpeg subprocesses are still needed for rendering.
 
-| Environment variable                                  | Purpose                                              |
-| ----------------------------------------------------- | ---------------------------------------------------- |
-| `CODEX_UX_DATA_DIR`                                   | Override the data directory                          |
-| `CODEX_UX_APPS_FILE`                                  | Read hosted app build registrations from a JSON file |
-| `CODEX_UX_PORT`                                       | Override loopback port 5173                          |
-| `CODEX_UX_CODEX_BIN`                                  | Override the Codex executable                        |
-| `CODEX_UX_CHROME`                                     | Chromium executable for thumbnails and browser tests |
-| `PRODUCER_HEADLESS_SHELL_PATH`                        | Chromium executable for HyperFrames rendering        |
-| `HYPERFRAMES_FFMPEG_PATH`, `HYPERFRAMES_FFPROBE_PATH` | Override bundled media binaries                      |
+| Environment variable                                  | Purpose                                                       |
+| ----------------------------------------------------- | ------------------------------------------------------------- |
+| `CODEX_UX_DATA_DIR`                                   | Override the data directory                                   |
+| `CODEX_UX_APPS_FILE`                                  | Read hosted app build registrations from a JSON file          |
+| `CODEX_UX_PORT`                                       | Override loopback port 5173                                   |
+| `CODEX_UX_CODEX_BIN`                                  | Override the Codex executable                                 |
+| `CODEX_UX_CHROME`                                     | Chromium for thumbnails, Remotion rendering and browser tests |
+| `CODEX_UX_FFMPEG`, `CODEX_UX_FFPROBE`                 | Media generation/probing binary overrides                     |
+| `PRODUCER_HEADLESS_SHELL_PATH`                        | Chromium executable for HyperFrames rendering                 |
+| `HYPERFRAMES_FFMPEG_PATH`, `HYPERFRAMES_FFPROBE_PATH` | Hyperframes Producer binary overrides                         |
 
 On macOS, Chrome defaults to `/Applications/Google Chrome.app/Contents/MacOS/Google Chrome`.
 Elsewhere, provide Chromium through these settings or Playwright. FFmpeg and FFprobe use pinned
 static dependencies. The workspace permits the `ffmpeg-static` and `esbuild` installation scripts;
 restore skipped dependency builds before exporting. HyperFrames may fetch fonts while compiling;
-fully offline rendering is not guaranteed.
+fully offline rendering is not guaranteed. Remotion dependencies retain their own Remotion License;
+the repository's MIT license does not relicense third-party packages.
 
 The service binds to loopback, checks Host and Origin, and validates IDs and paths. It is a trusted
-local application, not a hosted multi-user security boundary: scene HTML and hosted apps execute on
-the same origin and must be trusted. Session references are routing information, not credentials.
+local application, not a hosted multi-user security boundary: video source and hosted apps execute
+on the same origin and must be trusted. Session references are routing information, not credentials.
 
 ## Verification
 
 `pnpm check` runs Prettier, ESLint, TypeScript, Node tests and the production build. Tests cover
-workspace portability and app isolation, independent app hosting, revision conflicts, native source,
-request routing snapshots, publication and HTTP validation. Delivery tests substitute a local
-executable and never send real messages.
+workspace portability and app isolation, independent app hosting, revision conflicts, source
+snapshots, request routing snapshots, publication, source/build rejection and HTTP validation.
+Delivery tests substitute a local executable and never send real messages.
 
 `pnpm test:browser` builds and starts an isolated service on port 5197 using a fresh directory under
 `.codex-ux/browser-tests/` for each run. It covers instance/session isolation and restoration,
 copied pages, sending while switching workspaces, canvas editing, draft preservation, history, media
-drops, responsive layouts, fullscreen and native dependency playback. The native test also exports
-an MP4, requiring Chrome and the media binaries. Browser/export integration is separate from
-`pnpm check`.
+drops, responsive layouts, fullscreen, Hyperframes dependencies, Remotion builds, direct video
+replacement, old-version playback and failed-preview recovery. It renders Hyperframes and Remotion
+MP4s and verifies direct media exports, requiring Chrome and the media binaries. Browser/export
+integration is separate from `pnpm check`.
 
 See [video editing](video-editor.md) and [local API](local-api.md) for detailed behavior.

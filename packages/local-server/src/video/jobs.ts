@@ -1,15 +1,15 @@
 import { randomUUID } from 'node:crypto';
-import { createRequire } from 'node:module';
-import { access, mkdir, readFile, writeFile, rename } from 'node:fs/promises';
-import { join } from 'node:path';
+import { access, copyFile, mkdir, readFile, writeFile, rename } from 'node:fs/promises';
+import { extname, join } from 'node:path';
 import type { ExportJob, Revision } from '@codex-ux/video-domain';
 import { HttpError } from '../errors.ts';
-import { materialize, videoDirectory } from './files.ts';
+import { prepareVideo, videoDirectory } from './files.ts';
 
-const require = createRequire(import.meta.url);
+import { mediaBinaries } from './probe.ts';
 export function configureRenderer() {
-  process.env.HYPERFRAMES_FFMPEG_PATH ??= require('ffmpeg-static') as string;
-  process.env.HYPERFRAMES_FFPROBE_PATH ??= (require('ffprobe-static') as { path: string }).path;
+  const binaries = mediaBinaries();
+  process.env.HYPERFRAMES_FFMPEG_PATH ??= binaries.ffmpeg;
+  process.env.HYPERFRAMES_FFPROBE_PATH ??= binaries.ffprobe;
   if (process.platform === 'darwin')
     process.env.PRODUCER_HEADLESS_SHELL_PATH ??=
       '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
@@ -64,22 +64,47 @@ export class RenderJobs {
   private async run(workspaceId: string, revision: Revision, job: ExportJob) {
     const dir = join(videoDirectory(this.root, workspaceId), 'exports');
     try {
-      configureRenderer();
-      await access(process.env.HYPERFRAMES_FFMPEG_PATH!);
-      await access(process.env.HYPERFRAMES_FFPROBE_PATH!);
-      const { createRenderJob, executeRenderJob } = await import('@hyperframes/producer');
-      const source = await materialize(this.root, workspaceId, revision);
-      const render = createRenderJob({
-        fps: revision.document.fps,
-        quality: 'standard',
-        format: 'mp4',
-        workers: 1,
-        strictness: 'strict',
-      });
-      await executeRenderJob(render, source, join(dir, `${job.id}.mp4`));
+      const prepared = await prepareVideo(this.root, workspaceId, revision.document);
+      const source = revision.document.source;
+      const extension = source.kind === 'media' ? extname(source.entry).toLowerCase() : '.mp4';
+      const output = join(dir, `${job.id}${extension}`);
+      if (source.kind === 'media') {
+        await copyFile(join(prepared, 'source', source.entry), output);
+      } else if (source.kind === 'remotion') {
+        const { selectComposition, renderMedia } = await import('@remotion/renderer');
+        const browserExecutable =
+          process.env.CODEX_UX_CHROME ??
+          (process.platform === 'darwin'
+            ? '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
+            : null);
+        const serveUrl = join(prepared, 'render');
+        const composition = await selectComposition({ serveUrl, id: 'Video', browserExecutable });
+        await renderMedia({
+          serveUrl,
+          composition,
+          codec: 'h264',
+          outputLocation: output,
+          browserExecutable,
+          concurrency: 1,
+        });
+      } else {
+        configureRenderer();
+        await access(process.env.HYPERFRAMES_FFMPEG_PATH!);
+        await access(process.env.HYPERFRAMES_FFPROBE_PATH!);
+        const { createRenderJob, executeRenderJob } = await import('@hyperframes/producer');
+        const render = createRenderJob({
+          fps: source.fps,
+          quality: 'standard',
+          format: 'mp4',
+          workers: 1,
+          strictness: 'strict',
+          entryFile: source.entry,
+        });
+        await executeRenderJob(render, join(prepared, 'source'), output);
+      }
       job.state = 'complete';
       job.progress = 1;
-      job.url = `/media/video-editor/exports/${workspaceId}/${job.id}.mp4`;
+      job.url = `/media/video-editor/exports/${workspaceId}/${job.id}${extension}`;
     } catch (e) {
       job.state = 'failed';
       job.error = e instanceof Error ? e.message : 'Export failed.';

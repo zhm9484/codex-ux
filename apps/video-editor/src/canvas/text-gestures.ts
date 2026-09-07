@@ -1,4 +1,4 @@
-import type { Clip, VideoDocument } from '@codex-ux/video-domain';
+import type { TextElement, VideoDocument } from '@codex-ux/video-domain';
 import { bounds, patchText, type CanvasText, type TextBinding } from './text-model';
 
 export function startTextDrag(
@@ -7,7 +7,7 @@ export function startTextDrag(
   selection: CanvasText,
   doc: VideoDocument,
   select: (selection: CanvasText) => void,
-  save: (selection: CanvasText, clip: Clip) => void,
+  save: (selection: CanvasText, clip: TextElement) => void,
 ) {
   if (event.button !== 0 || (event.target as HTMLElement).isContentEditable) return;
   const element = binding.element;

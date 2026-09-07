@@ -38,8 +38,7 @@
 }
 .notes-content,
 .assets-content,
-.history-content,
-.inspector-content {
+.history-content {
   overflow-y: auto;
   overscroll-behavior: contain;
   padding: 0 18px 18px;
@@ -163,38 +162,6 @@
   color: var(--muted);
   margin-top: 8px;
 }
-.object-identity {
-  display: flex;
-  gap: 10px;
-  align-items: center;
-  padding-bottom: 20px;
-}
-.kind-icon {
-  display: grid;
-  place-items: center;
-  width: 32px;
-  height: 32px;
-  border-radius: 7px;
-  background: #f0f0f0;
-  color: #666;
-  font:
-    19px Georgia,
-    serif;
-}
-.object-identity strong {
-  font-size: 12px;
-  font-weight: 500;
-  display: block;
-}
-.object-identity div > span {
-  display: block;
-  color: var(--muted);
-  font-size: 10px;
-  margin-top: 5px;
-}
-.text-editor {
-  line-height: 1.5;
-}
 .color-input {
   display: flex;
   align-items: center;
@@ -216,19 +183,6 @@
   font:
     10px ui-monospace,
     monospace;
-}
-.alignment-buttons {
-  display: flex;
-  gap: 3px;
-  background: #f2f2f2;
-  border-radius: 8px;
-  padding: 3px;
-  align-self: start;
-}
-.inspector-divider {
-  height: 1px;
-  background: var(--line);
-  margin: 4px 0 20px;
 }
 .side-panel > .secondary-button {
   width: calc(100% - 36px);
@@ -371,55 +325,11 @@
   font-size: 11px;
 }
 
-.source-dialog {
-  width: min(480px, calc(100vw - 32px));
-  border: 1px solid var(--line);
-  padding: 0;
-  border-radius: 18px;
-  color: #242424;
-  background: var(--panel, #fff);
-  box-shadow: 0 24px 80px #0002;
-}
-.source-dialog::backdrop {
-  background: #0002;
-  backdrop-filter: blur(5px);
-}
-.source-content {
-  padding: 24px;
-}
-.source-heading {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-.source-heading h2 {
-  flex: 1;
-  font-size: 16px;
-  font-weight: 500;
-  margin: 0;
-}
 .source-content p {
   font-size: 13px;
   color: var(--muted);
   line-height: 1.7;
   margin: 18px 0;
-}
-.source-path {
-  display: grid;
-  grid-template-columns: 1fr auto;
-  gap: 8px;
-  padding: 14px;
-  background: #f6f6f6;
-  border-radius: 10px;
-}
-.source-path code {
-  overflow-wrap: anywhere;
-  font-size: 11px;
-  line-height: 1.6;
-}
-.source-path span {
-  color: var(--muted);
-  font-size: 10px;
 }
 .source-content form {
   display: grid;
@@ -440,4 +350,17 @@
   font-size: 11px;
   line-height: 1.6;
   color: var(--muted);
+}
+
+.source-content > code {
+  display: block;
+  padding: 12px;
+  background: #f6f6f6;
+  border-radius: 8px;
+  font-size: 11px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+.source-content > .field {
+  margin-top: 20px;
 }

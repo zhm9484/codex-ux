@@ -13,11 +13,11 @@
   "dependencies": {
     "@codex-ux/protocol": "workspace:*",
     "@codex-ux/video-domain": "workspace:*",
-    "@hyperframes/player": "0.8.30",
     "lucide-react": "1.41.0",
     "react": "catalog:",
     "react-dom": "catalog:",
-    "@codex-ux/sdk": "workspace:*"
+    "@codex-ux/sdk": "workspace:*",
+    "@codex-ux/video-runtime": "workspace:*"
   },
   "devDependencies": {
     "@types/react": "catalog:",

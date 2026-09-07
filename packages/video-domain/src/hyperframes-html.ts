@@ -16,7 +16,7 @@ export const attribute = (element: Element, name: string) =>
   element.attrs.find((attr) => attr.name === name)?.value;
 
 /** Source ranges allow a text edit without reserializing scripts or the surrounding HTML. */
-export function nativeTextTargets(html: string) {
+export function htmlTextTargets(html: string) {
   return htmlElements(html).flatMap((element, index) => {
     const location = element.sourceCodeLocation;
     if (
@@ -47,8 +47,8 @@ export function nativeTextTargets(html: string) {
 }
 const escapeText = (text: string) =>
   text.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;');
-export function replaceNativeText(html: string, index: number, text: string, style: string) {
-  const target = nativeTextTargets(html).find((item) => item.index === index);
+export function replaceHtmlText(html: string, index: number, text: string, style: string) {
+  const target = htmlTextTargets(html).find((item) => item.index === index);
   if (!target) throw new Error('This text no longer has a reliable source location.');
   const location = target.location;
   const attr = location.attrs?.style;
@@ -63,7 +63,7 @@ export function replaceNativeText(html: string, index: number, text: string, sty
     html.slice(location.endTag!.startOffset)
   );
 }
-export function nativeMetadata(html: string) {
+export function hyperframesMetadata(html: string) {
   const root = htmlElements(html).find(
     (element) => attribute(element, 'data-composition-id') && attribute(element, 'data-width'),
   );

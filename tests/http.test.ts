@@ -22,7 +22,7 @@ void test('HTTP rejects cross-origin writes, stale edits and cross-workspace ref
   const create = async (name: string) => {
     const workspace = (await (await post('/api/workspaces', { name })).json()) as { id: string };
     return (await (
-      await post(`/api/workspaces/${workspace.id}/apps/video-editor`, { format: 'structured' })
+      await post(`/api/workspaces/${workspace.id}/apps/video-editor`, {})
     ).json()) as VideoProject;
   };
   try {
@@ -47,6 +47,7 @@ void test('HTTP rejects cross-origin writes, stale edits and cross-workspace ref
       (
         await post(base + '/notes', {
           text: 'Wrong version',
+          intent: { kind: 'change' },
           anchor: { revisionId: second.revisionId, start: 0, end: 1 },
         })
       ).status,
@@ -64,13 +65,14 @@ void test('HTTP rejects cross-origin writes, stale edits and cross-workspace ref
       409,
     );
     const preview = await fetch(
-      origin + `/media/video-editor/preview/${first.workspaceId}/${first.revisionId}/index.html`,
+      origin +
+        `/media/video-editor/preview/${first.workspaceId}/${first.revisionId}/source/index.html`,
     );
     assert.equal(preview.status, 200);
     assert.match(await preview.text(), /data-composition-id="main"/);
-    const player = await fetch(origin + '/media/video-editor/engine/player.js');
+    const player = await fetch(origin + '/media/video-editor/engine/preview.js');
     assert.match(player.headers.get('content-type') ?? '', /javascript/);
-    assert.match(await player.text(), /export/);
+    assert.match(await player.text(), /__videoPreview/);
     const runtime = await fetch(origin + '/media/video-editor/engine/runtime.js');
     assert.equal(runtime.status, 200);
     assert.match(runtime.headers.get('content-type') ?? '', /javascript/);
@@ -88,6 +90,40 @@ void test('HTTP rejects cross-origin writes, stale edits and cross-workspace ref
       404,
     );
     assert.equal((await post(base + '/binding', { threadId: randomUUID() })).status, 404);
+    assert.equal((await post(base, { format: 'structured' })).status, 400);
+    assert.equal(
+      (await post(base + '/source', { baseRevision: first.revisionId, directory: '/tmp' })).status,
+      400,
+    );
+    assert.equal(
+      (
+        await post(base + '/notes', {
+          text: 'Missing intent',
+          anchor: { revisionId: first.revisionId, start: 0, end: 1 },
+        })
+      ).status,
+      400,
+    );
+    assert.equal(
+      (
+        await post(base + '/notes', {
+          text: 'Outside video',
+          intent: { kind: 'change' },
+          anchor: { revisionId: first.revisionId, start: 0, end: 100 },
+        })
+      ).status,
+      400,
+    );
+    assert.equal(
+      (
+        await fetch(
+          origin +
+            `/media/video-editor/preview/${first.workspaceId}/${first.revisionId}/index.html`,
+        )
+      ).status,
+      404,
+    );
+    assert.equal((await fetch(origin + '/media/video-editor/engine/player.js')).status, 404);
     assert.equal(
       (await fetch(origin + `/api/workspaces/${first.workspaceId}/revisions/${first.revisionId}`))
         .status,

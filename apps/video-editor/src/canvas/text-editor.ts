@@ -1,4 +1,4 @@
-import type { Clip, VideoDocument } from '@codex-ux/video-domain';
+import type { TextElement, VideoDocument } from '@codex-ux/video-domain';
 import { describeText, patchText, textBindings, type CanvasText } from './text-model';
 import { startTextDrag } from './text-gestures';
 
@@ -6,7 +6,7 @@ export function createTextEditor(
   frame: Document,
   doc: VideoDocument,
   onSelect: (text: CanvasText) => void,
-  onSave: (text: CanvasText, next: Clip) => Promise<unknown>,
+  onSave: (text: CanvasText, next: TextElement) => Promise<unknown>,
   pause: () => void,
   onRestore: (text: CanvasText) => void = onSelect,
 ) {
@@ -48,7 +48,7 @@ export function createTextEditor(
     }
     return selection;
   };
-  const save = (selection: CanvasText, next: Clip) => {
+  const save = (selection: CanvasText, next: TextElement) => {
     void onSave(selection, next).then((saved) => {
       const binding = bindings.get(selection.clip.id);
       if (!saved && binding?.element.isConnected) {
@@ -61,7 +61,7 @@ export function createTextEditor(
     const selection = select(id);
     const binding = bindings.get(id);
     if (!selection || !binding) return;
-    const element = binding.source ? binding.element : binding.element.querySelector('span')!;
+    const element = binding.element;
     const original = element.textContent ?? '';
     element.contentEditable = 'plaintext-only';
     element.setAttribute('role', 'textbox');
@@ -109,7 +109,7 @@ export function createTextEditor(
     },
     edit,
     describe,
-    patch: (selection: CanvasText, next: Clip) => {
+    patch: (selection: CanvasText, next: TextElement) => {
       const binding = bindings.get(selection.clip.id);
       if (binding) patchText(binding.element, selection, next, doc);
     },

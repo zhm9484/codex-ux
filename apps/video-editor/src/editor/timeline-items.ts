@@ -1,49 +1,29 @@
 import {
-  clipSchema,
-  nativeTimelineItems,
-  type Clip,
-  type NativeTimelineItem,
+  hyperframesTimelineItems,
+  type TimelineItem,
   type VideoDocument,
 } from '@codex-ux/video-domain';
-export interface TimelineItem {
-  clip: Clip;
-  native?: NativeTimelineItem;
-  textId?: string;
-}
+export type { TimelineItem } from '@codex-ux/video-domain';
 export function timelineItems(doc: VideoDocument): TimelineItem[] {
-  if (!doc.native)
-    return doc.clips.map((clip) => ({
-      clip,
-      ...(clip.kind === 'text' ? { textId: clip.id } : {}),
-    }));
-  return nativeTimelineItems(doc).map((item) => {
-    const clip = clipSchema.parse({
-      id: 'native-element',
-      trackId: doc.tracks[0]!.id,
-      kind: item.textIndex === undefined ? 'scene' : 'text',
-      name: item.name,
-      start: item.start,
-      duration: item.duration,
-    });
-    clip.id = item.id;
-    return { clip, native: item };
-  });
+  if (doc.source.kind !== 'hyperframes') return [];
+  return hyperframesTimelineItems(doc).map((item) => ({
+    id: item.id,
+    name: item.name,
+    kind: item.textIndex === undefined ? 'scene' : 'text',
+    start: item.start,
+    duration: item.duration,
+    target: item,
+  }));
 }
-export function previewScenes(doc: VideoDocument): Clip[] {
-  if (!doc.native) return doc.clips.filter((clip) => clip.kind === 'scene');
-  const scenes = timelineItems(doc)
-    .filter((item) => item.clip.kind === 'scene')
-    .map((item) => item.clip);
+export function previewScenes(doc: VideoDocument): TimelineItem[] {
+  const scenes = timelineItems(doc).filter((item) => item.kind === 'scene');
   return scenes.length
     ? scenes
-    : [
-        clipSchema.parse({
-          id: 'native-preview',
-          name: doc.name,
-          kind: 'scene',
-          trackId: doc.tracks[0]!.id,
-          start: 0,
-          duration: doc.native.duration,
-        }),
-      ];
+    : Array.from({ length: 8 }, (_, index) => ({
+        id: `sample-${index}`,
+        name: doc.name,
+        kind: 'scene',
+        start: (index * doc.duration) / 8,
+        duration: doc.duration / 8,
+      }));
 }

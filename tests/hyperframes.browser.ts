@@ -41,29 +41,34 @@ test('native projects preserve runtime dependencies, UI edits and drafts through
     const initial = await createVideo(request, 'Native verification');
     const base = `/api/workspaces/${initial.workspaceId}/apps/video-editor`;
     const imported = await request.post(`${base}/source`, {
-      data: { directory: input, baseRevision: initial.revisionId },
+      data: { path: input, baseRevision: initial.revisionId },
     });
     expect(imported.ok()).toBe(true);
     const original = (await imported.json()) as VideoProject;
     const source = (await (await request.get(`${base}/source`)).json()) as { directory: string };
     const read = async () => (await (await request.get(base)).json()) as VideoProject;
     await page.goto(`/apps/video-editor/w/${initial.workspaceId}`);
-    const frame = () => page.frameLocator('iframe');
+    await expect(page.locator(`iframe[data-revision="${original.revisionId}"]`)).toHaveCSS(
+      'opacity',
+      '1',
+    );
+    const frame = () => page.frameLocator('iframe').frameLocator('iframe');
     await expect(frame().locator('#caption')).toHaveAttribute('data-module-loaded', 'modules work');
     await expect(frame().locator('p#detail')).toHaveText('Nested detail');
     await frame().locator('#caption').dblclick();
     await frame().getByRole('textbox', { name: 'Canvas text' }).fill('Edited natively');
     await page.locator('.app-header').click({ position: { x: 500, y: 25 } });
     await expect
-      .poll(async () => (await read()).revision.document.native!.files['index.html']!.text)
+      .poll(async () => (await read()).revision.document.files['index.html']!.text)
       .toContain('Edited natively');
-    await expect(page.locator('hyperframes-player')).toHaveCount(1);
+    await expect(page.locator('iframe[data-revision]')).toHaveCount(1);
     await expect(frame().locator('#caption')).toHaveText('Edited natively');
     expect(await readFile(join(source.directory, 'app.js'), 'utf8')).toBe(program);
     const current = await read();
     await request.post(`${base}/notes`, {
       data: {
         text: 'Original note',
+        intent: { kind: 'change' },
         anchor: { revisionId: original.revisionId, start: 3, end: 3 },
       },
     });
@@ -80,9 +85,9 @@ test('native projects preserve runtime dependencies, UI edits and drafts through
       .not.toBe(current.revisionId);
     const updated = await read();
     await expect(
-      page.locator(`hyperframes-player[data-revision="${updated.revisionId}"]`),
+      page.locator(`iframe[data-revision][data-revision="${updated.revisionId}"]`),
     ).toHaveCSS('opacity', '1');
-    await expect(page.locator('hyperframes-player')).toHaveCount(1);
+    await expect(page.locator('iframe[data-revision]')).toHaveCount(1);
     await expect(page.getByRole('textbox', { name: 'Feedback note' })).toHaveValue(
       'Keep my unsent draft',
     );
@@ -95,10 +100,10 @@ test('native projects preserve runtime dependencies, UI edits and drafts through
     expect((await read()).notes.at(-1)!.anchor.revisionId).toBe(current.revisionId);
     await writeFile(join(source.directory, 'app.js'), 'throw new Error("Broken external script");');
     await expect(page.locator('.preview-error')).toBeVisible({ timeout: 18000 });
-    await expect(page.locator('hyperframes-player').first()).toHaveCSS('opacity', '1');
+    await expect(page.locator('iframe[data-revision]').first()).toHaveCSS('opacity', '1');
     await writeFile(join(source.directory, 'app.js'), program);
     await expect(page.locator('.preview-error')).toHaveCount(0, { timeout: 15000 });
-    await expect(page.locator('hyperframes-player')).toHaveCount(1);
+    await expect(page.locator('iframe[data-revision]')).toHaveCount(1);
     await expect(page.locator('.current-time')).toHaveText('00:03:00');
     await frame().locator('#caption').dblclick();
     await frame().getByRole('textbox', { name: 'Canvas text' }).press('Escape');
@@ -106,11 +111,11 @@ test('native projects preserve runtime dependencies, UI edits and drafts through
     await expect(page.locator('.text-selection')).toBeVisible();
     await page.keyboard.press('Delete');
     await expect
-      .poll(async () => (await read()).revision.document.native!.files['index.html']!.text)
+      .poll(async () => (await read()).revision.document.files['index.html']!.text)
       .not.toContain('Edited natively');
     await page.getByRole('button', { name: 'Undo (⌘Z)', exact: true }).click();
     await expect
-      .poll(async () => (await read()).revision.document.native!.files['index.html']!.text)
+      .poll(async () => (await read()).revision.document.files['index.html']!.text)
       .toContain('Edited natively');
     const forExport = await read();
     const exportResponse = await request.post(`${base}/exports`, {

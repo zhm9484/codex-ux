@@ -128,6 +128,11 @@ export function NotesPanel(p: Props) {
                     </IconButton>
                   )}
                 </div>
+                {note.intent.kind === 'transition' && (
+                  <span className="older-version">
+                    Transition{note.intent.duration ? ` · ${note.intent.duration}s` : ''}
+                  </span>
+                )}
                 <p>{note.text}</p>
                 {note.anchor.revisionId !== p.project.revisionId && (
                   <span className="older-version">Attached to an earlier version</span>

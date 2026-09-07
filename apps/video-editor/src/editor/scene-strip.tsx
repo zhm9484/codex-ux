@@ -1,6 +1,12 @@
 import { previewScenes } from './timeline-items';
 import { useRef } from 'react';
-import { durationOf, roundFrame, formatTime, type VideoDocument } from '@codex-ux/video-domain';
+import {
+  durationOf,
+  timeStep,
+  roundFrame,
+  formatTime,
+  type VideoDocument,
+} from '@codex-ux/video-domain';
 import type { TimeRange } from './types';
 import type { PlaybackClock } from '../lib/playback-clock';
 import { usePlaybackDisplay } from '../hooks/use-playback-display';
@@ -36,7 +42,7 @@ export function SceneStrip(p: Props) {
     return Math.max(
       0,
       Math.min(
-        duration - 1 / p.document.fps,
+        duration - timeStep(p.document.fps),
         roundFrame(((event.clientX - rect.left) / rect.width) * duration, p.document.fps),
       ),
     );
@@ -63,7 +69,9 @@ export function SceneStrip(p: Props) {
         onKeyDown={(event) => {
           if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
             event.preventDefault();
-            p.onSeek(p.clock.sample() + (event.key === 'ArrowRight' ? 1 : -1) / p.document.fps);
+            p.onSeek(
+              p.clock.sample() + (event.key === 'ArrowRight' ? 1 : -1) * timeStep(p.document.fps),
+            );
           }
         }}
         onPointerDown={(event) => {
@@ -91,13 +99,13 @@ export function SceneStrip(p: Props) {
           if (start.kind === 'seek') p.onSeek(time);
           else if (start.kind === 'start' && start.range)
             p.onRange({
-              start: Math.min(time, start.range.end - 1 / p.document.fps),
+              start: Math.min(time, start.range.end - timeStep(p.document.fps)),
               end: start.range.end,
             });
           else if (start.kind === 'end' && start.range)
             p.onRange({
               start: start.range.start,
-              end: Math.max(time, start.range.start + 1 / p.document.fps),
+              end: Math.max(time, start.range.start + timeStep(p.document.fps)),
             });
           else if (Math.abs(event.clientX - start.x) > 5)
             p.onRange({ start: Math.min(time, start.time), end: Math.max(time, start.time) });
