@@ -16,7 +16,8 @@
     "@hyperframes/player": "0.8.30",
     "lucide-react": "1.41.0",
     "react": "catalog:",
-    "react-dom": "catalog:"
+    "react-dom": "catalog:",
+    "@codex-ux/sdk": "workspace:*"
   },
   "devDependencies": {
     "@types/react": "catalog:",

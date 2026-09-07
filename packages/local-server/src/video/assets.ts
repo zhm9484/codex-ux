@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { mkdir, writeFile, rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import type { Asset } from '@codex-ux/video-domain';
-import { workspaceDirectory } from './files.ts';
+import { videoDirectory } from './files.ts';
 import { HttpError } from '../errors.ts';
 import { mediaDuration } from './probe.ts';
 
@@ -36,7 +36,7 @@ export async function saveAsset(
   if (!bytes.length) throw new HttpError(400, 'The file is empty.');
   const id = randomUUID(),
     file = `${id}.${extension}`;
-  const dir = join(workspaceDirectory(root, workspaceId), 'assets');
+  const dir = join(videoDirectory(root, workspaceId), 'assets');
   await mkdir(dir, { recursive: true });
   await writeFile(join(dir, file), bytes, { flag: 'wx' });
   try {

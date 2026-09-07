@@ -45,7 +45,7 @@ export function compositionHtml(doc: VideoDocument, preview = false) {
   .clip{position:absolute;inset:0}.text-clip{inset:auto;transform:translateY(-50%);white-space:pre-wrap;line-height:1.04;letter-spacing:-0.045em;font-weight:400;pointer-events:auto}
   </style></head><body><div id="root" data-composition-id="main" data-start="0" data-duration="${durationOf(doc)}" data-width="${doc.width}" data-height="${doc.height}">${clips}</div>
   <script>window.__timelines=window.__timelines||{};window.__timelines.main=gsap.timeline({paused:true});</script>
-  ${preview ? '<script src="/engine/runtime.js"></script>' : ''}</body></html>`;
+  ${preview ? '<script src="/media/video-editor/engine/runtime.js"></script>' : ''}</body></html>`;
 }
 
 export function sceneHtml(source: string, clip: Clip, doc: VideoDocument) {

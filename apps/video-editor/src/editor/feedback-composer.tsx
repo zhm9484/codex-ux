@@ -13,7 +13,7 @@ export function FeedbackComposer({ state }: { state: EditorState }) {
   const anchor = reference?.anchor ?? state.anchor;
   const [saved, setSaved] = useState(false);
   const input = useRef<HTMLTextAreaElement>(null);
-  const count = state.workspace?.notes.filter((note) => !note.requestId).length ?? 0;
+  const count = state.project?.notes.filter((note) => !note.requestId).length ?? 0;
   const anchored = !!(state.selectedId || state.region || state.range || text);
   useEffect(() => {
     if (state.chatOpen) input.current?.focus();
@@ -46,7 +46,7 @@ export function FeedbackComposer({ state }: { state: EditorState }) {
             <span className="reference-icon">
               <img
                 alt="Referenced frame"
-                src={`/thumbnails/${state.workspace!.id}/${anchor.revisionId}?time=${anchor.start}`}
+                src={`/media/video-editor/thumbnails/${state.project!.workspaceId}/${anchor.revisionId}?time=${anchor.start}`}
               />
             </span>
             <span>

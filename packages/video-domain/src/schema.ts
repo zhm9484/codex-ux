@@ -107,14 +107,10 @@ export interface Note {
   createdAt: string;
   requestId: string | null;
 }
-export interface WorkspaceSummary {
-  id: string;
+export interface VideoProject {
+  workspaceId: string;
   name: string;
   revisionId: string;
-  updatedAt: string;
-  threadId: string | null;
-}
-export interface Workspace extends WorkspaceSummary {
   revision: Revision;
   history: Omit<Revision, 'document'>[];
   notes: Note[];

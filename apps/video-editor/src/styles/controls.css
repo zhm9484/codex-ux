@@ -188,7 +188,7 @@
   position: relative;
   min-width: 0;
 }
-.project-switcher {
+.workspace-switcher {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -199,11 +199,11 @@
   font-weight: 500;
   min-width: 0;
 }
-.project-switcher svg {
+.workspace-switcher svg {
   color: var(--muted);
   width: 12px;
 }
-.project-switcher span {
+.workspace-switcher span {
   max-width: 250px;
   overflow: hidden;
   text-overflow: ellipsis;

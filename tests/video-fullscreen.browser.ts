@@ -1,6 +1,6 @@
 /// <reference lib="dom" />
 import { test, expect } from '@playwright/test';
-import type { Workspace } from '../packages/video-domain/src/schema.ts';
+import { createVideo } from './browser-helpers.ts';
 
 for (const embedded of [false, true]) {
   test(`video fullscreen preserves playback and supports seeking (${embedded ? 'embedded fallback' : 'native'})`, async ({
@@ -13,22 +13,22 @@ for (const embedded of [false, true]) {
       });
       await page.setViewportSize({ width: 600, height: 800 });
     }
-    const created = await request.post('/api/workspaces', {
-      data: { name: 'Fullscreen verification', native: false },
-    });
-    const workspace = (await created.json()) as Workspace;
+    const workspace = await createVideo(request, 'Fullscreen verification', 'structured');
     if (embedded) {
-      const updated = await request.post(`/api/workspaces/${workspace.id}/revisions`, {
-        data: {
-          baseRevision: workspace.revisionId,
-          requestId: crypto.randomUUID(),
-          label: 'Portrait format',
-          document: { ...workspace.revision.document, width: 360, height: 640 },
+      const updated = await request.post(
+        `/api/workspaces/${workspace.workspaceId}/apps/video-editor/revisions`,
+        {
+          data: {
+            baseRevision: workspace.revisionId,
+            requestId: crypto.randomUUID(),
+            label: 'Portrait format',
+            document: { ...workspace.revision.document, width: 360, height: 640 },
+          },
         },
-      });
+      );
       expect(updated.ok()).toBe(true);
     }
-    await page.goto(`/w/${workspace.id}`);
+    await page.goto(`/apps/video-editor/w/${workspace.workspaceId}`);
     await expect(page.locator('.preview-loading')).toHaveCount(0);
     const strip = page.getByRole('slider', { name: 'Video position' });
     const stripBox = (await strip.boundingBox())!;

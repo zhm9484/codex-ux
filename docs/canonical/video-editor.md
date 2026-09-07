@@ -1,7 +1,9 @@
 # Video editor
 
-The `video-editor` preset centers one video per project in a neutral canvas. The project selector
-switches projects; it does not create additional videos. The timeline follows the preview and
+Video Editor manages one video project per workspace in a neutral canvas. The workspace selector
+switches the current app instance; other pages keep their own selections. Workspace names are
+independent of video titles. The app entry page lists workspaces and can create an empty workspace.
+Opening it in Video Editor initializes the video project. The timeline follows the preview and
 playback controls, with layout based on both pane dimensions and the video's aspect ratio.
 
 Chat, Notes, Add text (structured projects) and app Fullscreen live in a movable vertical tool
@@ -21,11 +23,12 @@ editor. If an embedded browser refuses native fullscreen, the same player view f
 
 ## Native HyperFrames projects
 
-New projects use a native HyperFrames directory. The local source API exposes its source location or
-imports an existing directory as a new revision. Import copies files; the original directory is not
-modified. Older structured videos can be converted once using `POST /source`. That conversion
-materializes their existing arrangement; subsequent native revisions never regenerate a main
-timeline or wrap scenes from `project.json`.
+New video projects default to a native HyperFrames directory at `files/video/` within the workspace.
+The local source API exposes its source location or imports an existing directory as a new revision.
+Import copies files; the original directory is not modified. A structured video can be converted
+using `POST /source` with its current `baseRevision`. That conversion materializes their existing
+arrangement; subsequent native revisions never regenerate a main timeline or wrap scenes from
+`project.json`.
 
 Native `index.html`, scripts, styles, sub-compositions and binary resources are captured together.
 Files that the app cannot interpret are retained byte for byte and remain available for playback,
@@ -76,7 +79,7 @@ untrusted websites.
   Editing attributes does not rewrite authored GSAP keyframes; deleting a referenced node may
   require an agent to update its script as well.
 
-Structured documents remain readable/editable for earlier revisions. They support their existing
+The API can explicitly initialize a structured video project. Structured documents support
 text/media clips and uniquely matched plain scene text. General clip operations are still available
 in the domain/API, without requiring a dense arrangement toolbar in the UI.
 
@@ -90,9 +93,9 @@ are not persisted across a full page reload.
 
 A note captures revision, time/range, optional object reference and normalized rectangle. Its
 reference is pinned when the input is opened. Saving stores it locally; selecting notes and pressing
-Send explicitly delivers them to the connected Codex task. Submitted and unsent notes keep their
-original revision anchors. Locating an older note opens that version for comparison; the app never
-silently rebinds it to new content.
+Send explicitly delivers them to this app instance’s connected Codex session. Submitted and unsent
+notes keep their original revision anchors. Locating an older note opens that version for
+comparison; the app never silently rebinds it to new content.
 
 The visible page polls every 1.8 seconds. Native source changes must be stable across two scans
 (separated by at least 650 ms) before capture. Each accepted external save becomes an agent-authored
@@ -110,12 +113,18 @@ timeline expansion/scroll state stay in the editor. The playback indicator paint
 requestAnimationFrame between runtime samples, and thumbnails remain visible while newer images are
 generated.
 
-The connection accepts an existing task ID or `codex://threads/<id>` link. Codex receives an HTTP
-context and an isolated candidate directory. Native candidates are edited as ordinary HyperFrames
-files and explicitly published as one revision; direct edits to the working project are picked up by
-polling. No MCP, internal-reasoning stream, multi-agent scheduler or concurrent merge is required.
-Files attached to Codex are not automatically imported; the agent can upload them through the local
-API. See [local API](local-api.md).
+Each app instance remembers its own session binding for each workspace. A → B → A restores A's
+connection; refreshing preserves it. A new or copied page starts unbound. Other pages are unaffected
+by switching or disconnecting. Requests retain the workspace, instance, session and base revision
+selected at submission, even if the originating page changes or closes. The browser SDK stores
+bindings in session storage and prevents two live pages from claiming the same instance identity.
+
+The connection accepts an existing Codex session/task ID or `codex://threads/<id>` link. Codex
+receives an HTTP context and an isolated candidate directory. Native candidates are edited as
+ordinary HyperFrames files and explicitly published as one revision; direct edits to the working
+project are picked up by polling. No MCP, internal-reasoning stream, multi-agent scheduler or
+concurrent merge is required. Files attached to Codex are not automatically imported; the agent can
+upload them through the local API. See [local API](local-api.md).
 
 ## History, media and output
 

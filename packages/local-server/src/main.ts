@@ -8,9 +8,10 @@ const lock = join(dataRoot, 'service.lock');
 try {
   const info = (await fetch(`${origin}/api/health`).then((r) => r.json())) as {
     service?: string;
+    version?: number;
     dataRoot?: string;
   };
-  if (info.service === 'codex-ux' && info.dataRoot === dataRoot) {
+  if (info.service === 'codex-ux' && info.version === 2 && info.dataRoot === dataRoot) {
     console.log(`Codex UX is already running at ${origin}`);
     process.exit(0);
   }

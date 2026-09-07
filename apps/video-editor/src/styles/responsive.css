@@ -38,10 +38,10 @@
   .header-actions .undo-controls {
     display: none;
   }
-  .project-switcher {
+  .workspace-switcher {
     font-size: 13px;
   }
-  .project-switcher span {
+  .workspace-switcher span {
     max-width: 150px;
   }
   .export-button {

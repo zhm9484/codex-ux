@@ -1,5 +1,6 @@
 import { defineConfig } from '@playwright/test';
 import { resolve } from 'node:path';
+import { randomUUID } from 'node:crypto';
 
 const executablePath =
   process.env.CODEX_UX_CHROME ??
@@ -20,7 +21,10 @@ export default defineConfig({
   webServer: {
     command: 'pnpm build && pnpm start',
     url: 'http://127.0.0.1:5197/api/health',
-    env: { CODEX_UX_PORT: '5197', CODEX_UX_DATA_DIR: resolve('.codex-ux/browser-tests') },
+    env: {
+      CODEX_UX_PORT: '5197',
+      CODEX_UX_DATA_DIR: resolve('.codex-ux/browser-tests', randomUUID()),
+    },
     timeout: 30000,
     reuseExistingServer: false,
   },

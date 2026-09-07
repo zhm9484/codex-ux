@@ -12,13 +12,15 @@ import { createPlaybackClock } from '../lib/playback-clock';
 import { editSourceText, type CanvasText } from '../canvas/text-model';
 import { deleteElement } from '../editor/element-edits';
 import type { TimelineItem } from '../editor/timeline-items';
-import { useWorkspace } from './use-workspace';
+import { useVideoProject } from './use-video-project';
+import { useSessionBinding } from './use-session-binding';
 import { api } from '../lib/api';
 import type { Panel, PlayerControl, TimeRange } from '../editor/types';
 
 export function useEditor(id: string) {
   const control = useRef<PlayerControl | null>(null);
-  const storage = useWorkspace(id, () => control.current?.isTextEditing() ?? false);
+  const binding = useSessionBinding(id);
+  const storage = useVideoProject(id, () => control.current?.isTextEditing() ?? false);
   const [displayedRevision, setDisplayedRevision] = useState('');
   const [panel, setPanel] = useState<Panel>(null);
   const [panelAnchor, setPanelAnchor] = useState<FloatingAnchor | null>(null);
@@ -41,8 +43,8 @@ export function useEditor(id: string) {
   const [comparison, setComparison] = useState<Revision | null>(null);
   const [exporting, setExporting] = useState(false);
   const compareControl = useRef<PlayerControl | null>(null);
-  const workspace = storage.workspace;
-  const document = workspace?.revision.document;
+  const project = storage.project;
+  const document = project?.revision.document;
 
   function seek(value: number, keepPlaying = false) {
     value = Math.max(
@@ -119,8 +121,8 @@ export function useEditor(id: string) {
     );
   }
   function locate(anchor: FeedbackAnchor) {
-    if (anchor.revisionId !== workspace?.revisionId) {
-      void api<Revision>(`/workspaces/${id}/revisions/${anchor.revisionId}`)
+    if (anchor.revisionId !== project?.revisionId) {
+      void api<Revision>(`/workspaces/${id}/apps/video-editor/revisions/${anchor.revisionId}`)
         .then((revision) => {
           setComparison(revision);
           setTime(anchor.start);
@@ -288,7 +290,7 @@ export function useEditor(id: string) {
   }, []);
 
   const anchor: FeedbackAnchor = {
-    revisionId: displayedRevision || workspace?.revisionId || '',
+    revisionId: displayedRevision || project?.revisionId || '',
     start: range?.start ?? clock.time(),
     end: range?.end ?? clock.time(),
     ...(selectedId
@@ -302,7 +304,8 @@ export function useEditor(id: string) {
   };
   return {
     ...storage,
-    error: storage.error || workspace?.source?.error || '',
+    ...binding,
+    error: storage.error || binding.bindingError || project?.source?.error || '',
     displayedRevision,
     setDisplayedRevision,
     timelineExpanded: !!canvasText,

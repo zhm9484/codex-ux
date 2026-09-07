@@ -4,8 +4,8 @@ Start here for an authoritative overview of the current project. These documents
 behavior, feature designs, architecture, and operating conventions. Keep them in sync with changes
 to the project; maintenance rules are in [AGENTS.md](../../AGENTS.md).
 
-- [Architecture](architecture.md): implemented components, module boundaries, and development
-  commands.
+- [Architecture](architecture.md): workspace/app/session concepts, storage ownership, module
+  boundaries and development commands.
 - [Video editor](video-editor.md): editing, responsive UI, collaboration and export.
 - [Local API](local-api.md): HTTP contracts, candidate publication and source conventions.
 

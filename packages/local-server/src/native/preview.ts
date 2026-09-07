@@ -13,7 +13,7 @@ export function nativePreview(html: string) {
     ? html.replace(/<head[^>]*>/i, (head) => head + errors)
     : errors + html;
   if (/hyperframe\.runtime|\/engine\/runtime\.js/.test(html)) return withErrors;
-  const bridge = '<script src="/engine/runtime.js"></script>';
+  const bridge = '<script src="/media/video-editor/engine/runtime.js"></script>';
   return /<\/body\s*>/i.test(withErrors)
     ? withErrors.replace(/<\/body\s*>/i, `${bridge}</body>`)
     : withErrors + bridge;

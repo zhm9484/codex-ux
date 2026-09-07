@@ -33,7 +33,7 @@ void test('media imports read actual duration and remove rejected files', async 
       saveAsset(root, 'video', 'Script.html', 'text/html', Buffer.from('<script>')),
       /Use PNG/,
     );
-    const files = await readdir(join(root, 'workspaces/video/assets'));
+    const files = await readdir(join(root, 'workspaces/video/apps/video-editor/assets'));
     assert.deepEqual(files, [asset.file]);
   } finally {
     await rm(root, { recursive: true, force: true });

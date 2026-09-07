@@ -1,12 +1,14 @@
 import { useState } from 'react';
 import { ArrowUp, Check, Link2, MessageSquare, Trash2 } from 'lucide-react';
-import { formatTime, type Workspace } from '@codex-ux/video-domain';
-import type { FeedbackAnchor } from '@codex-ux/protocol';
+import { formatTime, type VideoProject } from '@codex-ux/video-domain';
+import type { FeedbackAnchor, AgentSessionRef, CollaborationTarget } from '@codex-ux/protocol';
 import { EmptyState, IconButton, PanelHeader } from '../components/ui';
 import { post } from '../lib/api';
 
 interface Props {
-  workspace: Workspace;
+  project: VideoProject;
+  session: AgentSessionRef | null;
+  target: () => CollaborationTarget;
   disabled: boolean;
   onClose: () => void;
   onRemove: (id: string) => Promise<unknown>;
@@ -16,19 +18,22 @@ interface Props {
 }
 export function NotesPanel(p: Props) {
   const [binding, setBinding] = useState(false);
-  const [thread, setThread] = useState(p.workspace.threadId ?? '');
+  const [thread, setThread] = useState(p.session?.sessionId ?? '');
   const [sending, setSending] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const [excluded, setExcluded] = useState<string[]>([]);
-  const notes = p.workspace.notes;
+  const notes = p.project.notes;
   const unsent = notes.filter((n) => !n.requestId && !excluded.includes(n.id));
   const send = async () => {
     setSending(true);
     setError('');
     setMessage('');
     try {
-      await post(`/workspaces/${p.workspace.id}/requests`, { noteIds: unsent.map((n) => n.id) });
+      await post(`/workspaces/${p.project.workspaceId}/apps/video-editor/requests`, {
+        noteIds: unsent.map((n) => n.id),
+        target: p.target(),
+      });
       await p.onRefresh();
       setMessage('Sent to your Codex task. Keep exploring here.');
     } catch (e) {
@@ -46,8 +51,10 @@ export function NotesPanel(p: Props) {
       />
       <div className="notes-content">
         <div className="connection-row">
-          <span className={`connection-dot ${p.workspace.threadId ? 'connected' : ''}`} />
-          <span>{p.workspace.threadId ? 'Codex task connected' : 'Connect your Codex task'}</span>
+          <span className={`connection-dot ${p.session?.sessionId ? 'connected' : ''}`} />
+          <span>
+            {p.session?.sessionId ? 'Codex session connected' : 'Connect a Codex session'}
+          </span>
           <IconButton label="Configure Codex connection" onClick={() => setBinding(!binding)}>
             <Link2 size={14} />
           </IconButton>
@@ -64,7 +71,7 @@ export function NotesPanel(p: Props) {
             }}
           >
             <label className="field">
-              Task ID or task link
+              Session ID or task link
               <input
                 placeholder="codex://threads/…"
                 value={thread}
@@ -122,7 +129,7 @@ export function NotesPanel(p: Props) {
                   )}
                 </div>
                 <p>{note.text}</p>
-                {note.anchor.revisionId !== p.workspace.revisionId && (
+                {note.anchor.revisionId !== p.project.revisionId && (
                   <span className="older-version">Attached to an earlier version</span>
                 )}
               </article>
@@ -143,7 +150,7 @@ export function NotesPanel(p: Props) {
         )}
         <button
           className="primary-button full-width"
-          disabled={!unsent.length || !p.workspace.threadId || sending || p.disabled}
+          disabled={!unsent.length || !p.session?.sessionId || sending || p.disabled}
           onClick={() => void send()}
         >
           <ArrowUp size={15} />

@@ -1,5 +1,6 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
+import { openAppInstance } from '@codex-ux/sdk';
 import { App } from './app';
 import './styles.css';
 
@@ -9,8 +10,10 @@ if (!root) {
   throw new Error('The application root is missing.');
 }
 
+const instance = await openAppInstance('video-editor');
+
 createRoot(root).render(
   <StrictMode>
-    <App />
+    <App instance={instance} />
   </StrictMode>,
 );

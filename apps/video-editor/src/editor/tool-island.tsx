@@ -53,10 +53,10 @@ export function ToolIsland({
         onClick={(event) => panel('notes', event)}
       >
         <StickyNote size={18} />
-        {state.workspace?.notes.some((note) => !note.requestId) && <span className="island-dot" />}
+        {state.project?.notes.some((note) => !note.requestId) && <span className="island-dot" />}
       </IconButton>
       <span className="island-divider" />
-      {!state.workspace?.revision.document.native && (
+      {!state.project?.revision.document.native && (
         <IconButton label="Add text" disabled={state.saving} onClick={state.addText}>
           <Type size={17} />
         </IconButton>

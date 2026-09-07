@@ -1,16 +1,15 @@
 /// <reference lib="dom" />
 import { test, expect, type APIRequestContext, type Locator, type Page } from '@playwright/test';
-import type { Workspace } from '../packages/video-domain/src/schema.ts';
+import { createVideo } from './browser-helpers.ts';
+import type { VideoProject } from '../packages/video-domain/src/schema.ts';
 
 async function createWorkspace(request: APIRequestContext) {
-  const response = await request.post('/api/workspaces', {
-    data: { name: 'Browser verification', native: false },
-  });
-  expect(response.status()).toBe(201);
-  return (await response.json()) as Workspace;
+  return createVideo(request, 'Browser verification', 'structured');
 }
 async function readWorkspace(request: APIRequestContext, id: string) {
-  return (await (await request.get(`/api/workspaces/${id}`)).json()) as Workspace;
+  return (await (
+    await request.get(`/api/workspaces/${id}/apps/video-editor`)
+  ).json()) as VideoProject;
 }
 
 async function readyPreview(page: Page, request: APIRequestContext, id: string) {
@@ -27,11 +26,11 @@ test('canvas titles edit, drag, resize and undo without timeline editing control
   request,
 }) => {
   const workspace = await createWorkspace(request);
-  const read = () => readWorkspace(request, workspace.id);
+  const read = () => readWorkspace(request, workspace.workspaceId);
   const errors: string[] = [];
   page.on('pageerror', (error) => errors.push(error.message));
   await page.route('https://**', (route) => route.abort());
-  await page.goto(`/w/${workspace.id}`);
+  await page.goto(`/apps/video-editor/w/${workspace.workspaceId}`);
   const frame = page.frameLocator('iframe');
   const title = () => frame.locator('#title-1 span');
   await expect(page.getByRole('textbox', { name: 'Feedback note' })).toBeHidden();
@@ -45,7 +44,7 @@ test('canvas titles edit, drag, resize and undo without timeline editing control
   await expect
     .poll(async () => (await read()).revision.document.clips.find((c) => c.id === 'title-1')?.text)
     .toBe('Made together.');
-  await readyPreview(page, request, workspace.id);
+  await readyPreview(page, request, workspace.workspaceId);
   await expect(page.locator('hyperframes-player')).toHaveAttribute(
     'data-test-identity',
     'original-player',
@@ -59,7 +58,7 @@ test('canvas titles edit, drag, resize and undo without timeline editing control
   await expect
     .poll(async () => (await read()).revision.document.clips.find((c) => c.id === 'title-1')!.x)
     .toBeGreaterThan(6);
-  await readyPreview(page, request, workspace.id);
+  await readyPreview(page, request, workspace.workspaceId);
   await page.getByRole('button', { name: 'Resize text se' }).click({ trial: true });
   box = (await page.getByRole('button', { name: 'Resize text se' }).boundingBox())!;
   await page.mouse.move(box.x + 9, box.y + 9);
@@ -78,7 +77,7 @@ test('canvas titles edit, drag, resize and undo without timeline editing control
       async () => (await read()).revision.document.clips.find((c) => c.id === 'title-1')!.fontSize,
     )
     .toBe(100);
-  await readyPreview(page, request, workspace.id);
+  await readyPreview(page, request, workspace.workspaceId);
   expect((await page.locator('.text-selection').boundingBox())!.width).toBeLessThan(enlargedWidth);
   await page.locator('.app-header').click({ position: { x: 600, y: 30 } });
   await expect(page.locator('.text-selection')).toHaveCount(0);
@@ -90,8 +89,8 @@ test('HTML scene captions are editable, movable, font-selectable and durable', a
   request,
 }) => {
   const workspace = await createWorkspace(request);
-  const read = () => readWorkspace(request, workspace.id);
-  await page.goto(`/w/${workspace.id}`);
+  const read = () => readWorkspace(request, workspace.workspaceId);
+  await page.goto(`/apps/video-editor/w/${workspace.workspaceId}`);
   const frame = page.frameLocator('iframe');
   const edition = () => frame.locator('.art-opening .edition');
   await edition().dblclick();
@@ -100,14 +99,14 @@ test('HTML scene captions are editable, movable, font-selectable and durable', a
   await expect
     .poll(async () => (await read()).revision.document.sources.opening)
     .toContain('A NEW EDITION');
-  await readyPreview(page, request, workspace.id);
+  await readyPreview(page, request, workspace.workspaceId);
   await edition().click();
   await page.getByRole('button', { name: 'Typeface' }).click();
   await page.getByRole('option', { name: 'Avenir Next', exact: true }).click();
   await expect
     .poll(async () => (await read()).revision.document.sources.opening)
     .toContain('Avenir Next');
-  await readyPreview(page, request, workspace.id);
+  await readyPreview(page, request, workspace.workspaceId);
   const box = (await edition().boundingBox())!;
   await page.mouse.move(box.x + 20, box.y + box.height / 2);
   await page.mouse.down();
@@ -131,7 +130,7 @@ test('range and region comments open chat on demand and keep their original refe
   request,
 }) => {
   const workspace = await createWorkspace(request);
-  await page.goto(`/w/${workspace.id}`);
+  await page.goto(`/apps/video-editor/w/${workspace.workspaceId}`);
   await expect(page.locator('.scene-strip .clip-thumbnail')).toHaveCount(3, { timeout: 20000 });
   const strip = (await page.locator('.scene-strip').boundingBox())!;
   await page.mouse.move(strip.x + strip.width / 6, strip.y + 20);
@@ -148,7 +147,7 @@ test('range and region comments open chat on demand and keep their original refe
   await expect(page.getByRole('textbox', { name: 'Feedback note' })).toBeHidden();
   await page.getByRole('button', { name: 'Chat', exact: true }).click();
   await page.getByRole('button', { name: 'Save note', exact: true }).click();
-  const saved = await readWorkspace(request, workspace.id);
+  const saved = await readWorkspace(request, workspace.workspaceId);
   expect(saved.notes[0]?.anchor).toMatchObject({ start: 3, end: 5 });
   const canvas = (await page.locator('.stage-canvas').boundingBox())!;
   await page.mouse.move(canvas.x + canvas.width * 0.65, canvas.y + canvas.height * 0.2);
@@ -161,7 +160,9 @@ test('range and region comments open chat on demand and keep their original refe
   await page.getByRole('button', { name: 'Add note', exact: true }).click();
   await page.getByRole('textbox', { name: 'Feedback note' }).fill('Move this detail.');
   await page.getByRole('button', { name: 'Save note' }).click();
-  expect((await readWorkspace(request, workspace.id)).notes.at(-1)?.anchor.region).toMatchObject({
+  expect(
+    (await readWorkspace(request, workspace.workspaceId)).notes.at(-1)?.anchor.region,
+  ).toMatchObject({
     width: expect.any(Number),
   });
   await page.setViewportSize({ width: 390, height: 844 });
@@ -176,7 +177,7 @@ test('playhead paints between runtime samples and replacement previews retain th
   request,
 }) => {
   const workspace = await createWorkspace(request);
-  await page.goto(`/w/${workspace.id}`);
+  await page.goto(`/apps/video-editor/w/${workspace.workspaceId}`);
   await expect(page.locator('.preview-loading')).toHaveCount(0);
   await page.getByRole('button', { name: 'Play', exact: true }).click();
   const positions = await page.evaluate(async () => {
@@ -193,19 +194,24 @@ test('playhead paints between runtime samples and replacement previews retain th
   await frame.locator('#title-1 span').dblclick();
   await frame.getByRole('textbox', { name: 'Canvas text' }).fill('Discard this.');
   await frame.getByRole('textbox', { name: 'Canvas text' }).press('Escape');
-  expect((await readWorkspace(request, workspace.id)).revisionId).toBe(workspace.revisionId);
+  expect((await readWorkspace(request, workspace.workspaceId)).revisionId).toBe(
+    workspace.revisionId,
+  );
   let release = () => {};
   const gate = new Promise<void>((resolve) => {
     release = resolve;
   });
   let pending = false;
-  await page.route(`**/preview/${workspace.id}/*/index.html`, async (route) => {
-    pending = true;
-    await gate;
-    await route.continue();
-  });
-  const before = await readWorkspace(request, workspace.id);
-  await request.post(`/api/workspaces/${workspace.id}/revisions`, {
+  await page.route(
+    `**/media/video-editor/preview/${workspace.workspaceId}/*/index.html`,
+    async (route) => {
+      pending = true;
+      await gate;
+      await route.continue();
+    },
+  );
+  const before = await readWorkspace(request, workspace.workspaceId);
+  await request.post(`/api/workspaces/${workspace.workspaceId}/apps/video-editor/revisions`, {
     data: {
       requestId: crypto.randomUUID(),
       baseRevision: before.revisionId,
@@ -222,7 +228,7 @@ test('playhead paints between runtime samples and replacement previews retain th
   await expect(page.locator('hyperframes-player')).toHaveCount(2);
   await expect(page.locator('hyperframes-player').first()).toHaveCSS('opacity', '1');
   release();
-  await readyPreview(page, request, workspace.id);
+  await readyPreview(page, request, workspace.workspaceId);
   await expect(frame.locator('#title-1 span')).toHaveText('A clearer thought.');
 });
 
@@ -231,7 +237,7 @@ test('file drops import once, drafts survive closing chat and history compares s
   request,
 }) => {
   const workspace = await createWorkspace(request);
-  await page.goto(`/w/${workspace.id}`);
+  await page.goto(`/apps/video-editor/w/${workspace.workspaceId}`);
   await expect(page.locator('.preview-loading')).toHaveCount(0);
   await page.getByRole('button', { name: 'Chat', exact: true }).click();
   const note = page.getByRole('textbox', { name: 'Feedback note' });
@@ -239,7 +245,7 @@ test('file drops import once, drafts survive closing chat and history compares s
   await page.getByRole('button', { name: 'Close chat' }).click();
   await page.getByRole('button', { name: 'Chat', exact: true }).click();
   await expect(note).toHaveValue('Keep this draft.');
-  expect((await readWorkspace(request, workspace.id)).notes).toHaveLength(0);
+  expect((await readWorkspace(request, workspace.workspaceId)).notes).toHaveLength(0);
   async function drop(target: Locator, name: string) {
     await target.evaluate((element, name) => {
       const transfer = new DataTransfer();
@@ -259,13 +265,17 @@ test('file drops import once, drafts survive closing chat and history compares s
   await drop(page.frameLocator('iframe').locator('body'), 'Canvas.png');
   await expect
     .poll(async () =>
-      (await readWorkspace(request, workspace.id)).revision.document.assets.map((a) => a.name),
+      (await readWorkspace(request, workspace.workspaceId)).revision.document.assets.map(
+        (a) => a.name,
+      ),
     )
     .toEqual(['Canvas.png']);
   await drop(page.locator('.asset-drop'), 'Panel.png');
   await expect
     .poll(async () =>
-      (await readWorkspace(request, workspace.id)).revision.document.assets.map((a) => a.name),
+      (await readWorkspace(request, workspace.workspaceId)).revision.document.assets.map(
+        (a) => a.name,
+      ),
     )
     .toEqual(['Canvas.png', 'Panel.png']);
   await expect(page.locator('.drop-overlay')).toHaveCount(0);
@@ -279,19 +289,22 @@ test('failed scene-text saves restore the canvas and leave history intact', asyn
   request,
 }) => {
   const workspace = await createWorkspace(request);
-  await page.goto(`/w/${workspace.id}`);
+  await page.goto(`/apps/video-editor/w/${workspace.workspaceId}`);
   const frame = page.frameLocator('iframe');
   const edition = frame.locator('.art-opening .edition');
   const original = await edition.innerText();
-  await page.route(`**/api/workspaces/${workspace.id}/revisions`, (route) =>
-    route.fulfill({ status: 503, json: { error: 'Save temporarily unavailable.' } }),
+  await page.route(
+    `**/api/workspaces/${workspace.workspaceId}/apps/video-editor/revisions`,
+    (route) => route.fulfill({ status: 503, json: { error: 'Save temporarily unavailable.' } }),
   );
   await edition.dblclick();
   await frame.getByRole('textbox', { name: 'Canvas text' }).fill('An unsaved change.');
   await page.locator('.app-header').click({ position: { x: 600, y: 30 } });
   await expect(page.getByRole('alert')).toContainText('Save temporarily unavailable.');
   await expect(edition).toHaveText(original);
-  expect((await readWorkspace(request, workspace.id)).revisionId).toBe(workspace.revisionId);
+  expect((await readWorkspace(request, workspace.workspaceId)).revisionId).toBe(
+    workspace.revisionId,
+  );
 });
 
 test('focused text timeline retimes, locates, collapses and deletes with undo', async ({
@@ -299,8 +312,8 @@ test('focused text timeline retimes, locates, collapses and deletes with undo', 
   request,
 }) => {
   const workspace = await createWorkspace(request);
-  const read = () => readWorkspace(request, workspace.id);
-  await page.goto(`/w/${workspace.id}`);
+  const read = () => readWorkspace(request, workspace.workspaceId);
+  await page.goto(`/apps/video-editor/w/${workspace.workspaceId}`);
   const title = page.frameLocator('iframe').locator('#title-1 span');
   await title.click();
   await expect(page.locator('.element-row')).toHaveCount(1);
@@ -325,7 +338,7 @@ test('focused text timeline retimes, locates, collapses and deletes with undo', 
         (await read()).revision.document.clips.find((clip) => clip.id === 'title-1')!.start,
     )
     .toBeGreaterThan(0);
-  await readyPreview(page, request, workspace.id);
+  await readyPreview(page, request, workspace.workspaceId);
   const edge = (await block.locator('[data-edge="end"]').boundingBox())!;
   const duration = (await read()).revision.document.clips.find(
     (clip) => clip.id === 'title-1',
@@ -340,7 +353,7 @@ test('focused text timeline retimes, locates, collapses and deletes with undo', 
         (await read()).revision.document.clips.find((clip) => clip.id === 'title-1')!.duration,
     )
     .toBeGreaterThan(duration);
-  await readyPreview(page, request, workspace.id);
+  await readyPreview(page, request, workspace.workspaceId);
   await block.dblclick();
   const selected = (await read()).revision.document.clips.find((clip) => clip.id === 'title-1')!;
   await expect(page.getByRole('slider', { name: 'Video position' })).toHaveAttribute(
@@ -365,7 +378,7 @@ test('tool island moves, remembers its position, opens adjacent notes and suppor
   request,
 }) => {
   const workspace = await createWorkspace(request);
-  await page.goto(`/w/${workspace.id}`);
+  await page.goto(`/apps/video-editor/w/${workspace.workspaceId}`);
   await expect(page.locator('.preview-loading')).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Assets', exact: true })).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'HyperFrames project' })).toHaveCount(0);
@@ -399,35 +412,38 @@ test('tool island moves, remembers its position, opens adjacent notes and suppor
 
 test('background revisions wait for unfinished canvas typing', async ({ page, request }) => {
   const workspace = await createWorkspace(request);
-  await page.goto(`/w/${workspace.id}`);
+  await page.goto(`/apps/video-editor/w/${workspace.workspaceId}`);
   const frame = page.frameLocator('iframe');
   await frame.locator('#title-1 span').dblclick();
   const input = frame.getByRole('textbox', { name: 'Canvas text' });
   await input.fill('Still writing this thought');
-  const response = await request.post(`/api/workspaces/${workspace.id}/revisions`, {
-    data: {
-      requestId: crypto.randomUUID(),
-      baseRevision: workspace.revisionId,
-      label: 'External edit while typing',
-      document: {
-        ...workspace.revision.document,
-        clips: workspace.revision.document.clips.map((clip) =>
-          clip.id === 'title-1' ? { ...clip, text: 'An external revision.' } : clip,
-        ),
+  const response = await request.post(
+    `/api/workspaces/${workspace.workspaceId}/apps/video-editor/revisions`,
+    {
+      data: {
+        requestId: crypto.randomUUID(),
+        baseRevision: workspace.revisionId,
+        label: 'External edit while typing',
+        document: {
+          ...workspace.revision.document,
+          clips: workspace.revision.document.clips.map((clip) =>
+            clip.id === 'title-1' ? { ...clip, text: 'An external revision.' } : clip,
+          ),
+        },
       },
     },
-  });
+  );
   expect(response.ok()).toBe(true);
   for (let i = 0; i < 2; i++) {
     await page.waitForResponse(
       (response) =>
-        response.url().endsWith(`/api/workspaces/${workspace.id}`) &&
+        response.url().endsWith(`/api/workspaces/${workspace.workspaceId}/apps/video-editor`) &&
         response.request().method() === 'GET',
     );
     await expect(input).toHaveText('Still writing this thought');
   }
   await expect(page.locator('hyperframes-player')).toHaveCount(1);
   await input.press('Escape');
-  await readyPreview(page, request, workspace.id);
+  await readyPreview(page, request, workspace.workspaceId);
   await expect(frame.locator('#title-1 span')).toHaveText('An external revision.');
 });

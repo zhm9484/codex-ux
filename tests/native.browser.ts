@@ -4,7 +4,8 @@ import { mkdtemp, mkdir, writeFile, copyFile, readFile, rm } from 'node:fs/promi
 import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import type { Workspace } from '../packages/video-domain/src/schema.ts';
+import { createVideo } from './browser-helpers.ts';
+import type { VideoProject } from '../packages/video-domain/src/schema.ts';
 
 const require = createRequire(new URL('../packages/local-server/package.json', import.meta.url));
 const program = `import { message } from './lib/message.js';
@@ -37,17 +38,16 @@ test('native projects preserve runtime dependencies, UI edits and drafts through
       join(input, 'index.html'),
       '<!doctype html><html><head><link rel="stylesheet" href="style.css"><script src="gsap.js"></script></head><body><div id="root" data-composition-id="main" data-width="640" data-height="360" data-duration="8"><p id="caption" data-start="0" data-duration="8">Native title</p><canvas width="60" height="60"></canvas><div data-composition-id="detail" data-composition-src="scenes/detail.html" data-start="0" data-duration="8" data-width="640" data-height="360"></div></div><script type="module" src="app.js"></script><!-- unchanged sentinel --></body></html>',
     );
-    const created = await request.post('/api/workspaces', {
-      data: { name: 'Native verification' },
+    const initial = await createVideo(request, 'Native verification');
+    const base = `/api/workspaces/${initial.workspaceId}/apps/video-editor`;
+    const imported = await request.post(`${base}/source`, {
+      data: { directory: input, baseRevision: initial.revisionId },
     });
-    const initial = (await created.json()) as Workspace;
-    const base = `/api/workspaces/${initial.id}`;
-    const imported = await request.post(`${base}/source`, { data: { directory: input } });
     expect(imported.ok()).toBe(true);
-    const original = (await imported.json()) as Workspace;
+    const original = (await imported.json()) as VideoProject;
     const source = (await (await request.get(`${base}/source`)).json()) as { directory: string };
-    const read = async () => (await (await request.get(base)).json()) as Workspace;
-    await page.goto(`/w/${initial.id}`);
+    const read = async () => (await (await request.get(base)).json()) as VideoProject;
+    await page.goto(`/apps/video-editor/w/${initial.workspaceId}`);
     const frame = () => page.frameLocator('iframe');
     await expect(frame().locator('#caption')).toHaveAttribute('data-module-loaded', 'modules work');
     await expect(frame().locator('p#detail')).toHaveText('Nested detail');

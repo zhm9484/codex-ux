@@ -3,7 +3,10 @@ import { defineConfig } from 'vite';
 
 export default defineConfig({
   plugins: [react()],
+  base: '/apps/video-editor/',
   build: {
+    outDir: '../../.agents/skills/video-editor/dist',
+    emptyOutDir: true,
     rolldownOptions: {
       output: {
         codeSplitting: {

@@ -5,7 +5,8 @@ import { useVideoFullscreen } from '../hooks/use-video-fullscreen';
 import { PlaybackScrubber } from './playback-scrubber';
 import { useRef, useState } from 'react';
 import { AlertCircle, Columns2, Upload, X } from 'lucide-react';
-import { durationOf, type WorkspaceSummary } from '@codex-ux/video-domain';
+import { durationOf } from '@codex-ux/video-domain';
+import type { Workspace } from '@codex-ux/protocol';
 import { useEditor } from '../hooks/use-editor';
 import { Header } from './header';
 import { PlayerStage } from './player-stage';
@@ -21,7 +22,7 @@ import { IconButton } from '../components/ui';
 
 interface EditorProps {
   id: string;
-  workspaces: WorkspaceSummary[];
+  workspaces: Workspace[];
   onSelect: (id: string) => void;
 }
 export function Editor({ id, workspaces, onSelect }: EditorProps) {
@@ -34,15 +35,15 @@ export function Editor({ id, workspaces, onSelect }: EditorProps) {
   } = useVideoFullscreen();
   const [dragging, setDragging] = useState(false);
   const dragDepth = useRef(0);
-  const workspace = state.workspace;
-  if (!workspace)
+  const project = state.project;
+  if (!project)
     return (
       <div className="app-loading">
         <span className="loading-dot" />
         <p>{state.error || 'Opening video…'}</p>
       </div>
     );
-  const document = workspace.revision.document;
+  const document = project.revision.document;
   const comparison = state.comparison;
   async function drop(event: React.DragEvent) {
     event.preventDefault();
@@ -89,10 +90,8 @@ export function Editor({ id, workspaces, onSelect }: EditorProps) {
       onDrop={(event) => void drop(event)}
     >
       <Header
-        workspace={workspace}
-        workspaces={workspaces.map((item) =>
-          item.id === workspace.id ? { ...item, name: workspace.name } : item,
-        )}
+        project={project}
+        workspaces={workspaces}
         saving={state.saving}
         onTravel={(direction) => void state.travel(direction)}
         onExport={() => state.setExporting(true)}
@@ -157,7 +156,7 @@ export function Editor({ id, workspaces, onSelect }: EditorProps) {
             {comparison && <span className="compare-label">Current</span>}
             <PlayerStage
               workspaceId={id}
-              revisionId={workspace.revisionId}
+              revisionId={project.revisionId}
               document={document}
               time={state.time}
               selectedId={state.selectedId}
@@ -232,7 +231,7 @@ export function Editor({ id, workspaces, onSelect }: EditorProps) {
         </div>
       )}
       {state.exporting && (
-        <ExportDialog workspace={workspace} onClose={() => state.setExporting(false)} />
+        <ExportDialog project={project} onClose={() => state.setExporting(false)} />
       )}
     </main>
   );

@@ -1,6 +1,29 @@
 /** Transport-independent references shared by app and agent operations. */
+export interface Workspace {
+  id: string;
+  name: string;
+  createdAt: string;
+}
+export interface AppDefinition {
+  id: string;
+  name: string;
+}
+export interface AgentSessionRef {
+  provider: string;
+  sessionId: string;
+}
+export interface AppInstance {
+  id: string;
+  appId: string;
+  workspaceId: string | null;
+}
+export interface CollaborationTarget {
+  instanceId: string;
+  session: AgentSessionRef;
+}
 export interface RevisionReference {
   workspaceId: string;
+  appId: string;
   revisionId: string;
 }
 export interface ChangeRequest {

@@ -71,6 +71,9 @@ importers:
       '@codex-ux/protocol':
         specifier: workspace:*
         version: link:../../packages/protocol
+      '@codex-ux/sdk':
+        specifier: workspace:*
+        version: link:../../packages/sdk
       '@codex-ux/video-domain':
         specifier: workspace:*
         version: link:../../packages/video-domain
@@ -142,6 +145,12 @@ importers:
         version: 4.5.4
 
   packages/protocol: {}
+
+  packages/sdk:
+    dependencies:
+      '@codex-ux/protocol':
+        specifier: workspace:*
+        version: link:../protocol
 
   packages/video-domain:
     dependencies:

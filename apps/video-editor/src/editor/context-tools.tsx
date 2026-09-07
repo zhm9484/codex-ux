@@ -28,7 +28,7 @@ export function ContextTools({ state }: { state: EditorState }) {
       </IconButton>
       <FontPicker
         value={clip.fontFamily}
-        document={state.workspace!.revision.document}
+        document={state.project!.revision.document}
         disabled={state.saving}
         onChange={(fontFamily) => void state.updateText(selection, { ...clip, fontFamily })}
       />
