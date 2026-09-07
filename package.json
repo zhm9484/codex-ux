@@ -12,7 +12,8 @@
   },
   "scripts": {
     "dev": "pnpm --filter @codex-ux/local-server dev",
-    "build": "pnpm -r --if-present run build",
+    "build": "pnpm -r --if-present run build && node scripts/build-skills.ts",
+    "build:skills": "pnpm build",
     "typecheck": "tsc --noEmit && pnpm -r --if-present run typecheck",
     "lint": "eslint . --max-warnings 0",
     "format": "prettier . --write",
@@ -20,7 +21,8 @@
     "check": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test && pnpm build",
     "start": "pnpm --filter @codex-ux/local-server start",
     "test": "node --test tests/*.test.ts",
-    "test:browser": "playwright test"
+    "test:browser": "playwright test",
+    "test:skills": "pnpm build && node --test tests/skills.integration.ts"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",

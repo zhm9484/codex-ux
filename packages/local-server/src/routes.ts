@@ -5,13 +5,31 @@ import type { HostedApp } from './apps.ts';
 import { videoApi, type VideoServices } from './video/routes.ts';
 import { json, readJson } from './http.ts';
 import { HttpError } from './errors.ts';
+import type { Connections } from './connections.ts';
+import { connectionApi } from './connection-routes.ts';
+import { validateApps } from './apps.ts';
+import { codexCapability } from '@codex-ux/adapter-codex';
 
 export interface Services {
   workspaces: WorkspaceStore;
   apps: HostedApp[];
   video: VideoServices;
+  connections: Connections;
 }
 export async function api(req: IncomingMessage, res: ServerResponse, path: string, s: Services) {
+  if (path === '/api/agents/codex' && req.method === 'GET') {
+    json(res, await codexCapability());
+    return;
+  }
+  if (await connectionApi(req, res, path, s)) return;
+  if (path === '/api/apps' && req.method === 'POST') {
+    const [app] = validateApps([await readJson(req)]);
+    const index = s.apps.findIndex((item) => item.id === app!.id);
+    if (index < 0) s.apps.push(app!);
+    else s.apps[index] = app!;
+    json(res, { id: app!.id, name: app!.name });
+    return;
+  }
   if (path === '/api/apps' && req.method === 'GET') {
     json(
       res,

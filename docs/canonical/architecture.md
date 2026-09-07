@@ -35,20 +35,27 @@ session or cancel submitted work. One session can be referenced by multiple inst
 not create a session or change its working directory. Requests capture the instance, workspace, app,
 session and base revision when submitted; subsequent switching cannot retarget them.
 
+The shared connection broker supports agent-created new-page invitations and existing-page offers.
+The SDK acknowledges the actual instance before a receipt becomes connected. Codes are scoped to an
+app and Workspace; existing-page offers also name the instance and previous session. A takeover must
+explicitly match the previous session. Receipts are transient and renewed by the active page;
+bindings remain page-owned. They do not add a Workspace-global binding or automatic message sending.
+
 ## Modules
 
-| Module                               | Implemented responsibility                                                              |
-| ------------------------------------ | --------------------------------------------------------------------------------------- |
-| `apps/video-editor/src/`             | React editor, workspace selection, canvas, playback, notes and export UI                |
-| `packages/video-domain/`             | Source manifests, video revisions, feedback intents, HTML operations and timing         |
-| `packages/protocol/`                 | Portable workspace, app, instance, session, revision and operation references           |
-| `packages/sdk/`                      | Framework-independent browser instance identity and workspace-specific session bindings |
-| `packages/adapter-codex/`            | Delivery to an existing Codex task through `codex queue`                                |
-| `packages/local-server/src/storage/` | Workspace metadata, directory creation and path boundaries                              |
-| `packages/local-server/src/video/`   | Video databases, revision history, collaboration routes, assets and rendering           |
-| `packages/local-server/src/sources/` | Source import, snapshots, polling, dependency preparation and Remotion builds           |
-| `packages/video-runtime/`            | Common browser playback controller with Hyperframes, Remotion and media adapters        |
-| `packages/local-server/src/`         | HTTP hosting, app registration, workspace routes, agent dispatch and process lifecycle  |
+| Module                                     | Implemented responsibility                                                              |
+| ------------------------------------------ | --------------------------------------------------------------------------------------- |
+| `apps/video-editor/src/`                   | React editor, workspace selection, canvas, playback, notes and export UI                |
+| `packages/video-domain/`                   | Source manifests, video revisions, feedback intents, HTML operations and timing         |
+| `packages/protocol/`                       | Portable workspace, app, instance, session, revision and operation references           |
+| `packages/sdk/`                            | Framework-independent browser instance identity and workspace-specific session bindings |
+| `packages/adapter-codex/`                  | Delivery to an existing Codex task through `codex queue`                                |
+| `packages/local-server/src/storage/`       | Workspace metadata, directory creation and path boundaries                              |
+| `packages/local-server/src/connections.ts` | Shared ephemeral pairing, acknowledgements, expiry and takeover checks                  |
+| `packages/local-server/src/video/`         | Video databases, revision history, collaboration routes, assets and rendering           |
+| `packages/local-server/src/sources/`       | Source import, snapshots, polling, dependency preparation and Remotion builds           |
+| `packages/video-runtime/`                  | Common browser playback controller with Hyperframes, Remotion and media adapters        |
+| `packages/local-server/src/`               | HTTP hosting, app registration, workspace routes, agent dispatch and process lifecycle  |
 
 The protocol imports no React, Node.js, Codex or video engine. The browser SDK imports only portable
 protocol types. The frontend cannot import local-server, adapter-codex or `node:*`; ESLint enforces
@@ -117,15 +124,18 @@ selected workspace has URL `/apps/video-editor/w/<workspaceId>`; each page selec
 `/` lists hosted apps, and `GET /api/apps` returns their IDs and names.
 
 The backend embeds Vite in development. `pnpm build` writes the Video Editor frontend to
-`.agents/skills/video-editor/dist/`; `pnpm start` serves that build. This is a generated bundle
-location for skill distribution, not a skill installation workflow. No Video Editor skill definition
-or installer is supplied. Build output is ignored by Git and never placed in the user data root.
+`skills/codex-ux-video-editor/dist/` and generates the Workspace skill's source runtime bundle.
+`pnpm start` serves that build. These distribution artifacts are committed and verified by CI; other
+build output remains ignored. Installed skills run without a repository checkout or frontend build.
+See [skills](skills.md) for installation, cache ownership and release verification.
 
 `CODEX_UX_APPS_FILE` can point to a JSON array of `{ id, name, distDirectory }` records with unique
 app IDs and absolute build paths, including builds distributed inside installed skills. The
 configured array replaces the default Video Editor registration. All apps are served at
 `/apps/<appId>/` and must build for that base. Registration hosts static builds; only Video Editor
-currently has domain API handlers. A build update leaves workspace data in place.
+currently has domain API handlers. `POST /api/apps` can register/update a trusted installed build in
+the running service; the skill launcher persists its registry for restart. A build update leaves
+workspace data in place.
 
 The service uses a PID lock and health check to reuse the service for a data directory. All apps and
 workspaces share its HTTP port. Chromium and FFmpeg subprocesses are still needed for rendering.

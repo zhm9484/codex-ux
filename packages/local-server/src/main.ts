@@ -10,8 +10,14 @@ try {
     service?: string;
     version?: number;
     dataRoot?: string;
+    runtimeBuild?: string;
   };
-  if (info.service === 'codex-ux' && info.version === 2 && info.dataRoot === dataRoot) {
+  if (
+    info.service === 'codex-ux' &&
+    info.version === 3 &&
+    info.dataRoot === dataRoot &&
+    info.runtimeBuild === (process.env.CODEX_UX_RUNTIME_BUILD ?? 'development')
+  ) {
     console.log(`Codex UX is already running at ${origin}`);
     process.exit(0);
   }

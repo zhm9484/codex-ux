@@ -14,7 +14,7 @@ async function connection(page: Page) {
 async function bind(page: Page, sessionId: string) {
   await (await connection(page)).fill(sessionId);
   await page.getByRole('button', { name: 'Save connection' }).click();
-  await expect(page.getByText('Codex session connected', { exact: true })).toBeVisible();
+  await expect(page.getByText('Codex session saved', { exact: true })).toBeVisible();
 }
 async function select(page: Page, name: string) {
   if (await page.getByRole('button', { name: 'Close panel' }).isVisible())

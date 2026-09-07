@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { ArrowUp, Check, Link2, MessageSquare, Trash2 } from 'lucide-react';
 import { formatTime, type VideoProject } from '@codex-ux/video-domain';
 import type { FeedbackAnchor, AgentSessionRef, CollaborationTarget } from '@codex-ux/protocol';
+import type { Connection } from '@codex-ux/protocol';
 import { EmptyState, IconButton, PanelHeader } from '../components/ui';
 import { post } from '../lib/api';
 
@@ -13,6 +14,8 @@ interface Props {
   onClose: () => void;
   onRemove: (id: string) => Promise<unknown>;
   onBind: (id: string | null) => Promise<unknown>;
+  onPair: () => Promise<unknown>;
+  pairing: Connection | null;
   onRefresh: () => Promise<unknown>;
   onLocate: (anchor: FeedbackAnchor) => void;
 }
@@ -52,13 +55,37 @@ export function NotesPanel(p: Props) {
       <div className="notes-content">
         <div className="connection-row">
           <span className={`connection-dot ${p.session?.sessionId ? 'connected' : ''}`} />
-          <span>
-            {p.session?.sessionId ? 'Codex session connected' : 'Connect a Codex session'}
-          </span>
+          <span>{p.session?.sessionId ? 'Codex session saved' : 'Connect a Codex session'}</span>
           <IconButton label="Configure Codex connection" onClick={() => setBinding(!binding)}>
             <Link2 size={14} />
           </IconButton>
         </div>
+        {p.session && <p className="field-help">Task: {p.session.sessionId}</p>}
+        <button className="secondary-button" disabled={p.disabled} onClick={() => void p.onPair()}>
+          Connect current agent
+        </button>
+        {p.pairing && (
+          <div className="field">
+            {p.pairing.state === 'connected' ? (
+              <p role="status">
+                This page confirmed the connection. Feedback is sent when you choose Send.
+              </p>
+            ) : (
+              <>
+                <label htmlFor="connection-code">Give this connection code to your agent</label>
+                <input
+                  id="connection-code"
+                  readOnly
+                  value={p.pairing.code}
+                  onFocus={(event) => event.target.select()}
+                />
+                <p className="field-help">
+                  Valid for 10 minutes. Connects only this page and workspace.
+                </p>
+              </>
+            )}
+          </div>
+        )}
         {binding && (
           <form
             className="connection-form"

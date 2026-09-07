@@ -15,7 +15,20 @@ minimal collaboration contract and browser instance helpers are implemented. App
 workspaces; agent bindings are independent per page and workspace. 3D and automatic custom app
 builds remain reserved.
 
-## Start
+## Install and use
+
+With Node.js 24 and npm available, install both skills for your agent:
+
+```sh
+npx skills add zhm9484/codex-ux --skill codex-ux-workspace codex-ux-video-editor
+```
+
+Ask your agent to use Video Editor. Its skill includes the built web app; the Workspace skill
+prepares and starts the matching local service and connects the page to the current Codex task.
+First-time dependency/browser preparation needs network access. Other agents can use source and HTTP
+workflows; feedback delivery currently supports Codex only. See [skills](docs/canonical/skills.md).
+
+## Develop
 
 Use Node.js 24 and pnpm 10.34.5.
 
@@ -47,7 +60,7 @@ docs/
 
 All project code is TypeScript. Repository content is in English. Packages keep video behavior,
 portable contracts, system access and Codex delivery separate. User data defaults to `~/.codex-ux/`.
-Use `pnpm build && pnpm start` to serve the app build from `.agents/skills/video-editor/dist/`.
+Use `pnpm build && pnpm start` to serve the app build from `skills/codex-ux-video-editor/dist/`.
 Builds remain separate from workspace files and app state. Chrome is required for thumbnails and
 rendering; see the runtime settings in the canonical docs.
 

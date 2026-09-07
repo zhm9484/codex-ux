@@ -5,22 +5,59 @@ session, revision and operation references; video documents belong to `video-dom
 
 ## Shared endpoints
 
-All API paths below are relative to `http://127.0.0.1:5173/api`. JSON mutations use
+All API paths below are relative to the service origin plus `/api` (development defaults to
+`http://127.0.0.1:5173/api`; installed skills return their actual origin). JSON mutations use
 `Content-Type: application/json`. Errors contain `{ error, code }`; invalid input is 400, missing
 objects 404 and stale writes 409.
 
-| Method and path       | Behavior                                                            |
-| --------------------- | ------------------------------------------------------------------- |
-| `GET /health`         | Service identity, API version and data root                         |
-| `GET /apps`           | Hosted app IDs and names                                            |
-| `GET /workspaces`     | Workspace identities: `{ id, name, createdAt }`                     |
-| `POST /workspaces`    | Create a file container from `{ name }`; no app data is initialized |
-| `GET /workspaces/:id` | Workspace identity plus absolute `directory` and `filesDirectory`   |
+| Method and path       | Behavior                                                                                           |
+| --------------------- | -------------------------------------------------------------------------------------------------- |
+| `GET /health`         | Service identity, API version 3, data root and runtime fingerprint (`development` for source runs) |
+| `GET /apps`           | Hosted app IDs and names                                                                           |
+| `POST /apps`          | Register/update `{ id, name, distDirectory }` with an absolute trusted build path                  |
+| `GET /agents/codex`   | Read-only queue capability probe; does not validate a task or send messages                        |
+| `GET /workspaces`     | Workspace identities: `{ id, name, createdAt }`                                                    |
+| `POST /workspaces`    | Create a file container from `{ name }`; no app data is initialized                                |
+| `GET /workspaces/:id` | Workspace identity plus absolute `directory` and `filesDirectory`                                  |
 
 The workspace contract contains neither a video document nor an agent binding. App instances and
 bindings are page-owned, managed by the browser SDK. They have no workspace-global mutation API.
 Agent references use `{ provider, sessionId }`; the server currently accepts only
 `provider: "codex"`. The Codex adapter maps `sessionId` to the external task's `threadId`.
+
+## App-instance pairing
+
+The generic broker is shared by apps; no video document is involved. It stores transient receipts in
+memory, leaving binding ownership in the browser SDK. JSON mutations use:
+
+| Method and path                      | Body and result                                                                                                                    |
+| ------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------- |
+| `POST /connections`                  | New-page invitation: `{ appId, workspaceId, session }`; existing-page offer: `{ appId, workspaceId, instanceId, previousSession }` |
+| `GET /connections/:code`             | Receipt including scope, previous/requested sessions, state, expiry and last confirmation                                          |
+| `POST /connections/:code/connect`    | Agent claims an offer with `{ session, replaceSession? }`                                                                          |
+| `POST /connections/:code/accept`     | Page confirms/renews with `{ instanceId, currentSession }`                                                                         |
+| `POST /connections/:code/disconnect` | Page ends its receipt with `{ instanceId }`                                                                                        |
+
+Session fields use agent references; previous/current sessions may be null. Creation requires a
+registered app and existing Workspace. A code is 24 URL-safe characters generated from 18 random
+bytes. Pending receipts expire after ten minutes. States progress from `waiting-agent` to
+`waiting-page` to `connected`; new-page invitations start at `waiting-page`. A receipt is connected
+only after page acknowledgement and expires after 90 seconds without renewal. The SDK renews while
+the page is active, removes the invitation fragment, and checks scope/current binding again after
+network calls. Closed or suspended pages may expire without deleting their saved session binding.
+
+The new-page URL is `/apps/:appId/w/:workspaceId#connect=:code`. Existing pages provide their own
+code. Same-session claims and same-instance acknowledgements are idempotent. Another session or
+instance gets 409. Replacing a different existing session requires its exact `replaceSession`, and
+the page rejects changed local bindings. Ended receipts return 410 on mutation; missing codes
+return 404. Switching Workspaces or manually changing a binding disconnects its previous receipt;
+reload can resume an unexpired receipt. Service restart loses receipts, so use a fresh code.
+
+`openAppInstance(appId).enableConnections()` enables the generic SDK integration. Apps must call
+`select` on navigation and subscribe to instance changes. Receipt confirmation proves page binding,
+not session existence or message delivery. The queue probe runs only `queue --help`, never a test
+message. Codes are local pairing capabilities, not a remote authentication system. Installable skill
+instructions and launcher commands are described in [skills](skills.md).
 
 ## Video endpoints
 

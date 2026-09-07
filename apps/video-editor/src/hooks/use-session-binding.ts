@@ -1,4 +1,4 @@
-import { useContext, useState } from 'react';
+import { useContext, useEffect, useState } from 'react';
 import { AppInstanceContext } from '../lib/app-instance';
 
 export function useSessionBinding(workspaceId: string) {
@@ -6,6 +6,23 @@ export function useSessionBinding(workspaceId: string) {
   if (!instance) throw new Error('The application instance is missing.');
   const [session, setSession] = useState(() => instance.session(workspaceId));
   const [bindingError, setBindingError] = useState('');
+  const [pairing, setPairing] = useState(instance.connections?.connection ?? null);
+  useEffect(
+    () =>
+      instance.subscribe(() => {
+        setSession(instance.session(workspaceId));
+        setPairing(instance.connections?.connection ?? null);
+        setBindingError(instance.connections?.error ?? '');
+      }),
+    [instance, workspaceId],
+  );
+  const pair = async () => {
+    try {
+      await instance.connections?.offer();
+    } catch (error) {
+      setBindingError(error instanceof Error ? error.message : 'Could not create connection code.');
+    }
+  };
   const bind = (sessionId: string | null) => {
     try {
       if (sessionId && !/^[a-zA-Z0-9-]{10,100}$/.test(sessionId))
@@ -20,5 +37,5 @@ export function useSessionBinding(workspaceId: string) {
       return Promise.resolve(false);
     }
   };
-  return { session, bind, bindingError, target: () => instance.target(workspaceId) };
+  return { session, bind, pair, pairing, bindingError, target: () => instance.target(workspaceId) };
 }

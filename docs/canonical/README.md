@@ -8,5 +8,6 @@ to the project; maintenance rules are in [AGENTS.md](../../AGENTS.md).
   boundaries and development commands.
 - [Video editor](video-editor.md): editing, responsive UI, collaboration and export.
 - [Local API](local-api.md): HTTP contracts, candidate publication and source conventions.
+- [Skills](skills.md): installable app/runtime artifacts, startup, connection and release checks.
 
 Research, proposals, and historical context belong in [non-canonical](../non-canonical/README.md).

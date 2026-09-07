@@ -5,3 +5,7 @@
 *.woff2 binary
 *.glb binary
 *.mp4 binary
+
+# Shipped artifacts are regenerated from reviewed source, including upstream template whitespace.
+skills/codex-ux-video-editor/dist/** linguist-generated=true -whitespace
+skills/codex-ux-workspace/assets/runtime.json linguist-generated=true

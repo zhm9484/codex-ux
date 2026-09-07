@@ -119,6 +119,13 @@ receives HTTP context plus an isolated candidate directory containing ordinary p
 previews and publishes a candidate as one revision, or edits working files for polling to capture.
 See [local API](local-api.md) for the publication contract.
 
+The Notes panel offers **Connect current agent** to create a code for this page. Agents can also
+open an invitation URL in a new page through the Workspace skill. Pairing confirms the actual
+page/session; it never sends notes automatically. Manual task-ID/link entry remains available and is
+labeled as a saved session, without implying verified delivery. An existing other-session connection
+requires explicit takeover; opening a new page preserves it. Connection receipt errors do not delete
+the saved binding or user notes.
+
 ## Assets and output
 
 Assets accepts images, video, audio and fonts up to 100 MB each, including iframe file drops.

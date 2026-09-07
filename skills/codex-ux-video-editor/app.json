@@ -1,0 +1,8 @@
+{
+  "id": "video-editor",
+  "name": "Video Editor",
+  "dist": "dist",
+  "apiVersion": 3,
+  "runtimeBuild": "60ae1ce26c1c4da89ce68eef845339c1f594b79d3cfdc06fdf9c9701de0096bc",
+  "webBuild": "2f7aefd929151004faf7bee04872329eb54f01b45539814a3ef843585a25dc18"
+}

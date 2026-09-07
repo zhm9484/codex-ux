@@ -1,4 +1,6 @@
 import type { AgentSessionRef, AppInstance, CollaborationTarget } from '@codex-ux/protocol';
+import { InstanceConnections } from './connections.ts';
+export { InstanceConnections } from './connections.ts';
 
 interface InstanceState {
   instance: AppInstance;
@@ -9,6 +11,21 @@ interface InstanceState {
 export class BrowserAppInstance {
   private state: InstanceState;
   private key: string;
+  private listeners = new Set<() => void>();
+  connections: InstanceConnections | null = null;
+  enableConnections(apiBase = '/api') {
+    this.connections ??= new InstanceConnections(this, apiBase);
+    return this.connections;
+  }
+  subscribe(listener: () => void) {
+    this.listeners.add(listener);
+    return () => {
+      this.listeners.delete(listener);
+    };
+  }
+  notify() {
+    for (const listener of this.listeners) listener();
+  }
   constructor(state: InstanceState, key: string) {
     this.state = state;
     this.key = key;
@@ -41,6 +58,7 @@ export class BrowserAppInstance {
   }
   private persist() {
     sessionStorage.setItem(this.key, JSON.stringify(this.state));
+    this.notify();
   }
 }
 
