@@ -16,7 +16,7 @@ import { randomUUID } from 'node:crypto';
 import { WorkspaceStore } from '../packages/local-server/src/storage/workspaces.ts';
 import { workspaceDirectory, workspaceFiles } from '../packages/local-server/src/storage/paths.ts';
 import { VideoStore } from '../packages/local-server/src/video/store.ts';
-import { NativeProjects } from '../packages/local-server/src/native/projects.ts';
+import { VideoProjects } from '../packages/local-server/src/sources/projects.ts';
 
 void test('workspaces are portable file containers and app data stays independent', async () => {
   const root = mkdtempSync(join(tmpdir(), 'codex-ux-workspaces-'));
@@ -38,7 +38,7 @@ void test('workspaces are portable file containers and app data stays independen
     const another = workspaces.appDirectory(workspace.id, 'another-app');
     mkdirSync(another);
     writeFileSync(join(another, 'state.json'), '{"document":"independent"}');
-    const native = new NativeProjects(workspaces.root, videos);
+    const native = new VideoProjects(workspaces.root, videos);
     const [first, second] = await Promise.all([
       native.open(workspace.id),
       native.open(workspace.id),

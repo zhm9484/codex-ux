@@ -8,14 +8,11 @@ interface Props extends PlayerOptions {
   onNote: (event?: React.MouseEvent<HTMLElement>) => void;
 }
 export function PlayerStage(props: Props) {
-  const { host, ready, refreshing, failure } = usePlayer(props);
+  const { host, document, ready, refreshing, failure } = usePlayer(props);
   const region = props.region;
   return (
     <div className={`stage-section ${props.compare ? 'comparison-stage' : ''}`}>
-      <div
-        className="stage-canvas"
-        style={{ aspectRatio: `${props.document.width}/${props.document.height}` }}
-      >
+      <div className="stage-canvas" style={{ aspectRatio: `${document.width}/${document.height}` }}>
         <div className="player-host" ref={host} />
         {!ready && !failure && (
           <div className="preview-loading">

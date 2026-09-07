@@ -1,6 +1,6 @@
 import { useFloatingPosition } from '../hooks/use-floating-position';
 import type { EditorState } from '../hooks/use-editor';
-import { Inspector } from '../panels/inspector';
+import { SourcePanel } from '../panels/source';
 import { NotesPanel } from '../panels/notes';
 import { AssetsPanel } from '../panels/assets';
 import { HistoryPanel } from '../panels/history';
@@ -31,17 +31,7 @@ export function SidePanel({ state }: { state: EditorState }) {
           onLocate={state.locate}
         />
       )}
-      {state.panel === 'edit' && (
-        <Inspector
-          clip={document.clips.find((clip) => clip.id === state.selectedId)}
-          document={document}
-          disabled={state.saving}
-          onClose={close}
-          onPreview={(clip) => state.control.current?.patch(clip)}
-          onSave={state.updateClip}
-          onAddText={state.addText}
-        />
-      )}
+      {state.panel === 'source' && <SourcePanel state={state} onClose={close} />}
       {state.panel === 'assets' && (
         <AssetsPanel
           workspaceId={project.workspaceId}
@@ -49,7 +39,6 @@ export function SidePanel({ state }: { state: EditorState }) {
           disabled={state.saving}
           onClose={close}
           onUpload={state.upload}
-          onAdd={state.addAsset}
         />
       )}
       {state.panel === 'history' && (

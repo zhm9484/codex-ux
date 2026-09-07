@@ -13,7 +13,7 @@ for (const embedded of [false, true]) {
       });
       await page.setViewportSize({ width: 600, height: 800 });
     }
-    const workspace = await createVideo(request, 'Fullscreen verification', 'structured');
+    const workspace = await createVideo(request, 'Fullscreen verification');
     if (embedded) {
       const updated = await request.post(
         `/api/workspaces/${workspace.workspaceId}/apps/video-editor/revisions`,
@@ -22,19 +22,34 @@ for (const embedded of [false, true]) {
             baseRevision: workspace.revisionId,
             requestId: crypto.randomUUID(),
             label: 'Portrait format',
-            document: { ...workspace.revision.document, width: 360, height: 640 },
+            document: {
+              ...workspace.revision.document,
+              files: {
+                ...workspace.revision.document.files,
+                'index.html': {
+                  ...workspace.revision.document.files['index.html']!,
+                  text: workspace.revision.document.files['index.html']!.text!.replaceAll(
+                    '1280',
+                    '360',
+                  ).replaceAll('720', '640'),
+                },
+              },
+            },
           },
         },
       );
       expect(updated.ok()).toBe(true);
     }
     await page.goto(`/apps/video-editor/w/${workspace.workspaceId}`);
-    await expect(page.locator('.preview-loading')).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Play', exact: true })).toBeEnabled();
     const strip = page.getByRole('slider', { name: 'Video position' });
     const stripBox = (await strip.boundingBox())!;
     await strip.click({ position: { x: stripBox.width / 6, y: 20 } });
-    await expect(page.locator('.current-time')).toHaveText('00:03:00');
-    await page.locator('hyperframes-player').evaluate((player) => {
+    await expect
+      .poll(async () => Number(await strip.getAttribute('aria-valuenow')))
+      .toBeCloseTo(3, 0);
+    const pausedTimecode = await page.locator('.current-time').innerText();
+    await page.locator('iframe[data-revision]').evaluate((player) => {
       (player as HTMLElement).dataset.testIdentity = 'same-player';
     });
     await page.getByRole('button', { name: 'Video fullscreen', exact: true }).click();
@@ -47,7 +62,7 @@ for (const embedded of [false, true]) {
     await expect(page.locator('.app-header')).toBeHidden();
     await expect(page.locator('.tool-island')).toBeHidden();
     await expect(page.locator('.collaboration-space')).toBeHidden();
-    await expect(page.locator('.current-time')).toHaveText('00:03:00');
+    await expect(page.locator('.current-time')).toHaveText(pausedTimecode);
     const canvas = (await page.locator('.stage-canvas').boundingBox())!;
     const viewport = page.viewportSize()!;
     expect(canvas.width / canvas.height).toBeCloseTo(embedded ? 360 / 640 : 16 / 9, 2);
@@ -80,8 +95,8 @@ for (const embedded of [false, true]) {
     await expect(page.locator('.video-fullscreen')).toHaveCount(0);
     await expect(page.locator('.app-header')).toBeVisible();
     await expect(page.locator('.tool-island')).toBeVisible();
-    await expect(page.locator('hyperframes-player')).toHaveCount(1);
-    await expect(page.locator('hyperframes-player')).toHaveAttribute(
+    await expect(page.locator('iframe[data-revision]')).toHaveCount(1);
+    await expect(page.locator('iframe[data-revision]')).toHaveAttribute(
       'data-test-identity',
       'same-player',
     );

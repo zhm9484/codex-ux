@@ -1,76 +1,37 @@
-import { clipSchema, type VideoDocument } from './schema.ts';
-
-const artwork = (paper: string, ink: string, variant: number) => `<template>
-<style>
-  .art-__CLIP_ID__ { position:absolute; inset:0; background:${paper}; color:${ink}; overflow:hidden; font-family:Arial,sans-serif; }
-  .art-__CLIP_ID__ .folio {position:absolute;left:76px;right:76px;bottom:45px;display:flex;justify-content:space-between;font-size:14px;letter-spacing:2px;border-top:1px solid ${ink}40;padding-top:20px}
-  .art-__CLIP_ID__ .edition {position:absolute;left:76px;top:51px;font-size:15px;letter-spacing:3px}
-  .art-__CLIP_ID__ .sculpture {position:absolute;width:480px;height:580px;right:-40px;top:64px}
-</style>
-<div class="art-__CLIP_ID__">
- <div class="edition">FIELDNOTES &nbsp; / &nbsp; A STUDY IN POSSIBILITY</div>
- <svg class="sculpture" viewBox="0 0 480 580" fill="none" aria-label="An abstract orbital sculpture">
-  ${Array.from({ length: 9 }, (_, i) => `<ellipse cx="240" cy="290" rx="${55 + i * 18}" ry="245" stroke="${ink}" stroke-width="${i === 8 ? 2 : 1}" transform="rotate(${variant * 25 + i * 9} 240 290)"/>`).join('\n')}
-  <circle cx="${variant === 1 ? 260 : 315}" cy="190" r="34" fill="${ink}"/>
- </svg>
- <div class="folio"><span>GOOD THINGS TAKE SHAPE.</span><span>0${variant} / 03</span></div>
-</div>
-<script>
-{ const tl=gsap.timeline({paused:true});
-  tl.fromTo('.art-__CLIP_ID__ .sculpture',{rotation:-8,scale:0.94},{rotation:8,scale:1,duration:6,ease:'none'});
-  window.__timelines=window.__timelines||{}; window.__timelines['__CLIP_ID__']=tl;
-}
-</script>
-</template>`;
-
-export function sampleDocument(name = 'A little room'): VideoDocument {
-  return {
-    name,
-    width: 1280,
-    height: 720,
-    fps: 30,
-    background: '#e6e9ce',
-    tracks: [
-      { id: 'visuals', name: 'Scenes' },
-      { id: 'titles', name: 'Words' },
-      { id: 'sound', name: 'Sound' },
-    ],
-    clips: [
-      ...['opening', 'shape', 'ending'].map((id, i) =>
-        clipSchema.parse({
-          id,
-          name: ['A little space', 'Taking shape', 'Make it yours'][i],
-          kind: 'scene',
-          sourceId: id,
-          trackId: 'visuals',
-          start: i * 6,
-          duration: 6,
-        }),
-      ),
-      ...['Make room for\na good idea.', 'Give it\nsome shape.', 'Make it\nyours.'].map((text, i) =>
-        clipSchema.parse({
-          id: `title-${i + 1}`,
-          name: ['Opening title', 'The idea', 'Closing title'][i],
-          kind: 'text',
-          trackId: 'titles',
-          start: i * 6,
-          duration: 6,
-          text,
-          fontFamily: 'Georgia',
-          fontSize: 100,
-          color: i === 1 ? '#f4efe2' : '#242820',
-          align: 'left',
-          x: 6,
-          y: 44,
-          width: 65,
-        }),
-      ),
-    ],
-    assets: [],
-    sources: {
-      opening: artwork('#e6e9ce', '#333b2b', 1),
-      shape: artwork('#3b483e', '#d6ddc6', 2),
-      ending: artwork('#e9c9ac', '#483c32', 3),
-    },
+/** Ordinary HyperFrames source files for a new video. Never regenerated after initialization. */
+export function starterFiles(): Record<string, string> {
+  const names = ['opening', 'shape', 'ending'];
+  const titles = ['Make room for\na good idea.', 'Give it\nsome shape.', 'Make it\nyours.'];
+  const labels = ['A little space', 'Taking shape', 'Make it yours'];
+  const papers = ['#e6e9ce', '#3b483e', '#e9c9ac'];
+  const inks = ['#333b2b', '#d6ddc6', '#483c32'];
+  const files: Record<string, string> = {
+    'video.json':
+      JSON.stringify({ kind: 'hyperframes', entry: 'index.html', fps: 30 }, null, 2) + '\n',
+    'index.html': `<!doctype html><html><head><meta charset="utf-8"><script src="vendor/gsap.js"></script><style>
+html,body{margin:0;width:1280px;height:720px;overflow:hidden}
+#root{position:relative;width:1280px;height:720px;background:#e6e9ce;overflow:hidden}
+.scene{position:absolute;inset:0;pointer-events:none}
+.text-clip{position:absolute;left:6%;top:44%;width:65%;transform:translateY(-50%);white-space:pre-wrap;line-height:1.04;letter-spacing:-0.045em;font:100px Georgia;color:#242820;pointer-events:auto}
+</style></head><body><div id="root" data-composition-id="main" data-width="1280" data-height="720" data-duration="18">
+${names.map((id, i) => `<div id="${id}" class="scene" data-name="${labels[i]}" data-composition-id="${id}" data-composition-src="scenes/${id}.html" data-start="${i * 6}" data-duration="6" data-width="1280" data-height="720"></div>`).join('\n')}
+${titles.map((text, i) => `<div id="title-${i + 1}" class="text-clip" data-start="${i * 6}" data-duration="6" style="${i === 1 ? 'color:#f4efe2' : ''}">${text}</div>`).join('\n')}
+</div><script>window.__timelines=window.__timelines||{};window.__timelines.main=gsap.timeline({paused:true}).to({}, {duration:18});</script></body></html>`,
   };
+  names.forEach((id, i) => {
+    files[`scenes/${id}.html`] =
+      `<template><div data-composition-id="${id}" data-width="1280" data-height="720" data-duration="6" style="position:relative;width:1280px;height:720px">
+<style>
+.art-${id}{position:absolute;inset:0;background:${papers[i]};color:${inks[i]};font-family:Arial,sans-serif}
+.art-${id} .folio{position:absolute;left:76px;right:76px;bottom:45px;display:flex;justify-content:space-between;font-size:14px;letter-spacing:2px;border-top:1px solid ${inks[i]}40;padding-top:20px}
+.art-${id} .edition{position:absolute;left:76px;top:51px;font-size:15px;letter-spacing:3px}
+.art-${id} .sculpture{position:absolute;width:480px;height:580px;right:-40px;top:64px}
+</style><div class="art-${id}"><div id="${id}-edition" class="edition">FIELDNOTES &nbsp; / &nbsp; A STUDY IN POSSIBILITY</div>
+<svg class="sculpture" viewBox="0 0 480 580" fill="none" aria-label="An abstract orbital sculpture">
+${Array.from({ length: 9 }, (_, j) => `<ellipse cx="240" cy="290" rx="${55 + j * 18}" ry="245" stroke="${inks[i]}" stroke-width="${j === 8 ? 2 : 1}" transform="rotate(${(i + 1) * 25 + j * 9} 240 290)"/>`).join('\n')}
+<circle cx="${i === 0 ? 260 : 315}" cy="190" r="34" fill="${inks[i]}"/></svg>
+<div class="folio"><span id="${id}-motto">GOOD THINGS TAKE SHAPE.</span><span>0${i + 1} / 03</span></div></div></div>
+<script>{const tl=gsap.timeline({paused:true});tl.fromTo('.art-${id} .sculpture',{rotation:-8,scale:0.94},{rotation:8,scale:1,duration:6,ease:'none'});window.__timelines=window.__timelines||{};window.__timelines['${id}']=tl;}</script></template>`;
+  });
+  return files;
 }

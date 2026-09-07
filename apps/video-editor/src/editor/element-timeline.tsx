@@ -1,14 +1,14 @@
 import { useEffect, useRef, useState } from 'react';
 import { Type, Layers } from 'lucide-react';
-import { durationOf, moveClip, formatTime, type Clip } from '@codex-ux/video-domain';
+import { durationOf, moveTiming, formatTime } from '@codex-ux/video-domain';
 import type { EditorState } from '../hooks/use-editor';
 import { timelineItems, type TimelineItem } from './timeline-items';
 import { updateElementTiming } from './element-edits';
 
 export function ElementTimeline({ state }: { state: EditorState }) {
-  const doc = state.project!.revision.document;
+  const doc = state.document!;
   const items = timelineItems(doc).filter(
-    (item) => item.clip.id === state.selectedId && item.clip.kind === 'text',
+    (item) => item.id === state.selectedId && item.kind === 'text',
   );
   const scroll = useRef<HTMLDivElement>(null);
   const gesture = useRef<{
@@ -16,9 +16,9 @@ export function ElementTimeline({ state }: { state: EditorState }) {
     x: number;
     width: number;
     edge: 'move' | 'start' | 'end';
-    next: Clip;
+    next: TimelineItem;
   } | null>(null);
-  const [draft, setDraft] = useState<Clip | null>(null);
+  const [draft, setDraft] = useState<TimelineItem | null>(null);
   const duration = durationOf(doc);
   useEffect(() => {
     const selected = Array.from(
@@ -47,7 +47,7 @@ export function ElementTimeline({ state }: { state: EditorState }) {
   return (
     <div className="element-timeline" ref={scroll} aria-label="Element timeline">
       {items.map((item) => {
-        const clip = draft?.id === item.clip.id ? draft : item.clip;
+        const clip = draft?.id === item.id ? draft : item;
         return (
           <div className="element-row" key={clip.id} data-element-id={clip.id}>
             <span className="element-name" title={clip.name}>
@@ -76,15 +76,12 @@ export function ElementTimeline({ state }: { state: EditorState }) {
               }}
               onPointerMove={(event) => {
                 const start = gesture.current;
-                if (!start || start.item.clip.id !== item.clip.id) return;
+                if (!start || start.item.id !== item.id) return;
                 const delta = ((event.clientX - start.x) / start.width) * duration;
                 if (Math.abs(event.clientX - start.x) < 3 && !draft) return;
-                const next = moveClip(start.item.clip, delta, doc.fps, start.edge);
-                if (item.native) next.start = Math.max(item.native.offset, next.start);
-                next.duration = Math.min(
-                  next.duration,
-                  (doc.native ? duration : 3600) - next.start,
-                );
+                const next = moveTiming(start.item, delta, doc.fps, start.edge);
+                if (item.target) next.start = Math.max(item.target.offset, next.start);
+                next.duration = Math.min(next.duration, duration - next.start);
                 if (next.duration < 0.1) return;
                 start.next = next;
                 setDraft(next);
@@ -94,12 +91,12 @@ export function ElementTimeline({ state }: { state: EditorState }) {
                 cancel();
                 if (
                   start &&
-                  (start.next.start !== start.item.clip.start ||
-                    start.next.duration !== start.item.clip.duration)
+                  (start.next.start !== start.item.start ||
+                    start.next.duration !== start.item.duration)
                 )
                   void state.save(
                     updateElementTiming(doc, start.item, start.next),
-                    `Retime ${start.item.clip.name}`,
+                    `Retime ${start.item.name}`,
                   );
               }}
               onPointerCancel={cancel}
@@ -137,7 +134,7 @@ export function ElementTimeline({ state }: { state: EditorState }) {
           </div>
         );
       })}
-      {state.canvasText?.source && !items.some((item) => item.clip.id === state.selectedId) && (
+      {state.canvasText?.source && !items.some((item) => item.id === state.selectedId) && (
         <p className="timing-source-hint">
           This text follows its scene's animation. Add a note to change its timing with your agent.
         </p>

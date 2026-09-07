@@ -1,70 +1,84 @@
-import { mkdir, writeFile, readFile, copyFile, access } from 'node:fs/promises';
+import { mkdir, writeFile, readFile, access, rename, rm } from 'node:fs/promises';
 import { join } from 'node:path';
-import { createRequire } from 'node:module';
-import { videoSchema, type Revision, type VideoDocument } from '@codex-ux/video-domain';
-import { compositionHtml, sceneHtml } from './composition.ts';
-import { writeNative } from '../native/files.ts';
-import { contained, appDirectory } from '../storage/paths.ts';
+import { randomUUID } from 'node:crypto';
+import type { Revision, VideoDocument } from '@codex-ux/video-domain';
+import { writeProject, snapshot, digest } from '../sources/files.ts';
+import { buildRemotion } from '../sources/remotion.ts';
+import { videoDirectory } from './paths.ts';
+export { videoDirectory } from './paths.ts';
 
-const require = createRequire(import.meta.url);
-export const videoDirectory = (root: string, id: string) => appDirectory(root, id, 'video-editor');
-export async function materialize(root: string, workspaceId: string, revision: Revision) {
-  const dir = contained(videoDirectory(root, workspaceId), 'revisions', revision.id);
+const preparing = new Map<string, Promise<string>>();
+/** Immutable source and its derived artifacts share a content key, including the adapter versions. */
+export async function prepareVideo(root: string, id: string, doc: VideoDocument) {
+  const files = Object.fromEntries(
+    Object.entries(doc.files)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([path, file]) => [path, { hash: file.hash, size: file.size }]),
+  );
+  const key = digest(
+    JSON.stringify({
+      adapter: 1,
+      hyperframes: '0.8.30',
+      remotion: '4.0.522',
+      source: doc.source,
+      files,
+    }),
+  );
+  const directory = join(videoDirectory(root, id), 'presentations', key);
+  const existing = preparing.get(directory);
+  if (existing) return existing;
+  const task = (async () => {
+    try {
+      await access(join(directory, '.ready'));
+      return directory;
+    } catch {
+      /* Prepare an immutable presentation. */
+    }
+    const stage = directory + '-' + randomUUID();
+    try {
+      await mkdir(join(stage, 'source'), { recursive: true });
+      await writeProject(root, id, doc.files, join(stage, 'source'));
+      if (doc.source.kind === 'remotion') await buildRemotion(root, id, doc, stage);
+      await writeFile(join(stage, 'document.json'), JSON.stringify(doc));
+      await writeFile(join(stage, '.ready'), 'ready');
+      await rename(stage, directory);
+      return directory;
+    } finally {
+      await rm(stage, { recursive: true, force: true });
+    }
+  })();
+  preparing.set(directory, task);
   try {
-    await access(join(dir, '.ready'));
-    return dir;
-  } catch {
-    /* Build only immutable, complete revisions. */
+    return await task;
+  } finally {
+    preparing.delete(directory);
   }
-  if (revision.document.native) {
-    await mkdir(dir, { recursive: true });
-    await writeNative(root, workspaceId, revision.document, dir);
-    await writeFile(join(dir, '.ready'), 'ready');
-    return dir;
-  }
-  await mkdir(join(dir, 'scenes'), { recursive: true });
-  await mkdir(join(dir, 'assets'), { recursive: true });
-  await mkdir(join(dir, 'vendor'), { recursive: true });
-  const doc = revision.document;
-  await copyFile(require.resolve('gsap/dist/gsap.min.js'), join(dir, 'vendor/gsap.js'));
-  for (const asset of doc.assets)
-    await copyFile(
-      contained(videoDirectory(root, workspaceId), 'assets', asset.file),
-      join(dir, 'assets', asset.file),
-    );
-  for (const c of doc.clips) {
-    if (c.kind === 'scene' && c.sourceId)
-      await writeFile(
-        join(dir, 'scenes', `${c.id}.html`),
-        sceneHtml(doc.sources[c.sourceId] ?? '', c, doc),
-      );
-  }
-  await writeFile(join(dir, 'index.html'), compositionHtml(doc));
-  await writeFile(join(dir, '.ready'), 'ready');
-  return dir;
 }
 export async function writeCandidate(
   root: string,
-  workspaceId: string,
+  id: string,
   requestId: string,
   revision: Revision,
 ) {
-  const dir = contained(videoDirectory(root, workspaceId), 'requests', requestId);
-  await mkdir(join(dir, 'scenes'), { recursive: true });
-  if (revision.document.native) await writeNative(root, workspaceId, revision.document, dir);
-  else await writeFile(join(dir, 'project.json'), JSON.stringify(revision.document, null, 2));
-  for (const [id, source] of Object.entries(revision.document.sources))
-    await writeFile(join(dir, 'scenes', `${id}.html`), source);
-  return dir;
+  const directory = join(videoDirectory(root, id), 'requests', requestId);
+  await mkdir(directory, { recursive: true });
+  await writeProject(root, id, revision.document.files, directory);
+  return directory;
 }
 export async function readCandidate(
   root: string,
-  workspaceId: string,
+  id: string,
   requestId: string,
-): Promise<VideoDocument> {
-  const dir = contained(videoDirectory(root, workspaceId), 'requests', requestId);
-  const doc = videoSchema.parse(JSON.parse(await readFile(join(dir, 'project.json'), 'utf8')));
-  for (const id of Object.keys(doc.sources))
-    doc.sources[id] = await readFile(contained(dir, 'scenes', `${id}.html`), 'utf8');
-  return videoSchema.parse(doc);
+  base: VideoDocument,
+) {
+  const directory = join(videoDirectory(root, id), 'requests', requestId);
+  return snapshot(root, id, directory, base.name, base.assets);
+}
+export async function previewCss(directory: string) {
+  try {
+    await readFile(join(directory, 'preview', 'player.css'));
+    return '<link rel="stylesheet" href="./player.css">';
+  } catch {
+    return '';
+  }
 }

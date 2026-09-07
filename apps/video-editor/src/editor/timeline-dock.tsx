@@ -8,13 +8,13 @@ export function TimelineDock({ state }: { state: EditorState }) {
   const project = state.project!;
   const thumbnail = useThumbnails(
     project.workspaceId,
-    project.revisionId,
-    previewScenes(project.revision.document),
+    state.displayedRevision || project.revisionId,
+    previewScenes(state.document!),
   );
   return (
     <div className="timeline-dock">
       <SceneStrip
-        document={project.revision.document}
+        document={state.document!}
         time={state.time}
         clock={state.clock}
         range={state.range}

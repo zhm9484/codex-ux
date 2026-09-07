@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
-import type { Clip } from '@codex-ux/video-domain';
+import type { TimelineItem } from '@codex-ux/video-domain';
 
 /** Keep image generation off the browser's connection slots used for playback and saving. */
-export function useThumbnails(workspaceId: string, revisionId: string, clips: Clip[]) {
+export function useThumbnails(workspaceId: string, revisionId: string, clips: TimelineItem[]) {
   const retained = useRef<Record<string, string>>({});
   const [frames, setFrames] = useState<{ revision: string; images: Record<string, string> }>({
     revision: '',
@@ -41,7 +41,7 @@ export function useThumbnails(workspaceId: string, revisionId: string, clips: Cl
           setFrames((previous) => ({
             revision: revisionId,
             images: {
-              ...previous.images,
+              ...(previous.revision === revisionId ? previous.images : {}),
               [frame.id]: url,
             },
           }));
@@ -63,5 +63,5 @@ export function useThumbnails(workspaceId: string, revisionId: string, clips: Cl
       for (const url of Object.values(cache)) URL.revokeObjectURL(url);
     };
   }, []);
-  return (clipId: string) => frames.images[clipId];
+  return (clipId: string) => (frames.revision === revisionId ? frames.images[clipId] : undefined);
 }

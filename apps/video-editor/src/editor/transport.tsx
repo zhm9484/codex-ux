@@ -7,6 +7,7 @@ import type { PlaybackClock } from '../lib/playback-clock';
 
 export function Transport({
   time,
+  disabled,
   duration,
   fps,
   playing,
@@ -18,8 +19,9 @@ export function Transport({
   onFullscreen,
 }: {
   time: number;
+  disabled: boolean;
   duration: number;
-  fps: number;
+  fps: number | null;
   playing: boolean;
   onPlay: () => void;
   clock: PlaybackClock;
@@ -43,7 +45,12 @@ export function Transport({
         </span>
       </div>
       <div className="transport-center">
-        <IconButton label={playing ? 'Pause' : 'Play'} className="play-button" onClick={onPlay}>
+        <IconButton
+          disabled={disabled}
+          label={playing ? 'Pause' : 'Play'}
+          className="play-button"
+          onClick={onPlay}
+        >
           {playing ? (
             <Pause size={18} fill="currentColor" />
           ) : (

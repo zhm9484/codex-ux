@@ -4,6 +4,7 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { randomUUID } from 'node:crypto';
+import { fixtureDocument } from './video-fixtures.ts';
 import { VideoStore } from '../packages/local-server/src/video/store.ts';
 import { WorkspaceStore } from '../packages/local-server/src/storage/workspaces.ts';
 
@@ -12,8 +13,8 @@ void test('durable revisions support undo, redo, branching, deduplication and is
   const workspaces = new WorkspaceStore(root);
   let store = new VideoStore(workspaces);
   try {
-    const first = store.create(workspaces.create('First').id);
-    const other = store.create(workspaces.create('Other').id);
+    const first = store.create(workspaces.create('First').id, fixtureDocument('First'));
+    const other = store.create(workspaces.create('Other').id, fixtureDocument('Other'));
     const change = { requestId: randomUUID(), baseRevision: first.revisionId, label: 'Rename' };
     const second = store.commit(first.workspaceId, change, {
       ...first.revision.document,
@@ -55,6 +56,23 @@ void test('durable revisions support undo, redo, branching, deduplication and is
     assert.equal(store.get(first.workspaceId).history.length, 3);
   } finally {
     store.close();
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+void test('unsupported video databases are rejected without resetting their contents', async () => {
+  const root = mkdtempSync(join(tmpdir(), 'video-unsupported-'));
+  const { DatabaseSync } = await import('node:sqlite');
+  const { openVideoDatabase } = await import('../packages/local-server/src/video/database.ts');
+  try {
+    let db = new DatabaseSync(join(root, 'state.sqlite'));
+    db.exec("CREATE TABLE project(head TEXT);INSERT INTO project VALUES('keep-existing-data')");
+    db.close();
+    assert.throws(() => openVideoDatabase(root), /unsupported storage format/);
+    db = new DatabaseSync(join(root, 'state.sqlite'));
+    assert.equal(db.prepare('SELECT head FROM project').get()!.head, 'keep-existing-data');
+    db.close();
+  } finally {
     rmSync(root, { recursive: true, force: true });
   }
 });

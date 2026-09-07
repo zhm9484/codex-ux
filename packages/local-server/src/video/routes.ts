@@ -1,15 +1,17 @@
 import { randomUUID } from 'node:crypto';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { z } from 'zod';
-import { videoSchema } from '@codex-ux/video-domain';
+import { videoSchema, intentSchema } from '@codex-ux/video-domain';
 import type { VideoStore } from './store.ts';
 import type { VideoCollaboration } from './collaboration.ts';
 import { collaborationTarget } from '../agents.ts';
 import type { RenderJobs } from './jobs.ts';
 import { readBody, readJson, json } from '../http.ts';
 import { saveAsset } from './assets.ts';
-import type { NativeProjects } from '../native/projects.ts';
+import type { VideoProjects } from '../sources/projects.ts';
 import { HttpError } from '../errors.ts';
+import { join } from 'node:path';
+import { videoDirectory } from './paths.ts';
 
 const change = z.object({
   requestId: z.string().uuid(),
@@ -37,7 +39,7 @@ export interface VideoServices {
   collaboration: VideoCollaboration;
   jobs: RenderJobs;
   root: string;
-  native: NativeProjects;
+  projects: VideoProjects;
 }
 
 export async function videoApi(
@@ -49,36 +51,51 @@ export async function videoApi(
 ) {
   const method = req.method ?? 'GET';
   if (rest === '' && method === 'POST') {
-    const { format } = z
-      .strictObject({ format: z.enum(['native', 'structured']).default('native') })
-      .parse(await readJson(req));
-    json(res, await s.native.open(id, format));
+    z.strictObject({}).parse(await readJson(req));
+    json(res, await s.projects.open(id));
     return;
   }
   s.store.row(id);
   if ((rest === '' || rest === '/context') && method === 'GET') {
-    await s.native.sync(id);
+    await s.projects.sync(id);
     const workspace = s.store.get(id);
     json(res, {
       ...workspace,
-      source: workspace.revision.document.native ? s.native.status(id) : undefined,
+      source: s.projects.status(id),
     });
     return;
   }
   if (rest === '/source' && method === 'POST') {
-    const { directory, baseRevision } = z
-      .strictObject({ directory: z.string().min(1).optional(), baseRevision: z.string().uuid() })
+    const { path, baseRevision } = z
+      .strictObject({ path: z.string().min(1), baseRevision: z.string().uuid() })
       .parse(await readJson(req));
-    json(res, await s.native.importSource(id, baseRevision, directory));
+    json(res, await s.projects.importSource(id, baseRevision, path));
+    return;
+  }
+  if (rest === '/source/media' && method === 'POST') {
+    const baseRevision = z.string().uuid().parse(req.headers['x-base-revision']);
+    const name = decodeURIComponent(String(req.headers['x-file-name'] ?? 'video.mp4'));
+    const mime = String(req.headers['content-type'] ?? '').split(';')[0]!;
+    if (!['video/mp4', 'video/webm'].includes(mime)) throw new HttpError(415, 'Use MP4 or WebM.');
+    const asset = await saveAsset(s.root, id, name, mime, await readBody(req, 100 * 1024 * 1024));
+    json(
+      res,
+      await s.projects.importSource(
+        id,
+        baseRevision,
+        join(videoDirectory(s.root, id), 'assets', asset.file),
+        asset,
+      ),
+    );
     return;
   }
   if (rest === '/source' && method === 'GET') {
-    json(res, s.native.status(id));
+    json(res, s.projects.status(id));
     return;
   }
   if (rest === '/revisions' && method === 'POST') {
     const body = change.extend({ document: videoSchema }).parse(await readJson(req));
-    json(res, await s.native.commit(id, body, body.document));
+    json(res, await s.projects.commit(id, body, body.document));
     return;
   }
   if (rest.startsWith('/revisions/') && method === 'GET') {
@@ -87,18 +104,27 @@ export async function videoApi(
   }
   if ((rest === '/undo' || rest === '/redo') && method === 'POST') {
     const body = z.object({ baseRevision: z.string().uuid() }).parse(await readJson(req));
-    json(res, await s.native.travel(id, body.baseRevision, rest === '/undo' ? 'undo' : 'redo'));
+    json(res, await s.projects.travel(id, body.baseRevision, rest === '/undo' ? 'undo' : 'redo'));
     return;
   }
   if (rest === '/notes' && method === 'POST') {
     const body = z
-      .object({ text: z.string().trim().min(1).max(4000), anchor })
+      .strictObject({ text: z.string().trim().min(1).max(4000), anchor, intent: intentSchema })
       .parse(await readJson(req));
-    s.store.revision(id, body.anchor.revisionId);
+    const revision = s.store.revision(id, body.anchor.revisionId);
+    if (body.anchor.end > revision.document.duration)
+      throw new HttpError(400, 'The note is outside its video revision.');
     s.store
       .database(id)
-      .prepare('INSERT INTO notes VALUES(?,?,?,?,?)')
-      .run(randomUUID(), body.text, JSON.stringify(body.anchor), new Date().toISOString(), null);
+      .prepare('INSERT INTO notes VALUES(?,?,?,?,?,?)')
+      .run(
+        randomUUID(),
+        body.text,
+        JSON.stringify(body.anchor),
+        JSON.stringify(body.intent),
+        new Date().toISOString(),
+        null,
+      );
     json(res, s.store.get(id));
     return;
   }

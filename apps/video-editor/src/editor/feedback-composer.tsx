@@ -1,12 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
 import { ArrowUp, MessageSquare } from 'lucide-react';
 import type { FeedbackAnchor } from '@codex-ux/protocol';
-import { formatTime } from '@codex-ux/video-domain';
+import { formatTime, type VideoIntent } from '@codex-ux/video-domain';
 import type { EditorState } from '../hooks/use-editor';
 import { IconButton } from '../components/ui';
 
 export function FeedbackComposer({ state }: { state: EditorState }) {
   const [text, setText] = useState('');
+  const [intent, setIntent] = useState<VideoIntent>({ kind: 'change' });
   const [reference, setReference] = useState<{ anchor: FeedbackAnchor; focus: number } | null>(
     null,
   );
@@ -24,9 +25,10 @@ export function FeedbackComposer({ state }: { state: EditorState }) {
     return () => clearTimeout(timer);
   }, [saved]);
   async function save() {
-    if (!text.trim()) return;
-    if (await state.addNote(text, anchor)) {
+    if (!text.trim() || !state.displayedRevision) return;
+    if (await state.addNote(text, anchor, intent)) {
       setText('');
+      setIntent({ kind: 'change' });
       setReference(null);
       setSaved(true);
       state.clearSelection();
@@ -64,6 +66,41 @@ export function FeedbackComposer({ state }: { state: EditorState }) {
             </span>
           </div>
         )}
+        <label className="composer-intent">
+          Request
+          <select
+            aria-label="Request kind"
+            value={intent.kind}
+            onChange={(event) =>
+              setIntent(
+                event.target.value === 'transition' ? { kind: 'transition' } : { kind: 'change' },
+              )
+            }
+          >
+            <option value="change">Change</option>
+            <option value="transition">Transition</option>
+          </select>
+        </label>
+        {intent.kind === 'transition' && (
+          <label className="composer-intent">
+            Duration (seconds, optional)
+            <input
+              aria-label="Transition duration"
+              type="number"
+              min="0.01"
+              max="60"
+              step="0.01"
+              value={intent.duration ?? ''}
+              onChange={(event) =>
+                setIntent(
+                  event.target.value
+                    ? { kind: 'transition', duration: Number(event.target.value) }
+                    : { kind: 'transition' },
+                )
+              }
+            />
+          </label>
+        )}
         <textarea
           ref={input}
           aria-label="Feedback note"
@@ -73,7 +110,7 @@ export function FeedbackComposer({ state }: { state: EditorState }) {
           maxLength={4000}
           onFocus={() => {
             state.control.current?.pause();
-            if (!reference || reference.focus !== state.feedbackFocus)
+            if (!reference || (!text && reference.focus !== state.feedbackFocus))
               setReference({ anchor: state.anchor, focus: state.feedbackFocus });
           }}
           onChange={(event) => setText(event.target.value)}
@@ -99,7 +136,7 @@ export function FeedbackComposer({ state }: { state: EditorState }) {
             type="submit"
             label="Save note"
             className="save-note-button"
-            disabled={!text.trim() || state.saving}
+            disabled={!text.trim() || state.saving || !state.displayedRevision}
           >
             <ArrowUp size={18} />
           </IconButton>

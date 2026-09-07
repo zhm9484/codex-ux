@@ -3,8 +3,8 @@ import type { Region } from '@codex-ux/protocol';
 /** Empty canvas is always a region-selection surface. Text owns its own move gesture. */
 export function bindAreaGesture(
   frame: Document,
-  width: number,
-  height: number,
+  width: () => number,
+  height: () => number,
   clear: () => void,
   update: (region: Region | null, active: boolean, point?: { x: number; y: number }) => void,
 ) {
@@ -12,8 +12,8 @@ export function bindAreaGesture(
   let region: Region | null = null;
   let completed = false;
   const point = (event: PointerEvent) => ({
-    x: Math.max(0, Math.min(1, event.clientX / width)),
-    y: Math.max(0, Math.min(1, event.clientY / height)),
+    x: Math.max(0, Math.min(1, event.clientX / width())),
+    y: Math.max(0, Math.min(1, event.clientY / height())),
   });
   const down = (event: PointerEvent) => {
     if (event.button !== 0 || (event.target as Element).closest('[data-ux-text],input,button,a'))

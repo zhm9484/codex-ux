@@ -8,7 +8,7 @@ const errors = `<script>(function(){
 })();</script>`;
 
 /** Only the served preview gains a playback bridge and error reporting; project files stay intact. */
-export function nativePreview(html: string) {
+export function hyperframesPreview(html: string) {
   const withErrors = /<head[^>]*>/i.test(html)
     ? html.replace(/<head[^>]*>/i, (head) => head + errors)
     : errors + html;

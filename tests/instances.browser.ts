@@ -31,8 +31,8 @@ test('instances isolate bindings, restore each workspace on return and reload, a
   context,
   request,
 }) => {
-  const first = await createVideo(request, `Instance A ${randomUUID()}`, 'structured');
-  const second = await createVideo(request, `Instance B ${randomUUID()}`, 'structured');
+  const first = await createVideo(request, `Instance A ${randomUUID()}`);
+  const second = await createVideo(request, `Instance B ${randomUUID()}`);
   const url = `/apps/video-editor/w/${first.workspaceId}`;
   const x = randomUUID(),
     y = randomUUID(),
@@ -83,11 +83,15 @@ test('sending captures the current instance and session before switching workspa
   page,
   request,
 }) => {
-  const first = await createVideo(request, `Request A ${randomUUID()}`, 'structured');
-  const second = await createVideo(request, `Request B ${randomUUID()}`, 'structured');
+  const first = await createVideo(request, `Request A ${randomUUID()}`);
+  const second = await createVideo(request, `Request B ${randomUUID()}`);
   const base = `/api/workspaces/${first.workspaceId}/apps/video-editor`;
   await request.post(`${base}/notes`, {
-    data: { text: 'A precise change', anchor: { revisionId: first.revisionId, start: 0, end: 1 } },
+    data: {
+      intent: { kind: 'change' },
+      text: 'A precise change',
+      anchor: { revisionId: first.revisionId, start: 0, end: 1 },
+    },
   });
   await page.goto(`/apps/video-editor/w/${first.workspaceId}`);
   const sessionId = randomUUID();

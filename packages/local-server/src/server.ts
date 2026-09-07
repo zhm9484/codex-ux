@@ -14,7 +14,7 @@ import { serveFile } from './static.ts';
 import { contained } from './storage/paths.ts';
 import { json } from './http.ts';
 import { HttpError } from './errors.ts';
-import { NativeProjects } from './native/projects.ts';
+import { VideoProjects } from './sources/projects.ts';
 import { repositoryRoot } from './config.ts';
 
 export async function startServer(
@@ -27,15 +27,15 @@ export async function startServer(
   const apps = validateApps(hostedApps);
   const workspaces = new WorkspaceStore(root);
   const store = new VideoStore(workspaces);
-  const native = new NativeProjects(root, store);
+  const projects = new VideoProjects(root, store);
   const services: Services = {
     workspaces,
     apps,
     video: {
-      native,
+      projects,
       store,
       root,
-      collaboration: new VideoCollaboration(store, root, origin, native),
+      collaboration: new VideoCollaboration(store, root, origin, projects),
       jobs: new RenderJobs(root),
     },
   };
