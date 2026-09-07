@@ -86,15 +86,18 @@ external account access are not part of the video document.
 ## Verification
 
 `pnpm check` runs Prettier, ESLint, TypeScript, Node's test runner and a Vite production build.
-`pnpm test` covers timing, import failures, workspace isolation, durable history, stale writes, HTTP
-validation and candidate publication. The Codex-delivery test substitutes a local executable; it
-does not send real messages. `pnpm test:browser` builds and starts an isolated service on port 5197,
-then checks inline editing and cancellation, buffered revision replacement, anchored notes, narrow
-layouts, selection-driven text timing/deletion, native and embedded-fallback video fullscreen with
-playback/seeking, iframe/panel file drops, native module/sub-composition loading, draft preservation
-during source updates, failed-update recovery and comparison. It requires Chrome and stores test
-data in `.codex-ux/browser-tests/`. The native browser integration also renders an MP4 and requires
-the media binaries. This export integration remains outside `pnpm check`.
+GitHub Actions runs the same command on every pull request and every push to `main`, using the
+repository's pinned Node.js and pnpm versions with a frozen lockfile. The workflow can also be run
+manually from GitHub. `pnpm test` covers timing, import failures, workspace isolation, durable
+history, stale writes, HTTP validation and candidate publication. The Codex-delivery test
+substitutes a local executable; it does not send real messages. `pnpm test:browser` builds and
+starts an isolated service on port 5197, then checks inline editing and cancellation, buffered
+revision replacement, anchored notes, narrow layouts, selection-driven text timing/deletion, native
+and embedded-fallback video fullscreen with playback/seeking, iframe/panel file drops, native
+module/sub-composition loading, draft preservation during source updates, failed-update recovery and
+comparison. It requires Chrome and stores test data in `.codex-ux/browser-tests/`. The native
+browser integration also renders an MP4 and requires the media binaries. This export integration
+remains outside `pnpm check`.
 
 See [video editing](video-editor.md) for user-facing behavior and [local API](local-api.md) for
 collaboration details. Research and proposals belong in `docs/non-canonical/`.
