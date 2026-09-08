@@ -63,10 +63,11 @@ capability installation use separate locks, with atomically published PID/token 
 serialized dead-owner reclamation. Failed installations retain partial files and can be retried;
 capabilities are marked ready only after their own packages resolve and compiler/media binaries pass
 a smoke check. FFprobe uses platform-specific `@ffprobe-installer` binaries, including a native
-macOS ARM64 build. A damaged ready cache is rejected rather than reinstalled in place while another
-service may be using it; its error identifies the cache and required stopped-service recovery.
-Trusted dependency builds allow only esbuild and ffmpeg-static. Project source dependencies still
-disable lifecycle scripts.
+macOS ARM64 build. Media executables have short hard-linked paths outside the nested pnpm tree so
+Windows can launch them. A damaged ready cache is rejected rather than reinstalled in place while
+another service may be using it; its error identifies the cache and required stopped-service
+recovery. Trusted dependency builds allow only esbuild and ffmpeg-static. Project source
+dependencies still disable lifecycle scripts.
 
 The installer uses explicit `--package pnpm@10.34.5 pnpm` arguments and clears inherited npm exec
 package/call selection while preserving registry/proxy configuration. Windows invokes the fixed npx

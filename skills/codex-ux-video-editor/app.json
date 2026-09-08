@@ -3,6 +3,6 @@
   "name": "Video Editor",
   "dist": "dist",
   "apiVersion": 3,
-  "runtimeBuild": "a390c057d447409990d28e1d5c6ef9ec448d7dd8f4cb57d69c431f7692904c5b",
+  "runtimeBuild": "07e26e3e92e2bd472bbbc83e144fd7d6d8cef1414fb7ab5208d6cd0a8c981b2f",
   "webBuild": "fb77f10a93806b61ac80f2bd7cbda4d85b17e87f43d56c5533a07aca00d990ae"
 }

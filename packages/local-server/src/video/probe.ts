@@ -7,16 +7,23 @@ const execute = promisify(execFile);
 const require = createRequire(import.meta.url);
 export function mediaBinaries() {
   return {
-    ffmpeg: process.env.CODEX_UX_FFMPEG ?? (require('ffmpeg-static') as string),
+    ffmpeg:
+      process.env.CODEX_UX_FFMPEG ??
+      environments.binaryPath('ffmpeg') ??
+      (require('ffmpeg-static') as string),
     ffprobe:
       process.env.CODEX_UX_FFPROBE ??
+      environments.binaryPath('ffprobe') ??
       (require('@ffprobe-installer/ffprobe') as { path: string }).path,
   };
 }
 async function probeBinary() {
   if (process.env.CODEX_UX_FFPROBE) return process.env.CODEX_UX_FFPROBE;
   await environments.ensure('probe');
-  return (require('@ffprobe-installer/ffprobe') as { path: string }).path;
+  return (
+    environments.binaryPath('ffprobe') ??
+    (require('@ffprobe-installer/ffprobe') as { path: string }).path
+  );
 }
 async function probe(file: string) {
   let binary: string;

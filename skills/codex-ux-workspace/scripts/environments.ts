@@ -10,6 +10,7 @@ import {
   access,
   symlink,
   realpath,
+  link,
 } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { installDependencies, runtimeEnvironment } from './install.ts';
@@ -54,6 +55,11 @@ export class Environments {
     this.runtime = runtime;
     this.cache = cache;
     this.install = install;
+  }
+  binaryPath(name: 'ffmpeg' | 'ffprobe') {
+    return this.runtime
+      ? join(this.runtime, 'bin', `${name}${process.platform === 'win32' ? '.exe' : ''}`)
+      : undefined;
   }
   list() {
     return capabilities.map(
@@ -151,8 +157,24 @@ export class Environments {
             name === 'ffmpeg-static'
               ? (require(name) as string)
               : (require(name) as { path: string }).path;
+          // Windows cannot spawn executables through very long pnpm package paths.
+          // Hard links retain immutable bytes without depending on symlink privileges.
+          const nameOnDisk = `${name === 'ffmpeg-static' ? 'ffmpeg' : 'ffprobe'}${process.platform === 'win32' ? '.exe' : ''}`;
+          const executable = join(directory, nameOnDisk);
+          const publishBinary = async (target: string) => {
+            try {
+              await link(binary, target);
+            } catch (error) {
+              if (!(error instanceof Error && 'code' in error && error.code === 'EEXIST'))
+                throw error;
+            }
+          };
+          await publishBinary(executable);
           try {
-            await promisify(execFile)(binary, ['-version'], { timeout: 10000, windowsHide: true });
+            await promisify(execFile)(executable, ['-version'], {
+              timeout: 10000,
+              windowsHide: true,
+            });
           } catch (error) {
             const failure = error as Error & { code?: unknown; signal?: unknown };
             throw new Error(
@@ -160,6 +182,8 @@ export class Environments {
               { cause: error },
             );
           }
+          await mkdir(join(runtime, 'bin'), { recursive: true });
+          await publishBinary(join(runtime, 'bin', nameOnDisk));
         }
       };
       const marker = await readFile(join(directory, '.ready'), 'utf8').catch(() => '');
