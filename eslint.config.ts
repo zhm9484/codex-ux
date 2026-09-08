@@ -13,6 +13,8 @@ export default defineConfig(
     '**/coverage/**',
     '**/.codex-ux/**',
     '**/artifacts/**',
+    '**/test-results/**',
+    '**/playwright-report/**',
   ]),
   {
     files: ['**/*.{ts,tsx}'],

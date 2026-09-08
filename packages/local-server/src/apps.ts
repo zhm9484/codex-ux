@@ -29,11 +29,11 @@ export function readApps(): HostedApp[] {
           {
             id: 'video-editor',
             name: 'Video Editor',
-            distDirectory: resolve(repositoryRoot, '.agents/skills/video-editor/dist'),
+            distDirectory: resolve(repositoryRoot, 'skills/codex-ux-video-editor/dist'),
           },
         ],
   );
 }
-export function validateApps(apps: HostedApp[]) {
+export function validateApps(apps: unknown) {
   return hostedApps.parse(apps);
 }

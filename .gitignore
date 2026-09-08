@@ -55,3 +55,7 @@ Thumbs.db
 .idea/
 .vscode/
 .fleet/
+
+# Installable skills include the shipped application, not a build prerequisite.
+!skills/codex-ux-video-editor/dist/
+!skills/codex-ux-video-editor/dist/**

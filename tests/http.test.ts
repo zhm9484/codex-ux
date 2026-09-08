@@ -28,6 +28,46 @@ void test('HTTP rejects cross-origin writes, stale edits and cross-workspace ref
   try {
     const first = await create('HTTP test');
     const second = await create('Other video');
+    const invitation = await post('/api/connections', {
+      appId: 'video-editor',
+      workspaceId: first.workspaceId,
+      session: { provider: 'codex', sessionId: randomUUID() },
+    });
+    assert.equal(invitation.status, 201);
+    const pair = (await invitation.json()) as { code: string };
+    assert.equal((await fetch(origin + '/api/connections/' + pair.code)).status, 200);
+    assert.equal(
+      (
+        await post('/api/connections', {
+          appId: 'missing-app',
+          workspaceId: first.workspaceId,
+          session: { provider: 'codex', sessionId: randomUUID() },
+        })
+      ).status,
+      404,
+    );
+    assert.equal(
+      (
+        await post('/api/connections', {
+          appId: 'video-editor',
+          workspaceId: first.workspaceId,
+          session: { provider: 'unsupported', sessionId: randomUUID() },
+        })
+      ).status,
+      400,
+    );
+    assert.equal(
+      (await post('/api/apps', { id: 'another-app', name: 'Another App', distDirectory: root }))
+        .status,
+      200,
+    );
+    const otherPair = await post('/api/connections', {
+      appId: 'another-app',
+      workspaceId: first.workspaceId,
+      instanceId: randomUUID(),
+      previousSession: null,
+    });
+    assert.equal(otherPair.status, 201);
     const base = `/api/workspaces/${first.workspaceId}/apps/video-editor`;
     const blocked = await fetch(origin + base + '/notes', {
       method: 'POST',

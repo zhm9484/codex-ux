@@ -16,6 +16,7 @@ import { json } from './http.ts';
 import { HttpError } from './errors.ts';
 import { VideoProjects } from './sources/projects.ts';
 import { repositoryRoot } from './config.ts';
+import { Connections } from './connections.ts';
 
 export async function startServer(
   root: string,
@@ -29,6 +30,7 @@ export async function startServer(
   const store = new VideoStore(workspaces);
   const projects = new VideoProjects(root, store);
   const services: Services = {
+    connections: new Connections(),
     workspaces,
     apps,
     video: {
@@ -54,7 +56,12 @@ export async function startServer(
       const url = new URL(req.url ?? '/', origin);
       const path = url.pathname;
       if (path === '/api/health') {
-        json(res, { service: 'codex-ux', version: 2, dataRoot: root });
+        json(res, {
+          service: 'codex-ux',
+          version: 3,
+          dataRoot: root,
+          runtimeBuild: process.env.CODEX_UX_RUNTIME_BUILD ?? 'development',
+        });
         return;
       }
       if (path.startsWith('/api/')) {

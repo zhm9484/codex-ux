@@ -21,6 +21,18 @@ export interface CollaborationTarget {
   instanceId: string;
   session: AgentSessionRef;
 }
+/** A short-lived rendezvous, not a workspace-global session binding. */
+export interface Connection {
+  code: string;
+  appId: string;
+  workspaceId: string;
+  instanceId: string | null;
+  previousSession: AgentSessionRef | null;
+  session: AgentSessionRef | null;
+  state: 'waiting-agent' | 'waiting-page' | 'connected' | 'disconnected' | 'expired';
+  expiresAt: string;
+  confirmedAt: string | null;
+}
 export interface RevisionReference {
   workspaceId: string;
   appId: string;

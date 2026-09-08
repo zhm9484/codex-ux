@@ -11,6 +11,7 @@ if (!root) {
 }
 
 const instance = await openAppInstance('video-editor');
+instance.enableConnections();
 
 createRoot(root).render(
   <StrictMode>

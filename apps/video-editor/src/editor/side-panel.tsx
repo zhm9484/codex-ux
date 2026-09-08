@@ -27,6 +27,8 @@ export function SidePanel({ state }: { state: EditorState }) {
           onClose={close}
           onRemove={state.removeNote}
           onBind={state.bind}
+          onPair={state.pair}
+          pairing={state.pairing}
           onRefresh={state.refresh}
           onLocate={state.locate}
         />
