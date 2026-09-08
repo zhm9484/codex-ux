@@ -160,3 +160,66 @@ test('Send now captures its destination before asynchronous draft storage', asyn
     release();
   }
 });
+
+test('Chat and Add note share a readable draft and preserve its anchor across entry points', async ({
+  page,
+  request,
+}) => {
+  const video = await createVideo(request, 'Shared composer');
+  const base = `/api/workspaces/${video.workspaceId}/apps/video-editor`;
+  await page.goto(`/apps/video-editor/w/${video.workspaceId}`);
+  await expect(page.locator('.preview-loading')).toHaveCount(0);
+  await page.getByRole('button', { name: 'Chat', exact: true }).click();
+  const composer = page.getByRole('region', { name: 'Chat', exact: true });
+  const input = page.getByLabel('Chat message');
+  await input.fill('Give this moment a softer transition');
+  await page.getByLabel('Request kind').selectOption('transition');
+  await page.getByLabel('Transition duration').fill('0.8');
+  const anchor = await composer
+    .getByRole('button', { name: 'Locate referenced frame' })
+    .textContent();
+  await page.getByRole('button', { name: 'Close chat' }).click();
+  await page.getByRole('slider', { name: 'Video position' }).focus();
+  await page.keyboard.press('ArrowRight');
+  await page
+    .frameLocator('iframe[data-revision]')
+    .frameLocator('iframe')
+    .locator('body')
+    .click({ button: 'right', position: { x: 40, y: 40 } });
+  await page.getByRole('menuitem', { name: 'Add note', exact: true }).click();
+  await expect(input).toHaveText('Give this moment a softer transition');
+  await expect(page.getByLabel('Transition duration')).toHaveValue('0.8');
+  await expect(composer.getByRole('button', { name: 'Locate referenced frame' })).toHaveText(
+    anchor!,
+  );
+  for (const viewport of [
+    { width: 1280, height: 900 },
+    { width: 390, height: 844 },
+    { width: 320, height: 568 },
+  ]) {
+    await page.setViewportSize(viewport);
+    await expect
+      .poll(async () => {
+        const rect = await composer.boundingBox();
+        return (
+          !!rect &&
+          rect.x >= 0 &&
+          rect.y >= 0 &&
+          rect.x + rect.width <= viewport.width &&
+          rect.y + rect.height <= viewport.height
+        );
+      })
+      .toBe(true);
+    await expect(input).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Send now', exact: true })).toBeVisible();
+  }
+  await page.getByRole('button', { name: 'Add note to list' }).click();
+  await expect(
+    page
+      .getByRole('region', { name: 'Pending notes' })
+      .getByText('Give this moment a softer transition'),
+  ).toBeVisible();
+  const project = (await (await request.get(base)).json()) as VideoProject;
+  expect(project.notes).toHaveLength(1);
+  expect(project.notes[0]!.intent).toEqual({ kind: 'transition', duration: 0.8 });
+});

@@ -29,9 +29,13 @@ npx skills add zhm9484/codex-ux --skill codex-ux-workspace codex-ux-video-editor
 
 For branch or local installations, use that same source for both. Do not silently mix releases. The
 launcher validates their runtime fingerprints. Set `APP_SKILL` to this skill's absolute directory
-and follow Workspace's startup instructions with `--app "$APP_SKILL/app.json"`. Initialize the video
-project, open a new connected page or pair the user's explicit existing page, and verify
-acknowledgement. Do not ask users to understand the two-skill architecture first.
+and follow Workspace's startup instructions with `--app "$APP_SKILL/app.json"`. Follow its default
+opening flow: initialize the video project, open the invitation URL directly or pair the user's
+explicit existing page using browser tools, verify acknowledgement, and retain the editor tab as a
+user-facing deliverable. Do not open the unbound startup URL first or ask the user to relay a
+pairing code when browser tools can handle it. Leave the editor and its service available after the
+response so users can send feedback. Do not ask users to understand the two-skill architecture
+first.
 
 ## Choose the starting source
 

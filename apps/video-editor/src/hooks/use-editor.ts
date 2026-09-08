@@ -141,17 +141,17 @@ export function useEditor(id: string) {
   }
   function openNotes(event?: React.MouseEvent<HTMLElement>, retarget = true) {
     setNotePoint(null);
-    const rect = event?.currentTarget.getBoundingClientRect();
-    const fromIsland = !!event?.currentTarget.closest('.tool-island');
+    const island = event?.currentTarget.closest('.tool-island');
+    const rect = (island ?? event?.currentTarget)?.getBoundingClientRect();
+    const fromIsland = !!island;
     setChatAnchor(
       rect && fromIsland
         ? {
-            left:
-              rect.right + 372 < window.innerWidth
-                ? rect.right + 12
-                : Math.max(12, rect.left - 372),
-            top: rect.top - 10,
-            bottom: rect.top - 10,
+            left: rect.left,
+            right: rect.right,
+            top: rect.top,
+            bottom: rect.bottom,
+            placement: 'beside',
           }
         : rect
           ? { left: rect.left, top: rect.top, bottom: rect.bottom }

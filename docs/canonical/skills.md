@@ -78,6 +78,15 @@ guessing recent tasks. `doctor` checks local queue capability without sending me
 feedback delivery is implemented; other agents can edit source/use HTTP but cannot claim a complete
 app-to-agent delivery loop.
 
+The default skill flow prepares the service and document, creates an invitation, opens its URL
+straight into a visible connected page, verifies the receipt, and retains the page for the user.
+Agents do not open the unbound `start` URL first. For an explicitly selected existing page, agents
+obtain the page code through browser tools; asking users to relay codes is only a fallback without
+browser access. In Codex's in-app browser, the skill requires `markDeliverable()` before ending each
+turn that uses the editor, since unmarked agent-created tabs are temporary. The detached service
+also stays running for continued feedback. Tab retention belongs to the host browser integration,
+not the HTTP connection broker; browser tests cannot certify host end-of-turn cleanup.
+
 Agent-created invitations open a new page; existing pages expose connection codes. The page
 acknowledges its actual instance ID, and the agent checks the receipt before reporting connection.
 Existing other-session bindings are preserved unless the user requests takeover with an exact

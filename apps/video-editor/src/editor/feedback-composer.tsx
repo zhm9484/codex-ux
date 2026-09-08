@@ -1,6 +1,6 @@
 import { MentionInput } from '@codex-ux/library-react';
 import { useRef, useState } from 'react';
-import { ArrowUp, Plus } from 'lucide-react';
+import { ArrowUp } from 'lucide-react';
 import type { FeedbackAnchor, LibraryReference } from '@codex-ux/protocol';
 import { formatTime, type VideoIntent } from '@codex-ux/video-domain';
 import type { EditorState } from '../hooks/use-editor';
@@ -28,7 +28,7 @@ export function FeedbackComposer({ state }: { state: EditorState }) {
   const [attempted, setAttempted] = useState(false);
   const [draftError, setDraftError] = useState('');
 
-  const anchored = !!(state.selectedId || state.region || state.range || text);
+  const anchored = !!(reference || state.selectedId || state.region || state.range || text);
   function reset() {
     setText('');
     setAttachments([]);
@@ -106,16 +106,21 @@ export function FeedbackComposer({ state }: { state: EditorState }) {
     } else void persist(true);
   }
   return (
-    <div className="feedback-dock">
-      <form
-        className={`feedback-composer ${anchored ? 'has-anchor' : ''}`}
-        onSubmit={(event) => {
-          event.preventDefault();
-          void persist(false);
-        }}
-      >
+    <form
+      className="feedback-composer"
+      onSubmit={(event) => {
+        event.preventDefault();
+        void persist(false);
+      }}
+    >
+      <div className="composer-context">
         {anchored && (
-          <div className="composer-reference" onClick={() => state.locate(anchor)}>
+          <button
+            type="button"
+            className="composer-reference"
+            onClick={() => state.locate(anchor)}
+            aria-label="Locate referenced frame"
+          >
             <span className="reference-icon">
               <img
                 alt="Referenced frame"
@@ -135,10 +140,9 @@ export function FeedbackComposer({ state }: { state: EditorState }) {
                     ? 'Selected range'
                     : 'This moment'}
             </span>
-          </div>
+          </button>
         )}
         <label className="composer-intent">
-          Request
           <select
             aria-label="Request kind"
             disabled={busy || attempted}
@@ -153,95 +157,93 @@ export function FeedbackComposer({ state }: { state: EditorState }) {
             <option value="transition">Transition</option>
           </select>
         </label>
-        {intent.kind === 'transition' && (
-          <label className="composer-intent">
-            Duration (seconds, optional)
-            <input
-              aria-label="Transition duration"
-              disabled={busy || attempted}
-              type="number"
-              min="0.01"
-              max="60"
-              step="0.01"
-              value={intent.duration ?? ''}
-              onChange={(event) =>
-                setIntent(
-                  event.target.value
-                    ? { kind: 'transition', duration: Number(event.target.value) }
-                    : { kind: 'transition' },
-                )
+      </div>
+      {intent.kind === 'transition' && (
+        <label className="composer-intent">
+          Transition duration
+          <input
+            aria-label="Transition duration"
+            disabled={busy || attempted}
+            type="number"
+            min="0.01"
+            max="60"
+            step="0.01"
+            value={intent.duration ?? ''}
+            onChange={(event) =>
+              setIntent(
+                event.target.value
+                  ? { kind: 'transition', duration: Number(event.target.value) }
+                  : { kind: 'transition' },
+              )
+            }
+          />
+          <span>seconds · optional</span>
+        </label>
+      )}
+      <MentionInput
+        library={state.library}
+        value={text}
+        attachments={attachments}
+        label="Chat message"
+        placeholder="What would you like to change? Use @ to reference a file."
+        actions={
+          <div className="composer-actions">
+            <button
+              type="submit"
+              className="secondary-button"
+              aria-label="Add note to list"
+              disabled={
+                !text.trim() ||
+                state.saving ||
+                busy ||
+                attaching ||
+                state.sending ||
+                !state.displayedRevision
               }
-            />
-          </label>
-        )}
-        <MentionInput
-          library={state.library}
-          value={text}
-          attachments={attachments}
-          label="Chat message"
-          active={state.chatOpen}
-          focusKey={state.feedbackFocus}
-          disabled={busy}
-          onBusy={setAttaching}
-          incomingFiles={state.droppedFiles}
-          onConsumed={() => state.setDroppedFiles(null)}
-          onChange={(value, refs) => {
-            setText(value);
-            setAttachments(refs);
-          }}
-          onFocus={() => {
-            state.control.current?.pause();
-            if (!reference || (!text && reference.focus !== state.feedbackFocus))
-              setReference({ anchor: state.anchor, focus: state.feedbackFocus });
-          }}
-          onManage={() => state.setModal('library')}
-          onSubmit={() => void persist(false)}
-        />
-        <div className="composer-actions">
-          <button
-            type="submit"
-            className="secondary-button"
-            aria-label="Add note to list"
-            disabled={
-              !text.trim() ||
-              state.saving ||
-              busy ||
-              attaching ||
-              state.sending ||
-              !state.displayedRevision
-            }
-          >
-            <Plus size={15} />
-            Add to notes
-          </button>
-          <button
-            type="button"
-            className="primary-button"
-            onClick={sendNow}
-            disabled={
-              !text.trim() ||
-              state.saving ||
-              busy ||
-              attaching ||
-              state.sending ||
-              !state.displayedRevision
-            }
-          >
-            <ArrowUp size={15} />
-            {busy ? 'Sending…' : 'Send now'}
-          </button>
-        </div>
-        {(draftError || state.deliveryError) && (
-          <p role="alert" className="inline-error">
-            {draftError || state.deliveryError}
-          </p>
-        )}
-      </form>
-      <span className="composer-hint">
-        {state.marking
-          ? 'Draw on the frame to mark a detail.'
-          : 'Send this draft now, or add it to your notes for later.'}
-      </span>
-    </div>
+            >
+              Add to notes
+            </button>
+            <button
+              type="button"
+              className="primary-button"
+              onClick={sendNow}
+              disabled={
+                !text.trim() ||
+                state.saving ||
+                busy ||
+                attaching ||
+                state.sending ||
+                !state.displayedRevision
+              }
+            >
+              <ArrowUp size={15} />
+              {busy ? 'Working…' : 'Send now'}
+            </button>
+          </div>
+        }
+        active={state.chatOpen}
+        focusKey={state.feedbackFocus}
+        disabled={busy}
+        onBusy={setAttaching}
+        incomingFiles={state.droppedFiles}
+        onConsumed={() => state.setDroppedFiles(null)}
+        onChange={(value, refs) => {
+          setText(value);
+          setAttachments(refs);
+        }}
+        onFocus={() => {
+          state.control.current?.pause();
+          if (!reference || (!text && reference.focus !== state.feedbackFocus))
+            setReference({ anchor: state.anchor, focus: state.feedbackFocus });
+        }}
+        onManage={() => state.setModal('library')}
+        onSubmit={() => void persist(false)}
+      />
+      {(draftError || state.deliveryError) && (
+        <p role="alert" className="inline-error">
+          {draftError || state.deliveryError}
+        </p>
+      )}
+    </form>
   );
 }
