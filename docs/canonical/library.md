@@ -35,10 +35,12 @@ markup. These actions do not create video assets, update source or create a vide
 are 100 MB per attached file, 20 references per note and 4,000 message characters. Clipboard formats
 and media decoding depend on the browser; a copied URL is text, not an automatic download.
 
-Notes persist attachment snapshots alongside their original app context. Sending validates that
-referenced files still exist and match their captured size/modification time. Changed or missing
-files require choosing the current material again. Directories are location references, not frozen
-recursive snapshots. Video requests include these absolute paths in each note's context; the agent
+Video notes persist attachment snapshots alongside their original app context. 3D Space captures
+references directly on feedback requests; its spatial annotations remain text-only. Sending
+validates that referenced files still exist and match their captured size/modification time. Changed
+or missing files require choosing the current material again. Directories are location references,
+not frozen recursive snapshots. Video requests include these absolute paths in each note's context;
+3D requests expose an `attachments` array alongside their spatial feedback. In both apps, the agent
 reads them and copies resources actually used into the candidate, leaving originals untouched.
 Reference paths do not make external resources part of a saved/exportable video automatically.
 
@@ -53,10 +55,13 @@ Reference paths do not make external resources part of a saved/exportable video 
   between a note and those references.
 - React: `@codex-ux/library-react` exports `LibraryBrowser`, `MentionInput`, `AttachmentList`,
   `FileIcon`, `LibraryIcon`, and a separately imported `styles.css`. Hosts provide the SDK client,
-  modal, draft state and submission callback. Video revision/region/time handling stays in Video
-  Editor. `MentionInput` accepts a host placeholder and optional footer actions so hosts can combine
-  attachments with draft actions without duplicating input or upload controls.
+  modal, draft state and submission callback. Both apps integrate through the shared
+  `@codex-ux/editor-ui` composer. Time and spatial context remain app-owned. `MentionInput` accepts
+  a host placeholder, optional footer actions and opt-in image thumbnails below the text. Both
+  editor composers enable those thumbnails; they open the existing attachment preview and follow the
+  same reference tokens and undo history. Hosts combine attachments with draft actions without
+  duplicating input or upload controls.
 
 There is no automatic attachment/reference garbage collection, content indexing or material
 transformation. Removing a note does not delete its source files. See [Local API](local-api.md) for
-routes and [Video Editor](video-editor.md) for the first integration.
+routes, [Video Editor](video-editor.md) and [3D Space](3d-space.md) for app behavior.

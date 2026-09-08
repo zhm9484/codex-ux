@@ -62,30 +62,3 @@
   border-radius: 50%;
   background: #998cad;
 }
-.side-panel.island-panel {
-  right: auto;
-  bottom: auto;
-  width: min(335px, calc(100vw - 24px));
-  max-height: min(540px, calc(100svh - 24px));
-}
-.is-focus-mode .app-header {
-  display: none;
-}
-:root:fullscreen {
-  background: #fcfcfc;
-}
-@media (max-width: 600px) {
-  .header-actions .undo-controls {
-    display: flex;
-  }
-  .tool-island {
-    width: 42px;
-    padding: 4px;
-    border-radius: 15px;
-    gap: 2px;
-  }
-  .tool-island .icon-button {
-    width: 32px;
-    height: 32px;
-  }
-}

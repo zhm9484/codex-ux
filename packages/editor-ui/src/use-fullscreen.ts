@@ -5,7 +5,12 @@ export function useFullscreen() {
   useEffect(() => {
     const changed = () => setActive(!!document.fullscreenElement);
     const escape = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setFocused(false);
+      if (
+        event.key === 'Escape' &&
+        !event.defaultPrevented &&
+        !(event.target instanceof Element && event.target.closest('dialog'))
+      )
+        setFocused(false);
     };
     document.addEventListener('fullscreenchange', changed);
     window.addEventListener('keydown', escape);

@@ -84,7 +84,6 @@
   font-size: 10px;
   color: var(--muted);
 }
-
 .timeline-dock {
   width: 100%;
 }
@@ -121,16 +120,9 @@
   right: -3px;
   border-radius: 0 4px 4px 0;
 }
-.range-comment {
-  position: absolute;
-  bottom: calc(100% + 10px);
-  transform: translateX(-50%);
-  z-index: 15;
-}
 .clip-thumbnail {
   object-fit: cover;
 }
-
 .timeline-dock {
   position: relative;
 }
@@ -255,7 +247,6 @@
     gap: 8px;
   }
 }
-
 @keyframes timeline-reveal {
   from {
     opacity: 0;

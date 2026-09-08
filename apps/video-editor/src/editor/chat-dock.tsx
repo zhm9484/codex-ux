@@ -1,22 +1,21 @@
-import { X } from 'lucide-react';
+import { FloatingPanel } from '@codex-ux/editor-ui';
 import type { EditorState } from '../hooks/use-editor';
 import { FeedbackComposer } from './feedback-composer';
-import { useFloatingPosition } from '../hooks/use-floating-position';
-import { IconButton } from '../components/ui';
-
 export function ChatDock({ state }: { state: EditorState }) {
-  const popup = useFloatingPosition(state.chatOpen, state.chatAnchor);
   return (
     <div className="chat-dock">
-      <section ref={popup} className="chat-popover" hidden={!state.chatOpen} aria-label="Chat">
-        <div className="chat-heading">
-          <h2>Add note</h2>
-          <IconButton label="Close chat" onClick={() => state.setChatOpen(false)}>
-            <X size={18} />
-          </IconButton>
-        </div>
+      <FloatingPanel
+        open={state.chatOpen}
+        anchor={state.chatAnchor}
+        title={state.feedbackMode === 'note' ? 'Note' : 'Chat'}
+        heading={false}
+        movable
+        className="chat-popover"
+        closeLabel="Close chat"
+        onClose={() => state.setChatOpen(false)}
+      >
         <FeedbackComposer state={state} />
-      </section>
+      </FloatingPanel>
     </div>
   );
 }

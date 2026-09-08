@@ -1,0 +1,68 @@
+@import './base.css';
+@import './controls.css';
+@import './forms.css';
+@import './modal.css';
+@import './header.css';
+@import './island.css';
+@import './composer.css';
+@import './workspace.css';
+
+:root {
+  --radius-control: 9px;
+  --radius-panel: 14px;
+  --surface-shadow: 0 18px 64px #20202012, 0 2px 8px #20202006;
+}
+.icon-button {
+  width: 34px;
+  height: 34px;
+}
+button {
+  transition:
+    background-color 160ms ease,
+    color 160ms ease,
+    opacity 160ms ease,
+    box-shadow 160ms ease;
+}
+.ui-floating-panel {
+  z-index: 65;
+  width: min(360px, calc(100vw - 24px));
+  box-shadow: var(--surface-shadow);
+  border-radius: var(--radius-panel);
+}
+.ux-message-editor:focus-visible {
+  outline: none;
+}
+.editor-modal {
+  z-index: 100;
+}
+.export-button.active {
+  background: var(--accent);
+  color: white;
+}
+@media (max-width: 600px) {
+  .modal-heading {
+    padding: 16px 18px;
+  }
+  .modal-body {
+    padding: 18px;
+  }
+  .tool-island {
+    width: 42px;
+    padding: 4px;
+    border-radius: 15px;
+    gap: 2px;
+  }
+  .tool-island .icon-button {
+    width: 32px;
+    height: 32px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+}

@@ -72,7 +72,7 @@ test('canvas titles edit, drag, resize and undo without timeline editing control
   await page.mouse.up();
   await expect.poll(async () => fontSize(await read())).toBeGreaterThan(100);
   const enlargedWidth = (await page.locator('.text-selection').boundingBox())!.width;
-  await page.getByRole('button', { name: 'Undo (⌘Z)', exact: true }).click();
+  await page.getByRole('button', { name: 'Undo', exact: true }).click();
   await expect.poll(async () => fontSize(await read())).toBe(100);
   await readyPreview(page, request, workspace.workspaceId);
   expect((await page.locator('.text-selection').boundingBox())!.width).toBeLessThan(enlargedWidth);
@@ -142,7 +142,7 @@ test('range and region comments open chat on demand and keep their original refe
   const actionBox = (await noteAction.boundingBox())!;
   expect(actionBox.x).toBeGreaterThan(strip.x + (strip.width * 5) / 18);
   await noteAction.click();
-  await page.getByRole('textbox', { name: 'Chat message' }).fill('Let this moment breathe.');
+  await page.getByRole('textbox', { name: 'Note text' }).fill('Let this moment breathe.');
   await page.locator('.scene-strip').click({ position: { x: (strip.width * 8) / 18, y: 20 } });
   await expect(page.getByRole('textbox', { name: 'Chat message' })).toBeHidden();
   await page.getByRole('button', { name: 'Chat', exact: true }).click();
@@ -158,8 +158,8 @@ test('range and region comments open chat on demand and keep their original refe
   await page.mouse.up();
   await expect(page.getByRole('textbox', { name: 'Chat message' })).toBeHidden();
   await page.getByRole('button', { name: 'Add note', exact: true }).click();
-  await page.getByRole('textbox', { name: 'Chat message' }).fill('Move this detail.');
-  await page.getByRole('button', { name: 'Add note to list' }).click();
+  await page.getByRole('textbox', { name: 'Note text' }).fill('Move this detail.');
+  await page.getByRole('button', { name: 'Save note' }).click();
   expect(
     (await readWorkspace(request, workspace.workspaceId)).notes.at(-1)?.anchor.region,
   ).toMatchObject({
@@ -370,7 +370,7 @@ test('focused text timeline retimes, locates, collapses and deletes with undo', 
   await page.getByRole('menuitem', { name: 'Delete', exact: true }).click();
   await expect.poll(async () => !!titleSource(await read())).toBe(false);
   await expect(page.locator('.element-timeline')).toHaveCount(0);
-  await page.getByRole('button', { name: 'Undo (⌘Z)', exact: true }).click();
+  await page.getByRole('button', { name: 'Undo', exact: true }).click();
   await expect.poll(async () => !!titleSource(await read())).toBe(true);
 });
 
@@ -385,7 +385,7 @@ test('tool island moves, remembers its position, opens adjacent notes and suppor
   await expect(page.getByRole('button', { name: 'Assets', exact: true })).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'HyperFrames project' })).toHaveCount(0);
   await expect(page.locator('.app-header').getByRole('button', { name: 'History' })).toBeVisible();
-  const grip = page.getByRole('button', { name: 'Move video tools' });
+  const grip = page.getByRole('button', { name: 'Move collaboration tools' });
   let box = (await grip.boundingBox())!;
   await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
   await page.mouse.down();

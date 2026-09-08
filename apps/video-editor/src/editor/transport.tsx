@@ -1,6 +1,6 @@
 import { Play, Pause, Volume2, VolumeX, Maximize, Minimize } from 'lucide-react';
 import { formatTime } from '@codex-ux/video-domain';
-import { IconButton } from '../components/ui';
+import { IconButton } from '@codex-ux/editor-ui';
 import { useRef } from 'react';
 import { usePlaybackDisplay } from '../hooks/use-playback-display';
 import type { PlaybackClock } from '../lib/playback-clock';

@@ -1,7 +1,8 @@
+import { WorkspacePicker } from '@codex-ux/editor-ui';
 import { useEffect, useState } from 'react';
 import type { Workspace } from '@codex-ux/protocol';
 import type { BrowserAppInstance } from '@codex-ux/sdk';
-import { ArrowRight, Box, FolderOpen, LoaderCircle } from 'lucide-react';
+import { Box } from 'lucide-react';
 import { api, errorMessage } from './api';
 import { Editor } from './editor';
 
@@ -64,73 +65,22 @@ export function App({ instance }: { instance: BrowserAppInstance }) {
         instance={instance}
         workspaces={workspaces}
         onSelect={select}
-        onLeave={() => select(null)}
       />
     );
   return (
-    <main className="workspace-page">
-      <div className="workspace-wordmark">
-        <Box size={21} strokeWidth={1.5} />
-        3D Space<span>by Codex UX</span>
-      </div>
-      <div className="workspace-art" aria-hidden="true">
-        <div className="art-orbit" />
-        <div className="art-sphere" />
-        <div className="art-block" />
-      </div>
-      <section className="workspace-card">
-        <p className="eyebrow">A SPACE FOR YOUR IDEAS</p>
-        <h1>Make a little world.</h1>
-        <p className="workspace-intro">
-          Bring things in. Move them around.
-          <br />
-          Create something together with your agent.
-        </p>
-        {error && (
-          <p className="picker-error" role="alert">
-            {error}
-          </p>
-        )}
-        {active && loaded && !workspaces.some((workspace) => workspace.id === active) && (
-          <p className="picker-error" role="alert">
-            That workspace was not found. Choose another or create one.
-          </p>
-        )}
-        <form
-          onSubmit={(event) => {
-            event.preventDefault();
-            void create();
-          }}
-        >
-          <label htmlFor="workspace-name">Start a new space</label>
-          <div className="workspace-input">
-            <input
-              id="workspace-name"
-              placeholder="Give your workspace a name"
-              value={name}
-              maxLength={100}
-              onChange={(event) => setName(event.target.value)}
-              required
-            />
-            <button aria-label="Create workspace" disabled={!name.trim() || creating}>
-              {creating ? <LoaderCircle className="spin" size={18} /> : <ArrowRight size={19} />}
-            </button>
-          </div>
-        </form>
-        {!loaded && !error && <p className="panel-caption">Loading workspaces…</p>}
-        {!!workspaces.length && (
-          <div className="recent-workspaces">
-            <span className="section-caption">OR PICK UP WHERE YOU LEFT OFF</span>
-            {workspaces.map((workspace) => (
-              <button key={workspace.id} onClick={() => select(workspace.id)}>
-                <FolderOpen size={16} />
-                <span>{workspace.name}</span>
-                <ArrowRight size={14} />
-              </button>
-            ))}
-          </div>
-        )}
-      </section>
-    </main>
+    <WorkspacePicker
+      appName="3D Space"
+      icon={<Box size={21} />}
+      description="Bring objects into a space and shape it with your agent."
+      workspaces={workspaces}
+      loaded={loaded}
+      error={error}
+      missing={!!active && loaded && !workspaces.some((w) => w.id === active)}
+      name={name}
+      onName={setName}
+      creating={creating}
+      onCreate={() => void create()}
+      onSelect={select}
+    />
   );
 }

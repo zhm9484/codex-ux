@@ -2,7 +2,7 @@ import { EditorModals } from './editor-modals';
 import { NotesBoard } from '../panels/notes';
 import { NotePopover } from '../components/note-popover';
 import { ToolIsland } from './tool-island';
-import { useFullscreen } from '../hooks/use-fullscreen';
+import { useFullscreen, anchorBelow } from '@codex-ux/editor-ui';
 import { useVideoFullscreen } from '../hooks/use-video-fullscreen';
 import { PlaybackScrubber } from './playback-scrubber';
 import { useRef, useState } from 'react';
@@ -20,7 +20,7 @@ import { SelectionBox } from '../canvas/selection-box';
 import { CanvasMenu } from '../canvas/context-menu';
 import { SidePanel } from './side-panel';
 import { ExportDialog } from './export-dialog';
-import { IconButton } from '../components/ui';
+import { IconButton } from '@codex-ux/editor-ui';
 
 interface EditorProps {
   id: string;
@@ -51,7 +51,7 @@ export function Editor({ id, workspaces, onSelect }: EditorProps) {
     event.preventDefault();
     dragDepth.current = 0;
     setDragging(false);
-    state.openNotes();
+    state.openNotes(undefined, false);
     state.setDroppedFiles(Array.from(event.dataTransfer.files));
   }
   return (
@@ -97,12 +97,7 @@ export function Editor({ id, workspaces, onSelect }: EditorProps) {
         onExport={() => state.setExporting(true)}
         historyOpen={state.panel === 'history'}
         onHistory={(event) => {
-          const rect = event.currentTarget.getBoundingClientRect();
-          state.setPanelAnchor({
-            left: rect.right - 335,
-            top: rect.bottom + 10,
-            bottom: rect.bottom + 10,
-          });
+          state.setPanelAnchor(anchorBelow(event.currentTarget));
           state.setChatOpen(false);
           state.setPanel(state.panel === 'history' ? null : 'history');
         }}

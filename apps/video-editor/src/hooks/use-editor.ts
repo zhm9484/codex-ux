@@ -2,7 +2,7 @@ import { WorkspaceLibrary } from '@codex-ux/sdk';
 import { useEffect, useEffectEvent, useRef, useState, useMemo } from 'react';
 import { durationOf, clampTime, type TextElement, type Revision } from '@codex-ux/video-domain';
 import type { FeedbackAnchor, Region } from '@codex-ux/protocol';
-import type { FloatingAnchor } from './use-floating-position';
+import type { FloatingAnchor } from '@codex-ux/editor-ui';
 import { createPlaybackClock } from '../lib/playback-clock';
 import { editSourceText, type CanvasText } from '../canvas/text-model';
 import { deleteElement } from '../editor/element-edits';
@@ -31,6 +31,7 @@ export function useEditor(id: string) {
   const lastPaint = useRef(0);
   const [canvasText, setCanvasText] = useState<CanvasText | null>(null);
   const [chatOpen, setChatOpen] = useState(false);
+  const [feedbackMode, setFeedbackMode] = useState<'chat' | 'note'>('chat');
   const [chatAnchor, setChatAnchor] = useState<FloatingAnchor | null>(null);
   const [notePoint, setNotePoint] = useState<{ x: number; y: number } | null>(null);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
@@ -161,6 +162,7 @@ export function useEditor(id: string) {
     setMarking(false);
     setPanel(null);
     setChatOpen(true);
+    setFeedbackMode(retarget ? 'note' : 'chat');
     setContextMenu(null);
     if (retarget) setFeedbackFocus((value) => value + 1);
   }
@@ -179,6 +181,7 @@ export function useEditor(id: string) {
     control.current?.setMuted(!muted);
   }
   const keyHandler = useEffectEvent((event: KeyboardEvent) => {
+    if (event.defaultPrevented) return;
     if (event.target instanceof Element && event.target.closest('dialog')) return;
     if (event.key === 'Escape') {
       setPanel(null);
@@ -292,6 +295,7 @@ export function useEditor(id: string) {
     notePoint,
     setNotePoint,
     feedbackFocus,
+    feedbackMode,
     clearSelection,
     panel,
     setPanel,

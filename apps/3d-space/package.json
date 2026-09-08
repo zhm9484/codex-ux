@@ -15,7 +15,9 @@
     "lucide-react": "1.41.0",
     "react": "catalog:",
     "react-dom": "catalog:",
-    "three": "0.185.1"
+    "three": "0.185.1",
+    "@codex-ux/editor-ui": "workspace:*",
+    "@codex-ux/library-react": "workspace:*"
   },
   "devDependencies": {
     "@types/three": "0.185.4",

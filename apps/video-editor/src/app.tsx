@@ -1,3 +1,5 @@
+import { Film } from 'lucide-react';
+import { WorkspacePicker } from '@codex-ux/editor-ui';
 import { useEffect, useState } from 'react';
 import type { Workspace } from '@codex-ux/protocol';
 import type { BrowserAppInstance } from '@codex-ux/sdk';
@@ -57,45 +59,20 @@ export function App({ instance }: { instance: BrowserAppInstance }) {
       {loaded && active && exists ? (
         <Editor key={active} id={active} workspaces={workspaces} onSelect={select} />
       ) : (
-        <main className="workspace-picker">
-          <span className="brand-word">Video Editor</span>
-          <h1>Choose a workspace</h1>
-          {active && loaded && !exists && (
-            <p role="alert">This workspace was not found. Choose another workspace.</p>
-          )}
-          {error && <p role="alert">{error}</p>}
-          {!loaded && !error && <p>Loading workspaces…</p>}
-          <div className="workspace-list">
-            {workspaces.map((workspace) => (
-              <button
-                className="secondary-button"
-                key={workspace.id}
-                onClick={() => select(workspace.id)}
-              >
-                {workspace.name}
-              </button>
-            ))}
-          </div>
-          <form
-            onSubmit={(event) => {
-              event.preventDefault();
-              void create();
-            }}
-          >
-            <label className="field">
-              Workspace name
-              <input
-                value={name}
-                maxLength={100}
-                onChange={(event) => setName(event.target.value)}
-                required
-              />
-            </label>
-            <button className="primary-button" disabled={!name.trim() || creating}>
-              {creating ? 'Creating…' : 'Create workspace'}
-            </button>
-          </form>
-        </main>
+        <WorkspacePicker
+          appName="Video Editor"
+          icon={<Film size={21} />}
+          description="Review a video, refine a moment, and collaborate with your agent."
+          workspaces={workspaces}
+          loaded={loaded}
+          error={error}
+          missing={!!active && loaded && !workspaces.some((w) => w.id === active)}
+          name={name}
+          onName={setName}
+          creating={creating}
+          onCreate={() => void create()}
+          onSelect={select}
+        />
       )}
     </AppInstanceContext>
   );

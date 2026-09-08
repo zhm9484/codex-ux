@@ -77,7 +77,8 @@ test('draft delivery stays separate from queued notes, preserves retries, and ex
     page.getByRole('dialog', { name: 'Notes history' }).locator('.note-card'),
   ).toHaveCount(2);
   await page.keyboard.press('Escape');
-  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await expect(page.getByRole('dialog', { name: 'Notes history' })).toHaveCount(0);
+  await page.unrouteAll({ behavior: 'wait' });
 });
 
 test('notes board clamps and remembers its position, and header dialogs fit a narrow screen', async ({
@@ -170,14 +171,13 @@ test('Chat and Add note share a readable draft and preserve its anchor across en
   await page.goto(`/apps/video-editor/w/${video.workspaceId}`);
   await expect(page.locator('.preview-loading')).toHaveCount(0);
   await page.getByRole('button', { name: 'Chat', exact: true }).click();
-  const composer = page.getByRole('region', { name: 'Chat', exact: true });
-  const input = page.getByLabel('Chat message');
+  const composer = page.locator('.chat-popover');
+  const input = composer.getByRole('textbox');
   await input.fill('Give this moment a softer transition');
+  await composer.getByRole('button', { name: 'Draft context' }).click();
   await page.getByLabel('Request kind').selectOption('transition');
   await page.getByLabel('Transition duration').fill('0.8');
-  const anchor = await composer
-    .getByRole('button', { name: 'Locate referenced frame' })
-    .textContent();
+  const anchor = await composer.locator('.composer-context-label').textContent();
   await page.getByRole('button', { name: 'Close chat' }).click();
   await page.getByRole('slider', { name: 'Video position' }).focus();
   await page.keyboard.press('ArrowRight');
@@ -189,8 +189,8 @@ test('Chat and Add note share a readable draft and preserve its anchor across en
   await page.getByRole('menuitem', { name: 'Add note', exact: true }).click();
   await expect(input).toHaveText('Give this moment a softer transition');
   await expect(page.getByLabel('Transition duration')).toHaveValue('0.8');
-  await expect(composer.getByRole('button', { name: 'Locate referenced frame' })).toHaveText(
-    anchor!,
+  await expect(composer.locator('.composer-context-label')).toHaveText(
+    anchor!.replace('Chat', 'Note'),
   );
   for (const viewport of [
     { width: 1280, height: 900 },
@@ -213,7 +213,10 @@ test('Chat and Add note share a readable draft and preserve its anchor across en
     await expect(input).toBeVisible();
     await expect(page.getByRole('button', { name: 'Send now', exact: true })).toBeVisible();
   }
-  await page.getByRole('button', { name: 'Add note to list' }).click();
+  await expect(page.getByRole('dialog', { name: 'Note', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Save note' })).toBeEnabled();
+  await input.press('ControlOrMeta+Enter');
+  await expect(composer).toBeHidden();
   await expect(
     page
       .getByRole('region', { name: 'Pending notes' })
@@ -222,4 +225,49 @@ test('Chat and Add note share a readable draft and preserve its anchor across en
   const project = (await (await request.get(base)).json()) as VideoProject;
   expect(project.notes).toHaveLength(1);
   expect(project.notes[0]!.intent).toEqual({ kind: 'transition', duration: 0.8 });
+});
+
+test('image previews follow the draft and explicit context replacement never loses its text', async ({
+  page,
+  request,
+}) => {
+  const video = await createVideo(request, 'A thought with a reference');
+  await page.goto(`/apps/video-editor/w/${video.workspaceId}`);
+  await expect(page.locator('.preview-loading')).toHaveCount(0);
+  await page.getByRole('button', { name: 'Chat', exact: true }).click();
+  const composer = page.getByRole('dialog', { name: 'Chat', exact: true });
+  const input = composer.getByRole('textbox', { name: 'Chat message' });
+  await input.fill('Keep this feeling');
+  const captured = await composer.locator('.composer-context-thumb').getAttribute('src');
+  await composer.getByLabel('Attach files').setInputFiles({
+    name: 'reference.png',
+    mimeType: 'image/png',
+    buffer: Buffer.from(
+      'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII=',
+      'base64',
+    ),
+  });
+  await expect(composer.getByRole('button', { name: 'Preview reference.png' })).toBeVisible();
+  await composer.getByRole('button', { name: 'Preview reference.png' }).click();
+  const preview = page.getByRole('dialog', { name: 'reference.png', exact: true });
+  await expect(preview.getByRole('img', { name: 'reference.png' })).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(preview).toHaveCount(0);
+  await expect(composer).toBeVisible();
+  await input.press('Escape');
+  await page.getByRole('slider', { name: 'Video position' }).focus();
+  await page.keyboard.press('ArrowRight');
+  await page.getByRole('button', { name: 'Chat', exact: true }).click();
+  await expect(composer.locator('.composer-context-thumb')).toHaveAttribute('src', captured!);
+  await expect(composer.getByRole('button', { name: 'Preview reference.png' })).toBeVisible();
+  await composer.getByRole('button', { name: 'Draft context' }).click();
+  await composer.getByRole('button', { name: 'Use current view' }).click();
+  await expect(composer.locator('.composer-context-thumb')).not.toHaveAttribute('src', captured!);
+  await expect(input).toContainText('Keep this feeling');
+  await expect(input.locator('[data-reference]')).toHaveCount(1);
+  await input.fill('Just the thought');
+  await expect(composer.getByRole('button', { name: 'Preview reference.png' })).toHaveCount(0);
+  await input.press('ControlOrMeta+z');
+  await expect(input.locator('[data-reference]')).toHaveCount(1);
+  await expect(composer.getByRole('button', { name: 'Preview reference.png' })).toBeVisible();
 });

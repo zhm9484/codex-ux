@@ -189,5 +189,6 @@ export const feedbackSchema = z.strictObject({
     )
     .max(10000),
   annotationIds: z.array(z.string().uuid()).max(1000),
+  attachmentIds: z.array(z.string().uuid()).max(20).optional(),
 });
 export type SceneFeedback = z.infer<typeof feedbackSchema>;

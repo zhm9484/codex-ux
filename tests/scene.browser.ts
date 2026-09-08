@@ -38,7 +38,7 @@ async function open(page: Page, request: APIRequestContext) {
   const initial = (await (await request.post(path, { data: {} })).json()) as SceneProject;
   await page.goto(`/apps/3d-space/w/${workspace.id}`);
   await expect(page).toHaveTitle('3D Space · Codex UX');
-  await expect(page.locator('.scene-brand > span').first()).toHaveText('3D Space');
+  await expect(page.locator('.app-brand > span').first()).toHaveText('3D Space');
   await expect
     .poll(async () => (await state(page)).revisionId, { timeout: 15000 })
     .toBe(initial.revisionId);
@@ -105,8 +105,10 @@ test('direct transforms preserve camera, survive refresh, undo, cancel and ancho
   await page.getByRole('button', { name: 'Annotate a place', exact: true }).click();
   const sphere = (await state(page)).objects.find((item) => item.id === 'sphere')!;
   await page.mouse.click(sphere.screen.x, sphere.screen.y);
-  await page.getByRole('textbox', { name: 'Message your agent' }).fill('Make this warmer');
-  await page.getByRole('button', { name: 'Pin note', exact: true }).click();
+  await page.getByRole('textbox', { name: 'Note text' }).fill('Make this warmer');
+  await expect(page.getByRole('textbox', { name: 'Note text' })).toBeFocused();
+  await page.getByRole('textbox', { name: 'Note text' }).press('ControlOrMeta+Enter');
+  await expect(page.getByRole('textbox', { name: 'Note text' })).toBeHidden();
   await expect.poll(async () => (await read()).document.annotations.length).toBe(1);
   expect((await read()).document.annotations[0]!.anchor.objectId).toBe('sphere');
   expect(errors).toEqual([]);
@@ -150,7 +152,7 @@ test('ordinary source updates retain placement; runtime and syntax errors recove
   );
 });
 
-test('model import uses real loaders; mobile navigation remains clear of composer', async ({
+test('model import uses real loaders; mobile navigation remains available without a composer', async ({
   page,
   request,
 }) => {
@@ -180,11 +182,9 @@ test('model import uses real loaders; mobile navigation remains clear of compose
   await page.getByRole('button', { name: 'Show whole space', exact: true }).click();
   expect(
     await page
-      .locator('.scene-header')
+      .locator('.app-header')
       .evaluate((header) => header.scrollWidth <= header.clientWidth),
   ).toBe(true);
-  const nav = await page.getByRole('navigation', { name: 'Space navigation' }).boundingBox();
-  const composer = await page.locator('.scene-composer').boundingBox();
-  expect(nav!.y + nav!.height).toBeLessThanOrEqual(composer!.y);
+  await expect(page.getByRole('textbox', { name: 'Chat message' })).toBeHidden();
   await expect(page.getByRole('button', { name: 'Add to space', exact: true })).toBeVisible();
 });

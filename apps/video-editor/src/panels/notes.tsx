@@ -13,8 +13,9 @@ import {
 } from 'lucide-react';
 import { formatTime, type Note } from '@codex-ux/video-domain';
 import type { EditorState } from '../hooks/use-editor';
-import { useIslandPosition } from '../hooks/use-island-position';
-import { EmptyState, IconButton } from '../components/ui';
+import { useIslandPosition } from '@codex-ux/editor-ui';
+import { EmptyState } from '../components/empty-state';
+import { IconButton } from '@codex-ux/editor-ui';
 
 export function NoteCard({
   note,

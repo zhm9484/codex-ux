@@ -5,6 +5,40 @@ viewport, small contextual toolbar and feedback composer avoid a permanent objec
 Open `/apps/3d-space/` to create or select a shared Workspace. It uses the same page-owned
 connection and workspace switching rules as Video Editor; the apps keep independent domain state.
 
+## Interface and collaboration
+
+The shared `@codex-ux/editor-ui` header places workspace identity and status on the left and
+undo/redo, History, Library and Agent on the right, followed by scene search and Explore. The header
+overlays the viewport. Workspace selection/creation, neutral controls, modal dialogs and floating
+surfaces are shared with Video Editor; scene colors and navigation remain domain-owned.
+
+Chat is hidden initially. The movable collaboration island opens Chat and Notes and toggles app
+fullscreen, with a pane-filling fallback if browser fullscreen is unavailable. Closing Chat or
+pressing Escape preserves its draft, attachments and original context until reload. Ordinary
+selection does not open Chat; **Ask agent about selection** and **Ask agent about this place** open
+it explicitly. Marking a place opens a Note composer immediately with **Pin note** as its primary
+action; saving closes it and returns to the scene. Chat prioritizes **Send now**. Both actions
+remain available where the captured context and attachments permit them. A draft captures its
+revision, camera, object bounds, selected point, annotation IDs and optional screenshot once. A
+small view thumbnail and label expand to reveal the captured image and **Use current view**, which
+explicitly replaces that context. Stale drafts are rejected rather than silently rebased. Enter
+inserts a new line; Cmd/Ctrl+Enter performs the primary action (pin a Note or send Chat). Successful
+Chat delivery is acknowledged inside the composer.
+
+Library and Agent open centered dialogs. Chat uses the shared mention input for `@` references, file
+selection, paste and attachment drops. Dropping files on the viewport still imports models; the
+scene Add tool remains separate from message attachments. Sending validates up to 20 Workspace
+references and captures their metadata and absolute paths without adding them to scene source.
+Spatial annotations remain text-only versioned scene data; Pin note is unavailable while a draft
+contains attachments. They are not Video Editor's pending-feedback queue.
+
+An unbound send opens Agent connection without losing the draft; **Continue sending** resumes after
+binding. Connecting alone never sends. Requests retain a stable ID and captured payload across
+uncertain HTTP failures; **Check delivery** reuses that identity without dispatching another
+request. History exposes recent request states/errors and explicit **Restore** buttons for scene
+versions. It does not offer Video Editor's side-by-side comparison. Scene zoom, framing, annotation,
+import and object transform controls stay outside the collaboration island.
+
 ## Working in a scene
 
 Click an object and drag to move it across its horizontal plane. Rotate and Resize change the
@@ -25,7 +59,7 @@ those loaders; this is not lossless interchange. Prefer GLB for portable texture
 files produced by Meshy or Tripo. There are no generation-service integrations, Blender conversion,
 CAD editing, general ZIP importer, full-scene file export or automatic asset optimization.
 
-Pin a surface and save a note or send a request to the connected Codex task. A note records the
+Mark a surface and save a note or send a request to the connected Codex task. A note records the
 revision, camera and object-local hit point (world point for empty ground), so it follows later
 object movement. Hidden or missing objects hide their pins without deleting the notes. History can
 restore earlier saved source, placements and annotations. Screenshot saves the rendered view.
@@ -94,11 +128,12 @@ capacity guarantees. Large worlds need appropriate instancing, LOD, resource bud
 streaming; the app does not add automatic world partitioning or promise a fixed frame rate.
 
 Requests capture the exact revision, target session, scene document, selected notes, camera, visible
-object transforms/bounds and optional PNG. The agent edits a materialized candidate, checks its
-read-only preview and publishes once through the supplied endpoint. Publication checks that both the
-current head and working source still match the request base, then creates an undoable agent
-revision. A 409 requires reconciliation. Delivery-unknown requests are not retried automatically.
-See [Local API](local-api.md) and the [3D Space skill](../../skills/codex-ux-3d-space/SKILL.md).
+object transforms/bounds, attachment reference snapshots and optional PNG. The agent edits a
+materialized candidate, checks its read-only preview and publishes once through the supplied
+endpoint. Publication checks that both the current head and working source still match the request
+base, then creates an undoable agent revision. A 409 requires reconciliation. Delivery-unknown
+requests are not retried automatically. See [Local API](local-api.md) and the
+[3D Space skill](../../skills/codex-ux-3d-space/SKILL.md).
 
 ## Renamed installations
 

@@ -93,18 +93,6 @@
   font-size: 12px;
   text-align: center;
 }
-.header-actions .icon-button {
-  position: relative;
-}
-.header-note-dot {
-  width: 4px;
-  height: 4px;
-  position: absolute;
-  top: 3px;
-  right: 3px;
-  border-radius: 50%;
-  background: #9285be;
-}
 @media (max-width: 600px) {
   .font-trigger {
     min-width: 95px;

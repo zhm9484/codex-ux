@@ -66,11 +66,13 @@ materials and animation. There is no Blender conversion, CAD editor or complete 
 
 Ordinary conversation edits go to working source. The browser observes stable source saves and
 creates agent revisions. For an app-submitted request, read the provided context, including its
-scene document, camera, object bounds, annotations and screenshot. Edit only its candidate source
-directory, inspect the supplied read-only preview URL, and POST `{ "label": "..." }` to the supplied
-publish URL. Do not also edit working source for that request. Publish is idempotent; a 409 means
-reconcile with the user's newer work rather than overwrite it. Report a failed candidate with POST
-`{ "message": "..." }` to the request's `/error` endpoint.
+scene document, camera, object bounds, annotations, attachment references and screenshot. Read
+attachments from their captured absolute paths; copy only resources actually used into the candidate
+and leave originals untouched. Edit only its candidate source directory, inspect the supplied
+read-only preview URL, and POST `{ "label": "..." }` to the supplied publish URL. Do not also edit
+working source for that request. Publish is idempotent; a 409 means reconcile with the user's newer
+work rather than overwrite it. Report a failed candidate with POST `{ "message": "..." }` to the
+request's `/error` endpoint.
 
 Verify the actual displayed revision, object transforms, materials and interactions. Build success
 alone does not prove a valid rendered scene. Build errors retain the last valid head; runtime/load

@@ -1,5 +1,6 @@
 import { useEffect, useEffectEvent, useRef, useState } from 'react';
-import type { BrowserAppInstance } from '@codex-ux/sdk';
+import { WorkspaceLibrary, type BrowserAppInstance } from '@codex-ux/sdk';
+import type { LibraryReference } from '@codex-ux/protocol';
 import {
   identityPlacement,
   type Annotation,
@@ -7,6 +8,7 @@ import {
   type SceneAnchor,
   type SceneOperation,
   type SceneProject,
+  type SceneFeedback,
   type Vec3,
   type VisibleObject,
 } from '@codex-ux/scene-domain';
@@ -29,7 +31,24 @@ export function useScene(id: string, instance: BrowserAppInstance, candidate: st
   const host = useRef<HTMLDivElement>(null);
   const markers = useRef<HTMLDivElement>(null);
   const viewport = useRef<SceneViewport | null>(null);
-  const composer = useRef<HTMLTextAreaElement>(null);
+  const [library] = useState(() => new WorkspaceLibrary(id));
+  const [chatOpen, setChatOpen] = useState(false);
+  const [draftMode, setDraftMode] = useState<'chat' | 'note'>('chat');
+  const [attachments, setAttachments] = useState<LibraryReference[]>([]);
+  const [draft, setDraft] = useState<{
+    revision: string;
+    feedback: Omit<SceneFeedback, 'text' | 'attachmentIds'>;
+    label: string;
+    screenshot?: string;
+  } | null>(null);
+  const pending = useRef<{
+    baseRevision: string;
+    requestId: string;
+    target: ReturnType<BrowserAppInstance['target']>;
+    feedback: SceneFeedback;
+    screenshot?: string;
+  } | null>(null);
+  const [checkingDelivery, setCheckingDelivery] = useState(false);
   const current = useRef<SceneProject | null>(null);
   const working = useRef(false);
   const interacting = useRef(false);
@@ -38,6 +57,7 @@ export function useScene(id: string, instance: BrowserAppInstance, candidate: st
   const [displayed, setDisplayed] = useState('');
   const [busy, setBusy] = useState('');
   const [error, setError] = useState('');
+  const [bindingError, setBindingError] = useState('');
   const [notice, setNotice] = useState('');
   const [selected, setSelected] = useState<{ id: string; label: string } | null>(null);
   const [tool, setTool] = useState<Tool>('move');
@@ -97,7 +117,9 @@ export function useScene(id: string, instance: BrowserAppInstance, candidate: st
   const onAnchor = useEffectEvent((next: SceneAnchor) => {
     setAnchor(next);
     setAnnotating(false);
-    composer.current?.focus();
+    if (!draft || (!text && !attachments.length && !pending.current)) setDraft(captureDraft(next));
+    setDraftMode('note');
+    setChatOpen(true);
   });
   const onNote = useEffectEvent((note: Annotation) => {
     setNotice(note.text);
@@ -105,7 +127,6 @@ export function useScene(id: string, instance: BrowserAppInstance, candidate: st
       ...note.anchor,
       revisionId: current.current?.revisionId ?? note.anchor.revisionId,
     });
-    composer.current?.focus();
   });
   useEffect(() => {
     alive.current = true;
@@ -202,7 +223,7 @@ export function useScene(id: string, instance: BrowserAppInstance, candidate: st
       instance.subscribe(() => {
         setSession(instance.session(id));
         setPairing(instance.connections?.connection ?? null);
-        if (instance.connections?.error) setError(instance.connections.error);
+        setBindingError(instance.connections?.error ?? '');
       }),
     [id, instance],
   );
@@ -293,61 +314,115 @@ export function useScene(id: string, instance: BrowserAppInstance, candidate: st
       'Added object',
     );
   }
+  function captureDraft(point = anchor ?? viewport.current?.anchorForSelection() ?? null) {
+    if (!viewport.current || !current.current || displayed !== current.current.revisionId)
+      return null;
+    let screenshot: string | undefined;
+    try {
+      screenshot = viewport.current.capture();
+    } catch {
+      /* Spatial context remains available. */
+    }
+    return {
+      revision: current.current.revisionId,
+      label: point?.objectId
+        ? (objects.find((object) => object.id === point.objectId)?.label ?? point.objectId)
+        : point
+          ? 'Pinned place'
+          : 'Scene view',
+      feedback: {
+        anchor: point,
+        camera: viewport.current.view(),
+        objects: viewport.current.inventory(),
+        annotationIds: current.current.document.annotations.map((note) => note.id),
+      },
+      ...(screenshot && screenshot.length <= 2 * 1024 ** 2 ? { screenshot } : {}),
+    };
+  }
+  function openChat() {
+    if (!draft) setDraft(captureDraft());
+    setDraftMode('chat');
+    setChatOpen(true);
+  }
+  function useCurrentView() {
+    if (pending.current) return;
+    setDraft(captureDraft(viewport.current?.anchorForSelection() ?? null));
+    setAnchor(null);
+    setError('');
+  }
+  function clearDraft() {
+    setText('');
+    setAttachments([]);
+    setDraft(null);
+    setAnchor(null);
+    pending.current = null;
+    setCheckingDelivery(false);
+  }
   async function pin() {
-    const point = anchor ?? viewport.current?.anchorForSelection();
-    if (!point || !text.trim()) return;
+    const context = draft ?? captureDraft();
+    const point = context?.feedback.anchor;
+    if (!point || !text.trim() || attachments.length || pending.current) return;
+    if (context.revision !== current.current?.revisionId) {
+      setError('The scene changed. Use the current view before saving this annotation.');
+      return;
+    }
     await save(
       { type: 'annotate', annotation: { id: crypto.randomUUID(), text, anchor: point } },
       'Added annotation',
     );
-    // Preserve the draft on a failed/stale save.
     if (
       current.current?.document.annotations.some(
         (note) => note.text === text && JSON.stringify(note.anchor) === JSON.stringify(point),
       )
     ) {
-      setText('');
-      setAnchor(null);
+      clearDraft();
+      setChatOpen(false);
       setNotice('Note pinned to the scene.');
     }
   }
   async function send() {
     if (!text.trim() || working.current || !current.current || !viewport.current || candidate)
       return;
-    const target = instance.target(id);
-    const revision = current.current.revisionId;
-    const capturedText = text;
-    const feedback = {
-      text,
-      anchor: anchor ?? viewport.current.anchorForSelection(),
-      camera: viewport.current.view(),
-      objects: viewport.current.inventory(),
-      annotationIds: current.current.document.annotations.map((note) => note.id),
+    const context = draft ?? captureDraft();
+    if (!context) return;
+    pending.current ??= {
+      baseRevision: context.revision,
+      requestId: crypto.randomUUID(),
+      target: instance.target(id),
+      feedback: { ...context.feedback, text, attachmentIds: attachments.map((ref) => ref.id) },
+      ...(context.screenshot ? { screenshot: context.screenshot } : {}),
     };
-    let screenshot: string | undefined;
-    try {
-      screenshot = viewport.current.capture();
-    } catch {
-      /* The spatial context is still available if a third-party texture prevents capture. */
-    }
+    const payload = pending.current;
     working.current = true;
     setBusy('Sending');
     setError('');
     try {
-      await api(`${base}/requests`, {
-        baseRevision: revision,
-        requestId: crypto.randomUUID(),
-        target,
-        feedback,
-        ...(screenshot && screenshot.length <= 2 * 1024 ** 2 ? { screenshot } : {}),
-      });
-      if (alive.current) {
-        setText((draft) => (draft === capturedText ? '' : draft));
-        setAnchor(null);
-        setNotice('Sent to your agent. You can keep exploring.');
-      }
+      const result = await api<{ state: string; error: string | null }>(
+        `${base}/requests`,
+        payload,
+      );
+      if (result.state === 'delivery-unknown' || result.state === 'failed') {
+        setError(result.error ?? 'Check request history before sending another message.');
+      } else setNotice('Sent to your agent. You can keep exploring.');
+      clearDraft();
     } catch (error) {
       if (alive.current) setError(errorMessage(error));
+      // A lost HTTP response must never turn a retry into another agent delivery.
+      try {
+        const response = await fetch(`/api${base}/requests/${payload.requestId}`);
+        if (response.status === 404) {
+          pending.current = null;
+          setCheckingDelivery(false);
+        } else if (response.ok) {
+          const result = (await response.json()) as { state: string; error: string | null };
+          clearDraft();
+          setError(
+            result.error ?? `Request status: ${result.state}. Check History before sending again.`,
+          );
+        } else setCheckingDelivery(true);
+      } catch {
+        setCheckingDelivery(true);
+      }
     } finally {
       working.current = false;
       if (alive.current) setBusy('');
@@ -357,14 +432,23 @@ export function useScene(id: string, instance: BrowserAppInstance, candidate: st
     try {
       await instance.connections?.offer();
     } catch (error) {
-      setError(errorMessage(error));
+      setBindingError(errorMessage(error));
     }
   }
   return {
     host,
     markers,
     viewport,
-    composer,
+    library,
+    chatOpen,
+    setChatOpen,
+    openChat,
+    useCurrentView,
+    draft,
+    draftMode,
+    attachments,
+    setAttachments,
+    checkingDelivery,
     project,
     displayed,
     busy,
@@ -385,6 +469,8 @@ export function useScene(id: string, instance: BrowserAppInstance, candidate: st
     setText,
     session,
     pairing,
+    bindingError,
+    setBindingError,
     requests,
     objects,
     editable,
