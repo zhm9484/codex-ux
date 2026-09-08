@@ -21,11 +21,11 @@ the app pane when the browser rejects fullscreen. Escape exits the fallback.
 ## Source and engine capabilities
 
 The working directory is `workspaces/<id>/files/video/`. First opening a video adopts existing
-source there, or creates an original 18-second Hyperframes sample if empty. Agents use the local API
-to import an absolute project directory/video path or replace the video. Project import and
-standalone asset management have no frontend controls. Import copies files without modifying the
-original. A replacement is an undoable revision, including when it changes engine, dimensions or
-duration.
+source there, or creates an original 18-second Hyperframes sample with gray, charcoal and periwinkle
+scenes if empty. Agents use the local API to import an absolute project directory/video path or
+replace the video. Project import and standalone asset management have no frontend controls. Import
+copies files without modifying the original. A replacement is an undoable revision, including when
+it changes engine, dimensions or duration.
 
 An optional `video.json` manifest identifies the source. With no manifest, a root `index.html`
 identifies Hyperframes; otherwise a single root MP4/WebM identifies media. Remotion requires a

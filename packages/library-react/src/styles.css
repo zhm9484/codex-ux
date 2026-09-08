@@ -3,14 +3,14 @@
 .ux-mention-input,
 .ux-mention-menu,
 .ux-attachments {
-  --ux-border: #e9e8e5;
-  --ux-muted: #84847f;
+  --ux-border: #e7e7e7;
+  --ux-muted: #828282;
   font:
     13px/1.5 -apple-system,
     BlinkMacSystemFont,
     'Segoe UI',
     sans-serif;
-  color: #30312e;
+  color: #303030;
 }
 .ux-file-icon {
   flex: 0 0 auto;
@@ -18,8 +18,8 @@
   align-items: center;
   justify-content: center;
   color: var(--file-color);
-  border-radius: 8px;
-  background: color-mix(in srgb, var(--file-color) 8%, white);
+  border-radius: 5px;
+  background: transparent;
 }
 .ux-file-icon svg {
   width: 82%;
@@ -30,30 +30,30 @@
   justify-content: center;
   align-items: center;
   white-space: nowrap;
-  border: 1px solid #e4e4df;
-  border-radius: 9px;
+  border: 1px solid #e2e2e2;
+  border-radius: 5px;
   padding: 8px 12px;
   background: white;
   font-size: 12px;
 }
 .ux-button:hover {
-  background: #f5f5f2;
+  background: #f4f4f4;
 }
 .ux-button.primary {
-  background: #30332e;
+  background: #303030;
   color: white;
-  border-color: #30332e;
+  border-color: #303030;
 }
 .ux-link,
 .ux-remove {
   border: 0;
   background: transparent;
-  color: #898b82;
+  color: #878787;
   font-size: 12px;
 }
 .ux-link:hover,
 .ux-remove:hover {
-  color: #30332e;
+  color: #303030;
 }
 .ux-remove {
   padding: 5px 8px;
@@ -77,7 +77,7 @@
 .ux-library-intro p,
 .ux-footnote {
   font-size: 11px;
-  color: #898b83;
+  color: #888888;
   line-height: 1.6;
 }
 .ux-library-locations {
@@ -87,15 +87,15 @@
   margin-bottom: 22px;
 }
 .ux-location {
-  border: 1px solid #e8e8e2;
-  border-radius: 10px;
+  border: 1px solid #e6e6e6;
+  border-radius: 6px;
   max-width: 100%;
   display: flex;
-  background: #fafaf8;
+  background: #f9f9f9;
 }
 .ux-location.selected {
-  border-color: #aaa99d;
-  background: #f1f2eb;
+  border-color: #a5a5a5;
+  background: #efefef;
 }
 .ux-location > button:first-child {
   display: flex;
@@ -117,16 +117,16 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  color: #8d8e88;
+  color: #8c8c8c;
   font-size: 10px;
 }
 .ux-search-field {
   display: flex;
   gap: 10px;
   align-items: center;
-  background: #f6f6f3;
-  border: 1px solid #ecece7;
-  border-radius: 10px;
+  background: #f5f5f5;
+  border: 1px solid #eaeaea;
+  border-radius: 6px;
   padding: 9px 12px;
   margin-bottom: 12px;
 }
@@ -141,7 +141,7 @@
 }
 .ux-search-field > span {
   font-size: 22px;
-  color: #7c8074;
+  color: #7b7b7b;
   line-height: 1;
 }
 .ux-search-field kbd {
@@ -162,13 +162,13 @@
   border: 0;
   background: transparent;
   text-align: left;
-  border-radius: 9px;
+  border-radius: 5px;
   min-width: 0;
   color: inherit;
 }
 .ux-result:hover,
 .ux-result[aria-selected='true'] {
-  background: #f3f4ee;
+  background: #f2f2f2;
 }
 .ux-result > span:not(.ux-file-icon) {
   flex: 1;
@@ -184,7 +184,7 @@
 }
 .ux-result small {
   display: block;
-  color: #98998f;
+  color: #959595;
   font-size: 10px;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -194,7 +194,7 @@
 .ux-result .ux-result-action {
   flex: 0;
   font-size: 10px;
-  color: #999b91;
+  color: #979797;
   white-space: nowrap;
   opacity: 0;
 }
@@ -213,17 +213,17 @@
   text-align: center;
   gap: 10px;
   padding: 28px 18px;
-  color: #8e9087;
+  color: #8c8c8c;
   font-size: 12px;
 }
 .ux-empty strong {
-  color: #52554b;
+  color: #515151;
   font-size: 13px;
   font-weight: 500;
 }
 .ux-error {
   font-size: 11px;
-  color: #a94d40;
+  color: #676767;
   padding: 8px 0;
   line-height: 1.6;
 }
@@ -239,8 +239,8 @@
 .ux-path-field input {
   flex: 1;
   min-width: 0;
-  border: 1px solid #e3e4dd;
-  border-radius: 8px;
+  border: 1px solid #e1e1e1;
+  border-radius: 5px;
   padding: 8px;
   font: 11px/1.5 monospace;
 }
@@ -258,7 +258,7 @@
   display: flex;
   justify-content: space-between;
   gap: 8px;
-  border-bottom: 1px solid #f1f1ed;
+  border-bottom: 1px solid #f0f0f0;
 }
 .ux-local-row > button:first-child {
   display: flex;
@@ -292,7 +292,7 @@
 }
 .ux-message-editor:empty::before {
   content: attr(data-placeholder);
-  color: #96998f;
+  color: #959595;
   pointer-events: none;
 }
 .ux-inline-reference {
@@ -302,9 +302,9 @@
   gap: 4px;
   padding: 0 5px;
   margin: 0 2px;
-  background: #edf2e7;
-  border: 1px solid #dfe6d8;
-  color: #537146;
+  background: #ededed;
+  border: 1px solid #dfdfdf;
+  color: #595959;
   border-radius: 5px;
   max-width: 100%;
   font-size: 12px;
@@ -313,38 +313,38 @@
   user-select: all;
 }
 .ux-inline-reference svg {
-  width: 12px;
-  height: 12px;
+  width: 14px;
+  height: 14px;
   stroke: currentColor;
   stroke-width: 1.3;
   fill: none;
 }
-.ux-inline-reference.video {
-  color: #79649b;
-  background: #f1edf6;
-  border-color: #e6deef;
+.ux-inline-reference.image svg {
+  color: #1864ff;
 }
-.ux-inline-reference.audio {
-  color: #987056;
-  background: #f8f1e9;
-  border-color: #ece1d6;
+.ux-inline-reference.video svg {
+  color: #7938f5;
 }
-.ux-inline-reference.document,
-.ux-inline-reference.code {
-  color: #5f7b99;
-  background: #edf1f7;
-  border-color: #dee6ef;
+.ux-inline-reference.audio svg {
+  color: #ef5a16;
 }
-.ux-inline-reference.folder {
-  color: #9b7e43;
-  background: #f6f1e5;
-  border-color: #ece3cc;
+.ux-inline-reference.font svg {
+  color: #d51c93;
+}
+.ux-inline-reference.code svg {
+  color: #075ae5;
+}
+.ux-inline-reference.document svg {
+  color: #e52e45;
+}
+.ux-inline-reference.folder svg {
+  color: #ff9800;
 }
 .ux-attach-tools {
   display: flex;
   align-items: center;
   gap: 8px;
-  color: #a0a197;
+  color: #9d9d9d;
   font-size: 9px;
   padding: 5px 0;
 }
@@ -354,10 +354,10 @@
   justify-content: center;
   width: 27px;
   height: 27px;
-  border: 1px solid #e8e9e1;
-  border-radius: 8px;
-  background: #fafbf8;
-  color: #6b725f;
+  border: 1px solid #e6e6e6;
+  border-radius: 5px;
+  background: #fafafa;
+  color: #696969;
   font-size: 20px;
 }
 .ux-mention-menu {
@@ -366,11 +366,11 @@
   width: min(340px, calc(100vw - 20px));
   background: #fffffff9;
   backdrop-filter: blur(24px);
-  border: 1px solid #e5e6de;
-  border-radius: 15px;
+  border: 1px solid #e3e3e3;
+  border-radius: 5px;
   padding: 6px;
   box-shadow:
-    0 16px 56px #292e2024,
+    0 16px 56px #28282824,
     0 2px 7px #20202008;
   animation: ux-library-arrive 140ms ease-out;
 }
@@ -378,19 +378,19 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  color: #95998b;
+  color: #939393;
   padding: 9px 10px;
   font-size: 9px;
   letter-spacing: 0.08em;
 }
 .ux-mention-menu kbd {
-  color: #929784;
+  color: #8f8f8f;
   font-size: 10px;
   font-family: inherit;
 }
 .ux-mention-menu .ux-menu-search {
   padding: 9px 10px;
-  border-bottom: 1px solid #eeefe8;
+  border-bottom: 1px solid #ececec;
   margin-bottom: 4px;
 }
 .ux-mention-results {
@@ -404,11 +404,11 @@
   justify-content: space-between;
   gap: 12px;
   padding: 9px 10px 5px;
-  border-top: 1px solid #eeefe8;
+  border-top: 1px solid #ececec;
   margin-top: 5px;
 }
 .ux-mention-menu footer button {
-  color: #7c846e;
+  color: #7a7a7a;
   font-size: 10px;
   border: 0;
   background: transparent;
@@ -422,9 +422,9 @@
 }
 .ux-attachment {
   display: flex;
-  border: 1px solid #e5e8de;
-  background: #fbfcf8;
-  border-radius: 9px;
+  border: 1px solid #e4e4e4;
+  background: #fafafa;
+  border-radius: 5px;
   max-width: 100%;
 }
 .ux-attachment-open {
@@ -453,14 +453,14 @@
 .ux-attachment-open small {
   display: block;
   font-size: 9px;
-  color: #909782;
+  color: #8e8e8e;
 }
 .ux-attachment-preview {
   padding: 12px;
   margin-top: 10px;
-  border-radius: 12px;
-  border: 1px solid #e5e6de;
-  background: #f9faf6;
+  border-radius: 6px;
+  border: 1px solid #e3e3e3;
+  background: #f8f8f8;
 }
 .ux-preview-heading {
   display: flex;
@@ -484,7 +484,7 @@
   display: block;
   margin-top: 8px;
   overflow-wrap: anywhere;
-  color: #8a907f;
+  color: #888888;
   font-size: 10px;
 }
 @keyframes ux-library-arrive {

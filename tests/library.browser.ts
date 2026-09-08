@@ -17,6 +17,8 @@ test('Library locations, @ references, paste, undo and note attachment edits sha
     await writeFile(join(directory, 'hero.png'), Buffer.from(png, 'base64'));
     await writeFile(join(directory, 'brand-guide.pdf'), 'reference');
     await mkdir(join(directory, 'clips'));
+    for (const name of ['intro.mp4', 'soundtrack.mp3', 'display.woff2', 'scene.ts'])
+      await writeFile(join(directory, name), 'reference');
     const video = await createVideo(request, 'Shared library');
     const base = `/api/workspaces/${video.workspaceId}/apps/video-editor`;
     const read = async () => (await (await request.get(base)).json()) as VideoProject;
@@ -26,6 +28,9 @@ test('Library locations, @ references, paste, undo and note attachment edits sha
     await page.getByLabel('Local path').fill(directory);
     await page.getByRole('button', { name: 'Add path', exact: true }).click();
     await expect(page.getByRole('dialog').getByText('hero.png', { exact: true })).toBeVisible();
+    await page
+      .getByRole('dialog')
+      .screenshot({ path: '/tmp/library-neutral-desktop.png', animations: 'disabled' });
     await page.getByRole('button', { name: 'Close library' }).click();
     await page.getByRole('button', { name: 'Chat', exact: true }).click();
     const input = page.getByRole('textbox', { name: 'Chat message' });
