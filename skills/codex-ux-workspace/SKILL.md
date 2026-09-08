@@ -14,7 +14,28 @@ one browser page. Each page remembers its own session binding for each Workspace
 the agent's current directory, a Codex project, or a conversation. One does not implicitly select or
 create the others.
 
-## Prepare and open
+## Default opening flow
+
+When asked to open an app, complete startup, pairing, browser opening, and page retention yourself.
+The user should receive a usable app connected to this conversation, without copying a code or
+opening a URL manually. Follow this order:
+
+1. Prepare the service and select/create the intended Workspace below. The `start` URL is only an
+   unbound app entry point: do not open it before creating the invitation.
+2. Initialize the app's document using its app skill, then run `doctor` and resolve the current task
+   identity as described below.
+3. Run `connect --app APP_ID --workspace WORKSPACE_ID`. Open its returned invitation `url` once in a
+   new, visible browser page. Use the host's in-app browser when available unless the user chooses
+   another browser. Keep the page handle.
+4. Verify the connection receipt and retain that same page for the user before ending the turn.
+   Opening a page alone is not completion.
+
+Reuse an explicitly selected page already connected to this conversation. If it needs pairing,
+follow the existing-page flow below using browser tools first. Manual code exchange is a fallback
+only when you cannot operate that page; never ask the user to copy a code from a page you just
+opened.
+
+## Prepare the service
 
 Resolve this installed skill's absolute directory as `WORKSPACE_SKILL`. Its `assets/runtime.json`
 contains the versioned local service. App skills carry their own built web files and `app.json`. Use
@@ -107,10 +128,11 @@ instance, and session match the intended target. An unopened URL remains `waitin
 briefly if needed; after 30 seconds explain what is waiting rather than declaring success. The
 receipt confirms browser binding, not successful message delivery.
 
-For an existing page, ask the user to choose **Connect current agent** in that app and provide its
-connection code, unless an already available browser tool can obtain the code from the explicitly
-selected page. Then run `connect --code CONNECTION_CODE` and check its receipt. This targets that
-page, even if other pages display the same Workspace. Never write browser session storage yourself.
+For an explicitly selected existing page, use available browser tools to open **Agent connection**,
+choose **Connect current agent**, and read its connection code yourself. Run
+`connect --code CONNECTION_CODE` and check its receipt. Only when browser access is unavailable, ask
+the user to choose **Connect current agent** and provide the code. This targets that page, even if
+other pages display the same Workspace. Never write browser session storage yourself.
 
 If the page belongs to another session, prefer a new page. Only for a user-requested takeover, read
 the receipt and pass `--replace-session PREVIOUS_SESSION_ID` with the connect command. A changed
@@ -119,6 +141,22 @@ binding requires a fresh code; do not retry with guessed replacement identities.
 Connecting does not send notes, change the agent's working directory, or grant permission to send
 messages. Users choose which feedback to send in the app. Switching Workspaces or disconnecting
 cannot retarget already submitted requests.
+
+## Keep the editor available between turns
+
+A collaborative app is a user-facing deliverable, not a temporary inspection tab. In Codex's in-app
+browser, agent-created tabs close when the turn ends unless retained. After opening and verifying
+this app, call `await tab.markDeliverable()` on its browser handle. The mark is turn-scoped: repeat
+it in later turns that use the app and must leave it available. Use `markHandoff()` only for
+temporary work to continue next turn, not as the final delivery of the editor. Follow the active
+browser tool's retention API if its interface differs; a visible tab or a link in the final answer
+does not replace retention. Do not close the user's editor during test-tab cleanup.
+
+Leave the detached Workspace service running for ongoing playback, notes, and feedback. Do not stop
+it just because the agent's current response is complete. Service lifetime and tab lifetime are
+separate: keeping one alive does not preserve the other. In later turns reuse the retained page; if
+it was closed, create a fresh invitation for the same Workspace and current conversation instead of
+asking the user to repair the connection. Do not reuse a consumed invitation URL.
 
 ## Recovery and updates
 

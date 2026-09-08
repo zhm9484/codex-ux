@@ -54,7 +54,8 @@ Reference paths do not make external resources part of a saved/exportable video 
 - React: `@codex-ux/library-react` exports `LibraryBrowser`, `MentionInput`, `AttachmentList`,
   `FileIcon`, `LibraryIcon`, and a separately imported `styles.css`. Hosts provide the SDK client,
   modal, draft state and submission callback. Video revision/region/time handling stays in Video
-  Editor.
+  Editor. `MentionInput` accepts a host placeholder and optional footer actions so hosts can combine
+  attachments with draft actions without duplicating input or upload controls.
 
 There is no automatic attachment/reference garbage collection, content indexing or material
 transformation. Removing a note does not delete its source files. See [Local API](local-api.md) for

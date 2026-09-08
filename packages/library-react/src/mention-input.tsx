@@ -1,4 +1,12 @@
-import { useEffect, useEffectEvent, useLayoutEffect, useRef, useState, useId } from 'react';
+import {
+  type ReactNode,
+  useEffect,
+  useEffectEvent,
+  useLayoutEffect,
+  useRef,
+  useState,
+  useId,
+} from 'react';
 import { createPortal } from 'react-dom';
 import type { LibraryEntry, LibraryReference } from '@codex-ux/protocol';
 import type { WorkspaceLibrary } from '@codex-ux/sdk';
@@ -19,6 +27,8 @@ export function MentionInput({
   focusKey = 0,
   active = true,
   label = 'Message',
+  placeholder = 'What would you like to do? Type @ to add a reference…',
+  actions,
   onBusy,
   incomingFiles = null,
   onConsumed,
@@ -36,6 +46,8 @@ export function MentionInput({
   focusKey?: number;
   active?: boolean;
   label?: string;
+  placeholder?: string;
+  actions?: ReactNode;
   onBusy?: (busy: boolean) => void;
 }) {
   const editor = useRef<HTMLDivElement>(null);
@@ -385,7 +397,7 @@ export function MentionInput({
         contentEditable={!disabled && !busy}
         suppressContentEditableWarning
         className="ux-message-editor"
-        data-placeholder="What would you like to do? Type @ to add a reference…"
+        data-placeholder={placeholder}
         onFocus={onFocus}
         onKeyDown={key}
         onKeyUp={(event) => {
@@ -476,10 +488,14 @@ export function MentionInput({
         >
           ＋
         </button>
-        <span>
-          {busy ? 'Saving attachment locally…' : 'Local files · paste images · @ to reference'}
-        </span>
+        {!actions && <span>Local files · paste images · @ to reference</span>}
+        {actions}
       </div>
+      {busy && (
+        <p role="status" className="ux-attachment-status">
+          Saving attachment locally…
+        </p>
+      )}
       <input
         ref={upload}
         type="file"

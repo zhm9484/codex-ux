@@ -25,34 +25,9 @@ button:active:not(:disabled) {
 .connection-dot.connected {
   background: #4c8067;
 }
-.chat-popover,
 .side-panel,
 .tool-island {
   box-shadow: var(--surface-shadow);
-}
-.chat-popover {
-  border-radius: 14px;
-}
-.composer-actions {
-  gap: 8px;
-}
-.composer-actions .notes-trigger {
-  margin-right: auto;
-}
-.composer-actions .notes-trigger span {
-  display: none;
-}
-.composer-actions .primary-button,
-.composer-actions .secondary-button {
-  padding: 8px 11px;
-  font-size: 12px;
-}
-.feedback-composer textarea {
-  line-height: 1.65;
-  min-height: 68px;
-}
-.feedback-composer > .inline-error {
-  padding: 0 12px 12px;
 }
 .text-button {
   display: inline-flex;
@@ -306,13 +281,6 @@ button:active:not(:disabled) {
   font-size: 10px;
   color: #90908c;
   margin-top: 10px;
-}
-.note-card textarea {
-  width: 100%;
-  min-height: 80px;
-  padding: 8px;
-  border: 1px solid var(--line);
-  border-radius: 7px;
 }
 .note-edit-actions {
   display: flex;
