@@ -123,10 +123,10 @@ source can be imported into a newly created workspace; existing user directories
 
 ## Runtime and app builds
 
-Use Node.js 24 and pnpm 10.34.5. Run `pnpm install`, then `pnpm dev`, and open
-`http://127.0.0.1:5173/apps/video-editor/`. The app offers workspace selection and creation. A
-selected workspace has URL `/apps/video-editor/w/<workspaceId>`; each page selects independently.
-`/` lists hosted apps, and `GET /api/apps` returns their IDs and names.
+Use Node.js 24 and pnpm 10.34.5. Run `pnpm install`, then `pnpm dev`, and open the Video Editor URL
+printed by the service (`http://127.0.0.1:<port>/apps/video-editor/`). The app offers workspace
+selection and creation. A selected workspace has URL `/apps/video-editor/w/<workspaceId>`; each page
+selects independently. `/` lists hosted apps, and `GET /api/apps` returns their IDs and names.
 
 The backend embeds Vite in development. `pnpm build` writes the Video Editor frontend to
 `skills/codex-ux-video-editor/dist/` and generates the Workspace skill's source runtime bundle.
@@ -143,13 +143,18 @@ the running service; the skill launcher persists its registry for restart. A bui
 workspace data in place.
 
 The service uses a PID lock and health check to reuse the service for a data directory. All apps and
-workspaces share its HTTP port. Chromium and FFmpeg subprocesses are still needed for rendering.
+workspaces share its HTTP port. By default, the OS assigns an available loopback port. The actual
+origin is saved in `<dataRoot>/runtime.json`; restarts prefer that port and fall back to OS
+assignment if it is occupied. This keeps browser storage at the same origin when possible. An
+explicit nonzero port is strict: occupation causes an error instead of silently changing it. Vite
+HMR, thumbnail capture, agent context URLs and host/origin checks all use the bound port. Chromium
+and FFmpeg subprocesses are still needed for rendering.
 
 | Environment variable                                  | Purpose                                                       |
 | ----------------------------------------------------- | ------------------------------------------------------------- |
 | `CODEX_UX_DATA_DIR`                                   | Override the data directory                                   |
 | `CODEX_UX_APPS_FILE`                                  | Read hosted app build registrations from a JSON file          |
-| `CODEX_UX_PORT`                                       | Override loopback port 5173                                   |
+| `CODEX_UX_PORT`                                       | 0/default: automatic; 1024–65535: fixed loopback port         |
 | `CODEX_UX_CODEX_BIN`                                  | Override the Codex executable                                 |
 | `CODEX_UX_CHROME`                                     | Chromium for thumbnails, Remotion rendering and browser tests |
 | `CODEX_UX_FFMPEG`, `CODEX_UX_FFPROBE`                 | Media generation/probing binary overrides                     |

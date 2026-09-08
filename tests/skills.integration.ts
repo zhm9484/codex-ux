@@ -27,7 +27,7 @@ void test(
       CODEX_UX_DATA_DIR: data,
       CODEX_UX_CACHE_DIR: process.env.CODEX_UX_CACHE_DIR ?? join(directory, 'cache'),
       CODEX_THREAD_ID: task,
-      CODEX_UX_PORT: String(31000 + (process.pid % 10000)),
+      CODEX_UX_PORT: '0',
     };
     const run = async (...args: string[]) => {
       const result = await execute(

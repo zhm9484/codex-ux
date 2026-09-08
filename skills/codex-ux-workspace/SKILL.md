@@ -30,10 +30,12 @@ node "$WORKSPACE_SKILL/scripts/workspace.ts" create --name "My project"
 
 `start` verifies and caches the app's bundled web files, prepares pinned dependencies and Chromium
 when needed, registers the app, and starts or reuses a matching service. It returns JSON with the
-actual origin and app URL. Use that origin throughout the task. Reuse the user's specified
-Workspace; create one for a new work item when appropriate. Do not silently choose a similarly named
-Workspace. Creating a Workspace does not initialize any app's document. Read the relevant app skill
-for that step.
+actual origin and app URL. Use that origin throughout the task; never assume a fixed port. Startup
+automatically selects an available port, preferring the last successful one on restart. Use `--port`
+or `CODEX_UX_PORT` only when a fixed port is needed (`0` restores automatic selection). Reuse the
+user's specified Workspace; create one for a new work item when appropriate. Do not silently choose
+a similarly named Workspace. Creating a Workspace does not initialize any app's document. Read the
+relevant app skill for that step.
 
 The default data root is `~/.codex-ux/`; runtime dependencies are cached separately under
 `~/.cache/codex-ux/`. `CODEX_UX_DATA_DIR`, `CODEX_UX_CACHE_DIR`, `CODEX_UX_PORT`, and

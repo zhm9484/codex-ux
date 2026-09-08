@@ -49,7 +49,7 @@ const session = (id: string) => {
 };
 async function api(origin: string, path: string, body?: unknown): Promise<Record<string, unknown>> {
   const response = await fetch(origin + '/api' + path, {
-    signal: AbortSignal.timeout(15_000),
+    signal: AbortSignal.timeout(path === '/health' ? 1500 : 15_000),
     ...(body === undefined
       ? {}
       : {
@@ -213,9 +213,12 @@ async function start() {
     }
     await prepare();
     const chrome = await browser();
-    const selectedPort = Number(values.port ?? process.env.CODEX_UX_PORT ?? 5173);
-    if (!Number.isInteger(selectedPort) || selectedPort < 1024 || selectedPort > 65535)
-      throw new Error('Port must be between 1024 and 65535.', { cause: error });
+    const selectedPort = Number(values.port ?? process.env.CODEX_UX_PORT ?? 0);
+    if (
+      !Number.isInteger(selectedPort) ||
+      (selectedPort !== 0 && (selectedPort < 1024 || selectedPort > 65535))
+    )
+      throw new Error('Port must be 0 (automatic) or between 1024 and 65535.', { cause: error });
     const log = await open(join(root, 'service.log'), 'a');
     await saveRegistry();
     const child = spawn(process.execPath, [join(runtime, 'packages/local-server/src/main.ts')], {
@@ -232,11 +235,21 @@ async function start() {
         PRODUCER_HEADLESS_SHELL_PATH: chrome,
       },
     });
+    let startupError: Error | undefined;
+    child.once('error', (error) => {
+      startupError = error;
+    });
     child.unref();
     await log.close();
     origin = '';
     for (let attempt = 0; attempt < 100; attempt++) {
       await delay(300);
+      if (startupError) throw startupError;
+      if (child.exitCode !== null || child.signalCode !== null)
+        throw new Error(
+          `Service exited before becoming ready. Read ${join(root, 'service.log')}.`,
+          { cause: error },
+        );
       try {
         origin = await service();
         break;

@@ -1,5 +1,6 @@
 import { LibraryStore } from './storage/library.ts';
 import { createServer } from 'node:http';
+import type { AddressInfo } from 'node:net';
 import { join } from 'node:path';
 import { ZodError } from 'zod';
 import { createServer as createViteServer, type ViteDevServer } from 'vite';
@@ -25,30 +26,16 @@ export async function startServer(
   dev = false,
   hostedApps: HostedApp[] = readApps(),
 ) {
-  const origin = `http://127.0.0.1:${port}`;
+  let ready = false;
   const apps = validateApps(hostedApps);
   const workspaces = new WorkspaceStore(root);
   const store = new VideoStore(workspaces);
   const library = new LibraryStore(workspaces);
   const projects = new VideoProjects(root, store);
-  const services: Services = {
-    library,
-    connections: new Connections(),
-    workspaces,
-    apps,
-    video: {
-      library,
-      projects,
-      store,
-      root,
-      collaboration: new VideoCollaboration(store, root, origin, projects, library),
-      jobs: new RenderJobs(root),
-    },
-  };
-  const thumbnails = new Thumbnails(root, origin);
   let vite: ViteDevServer | undefined;
   const server = createServer((req, res) => {
     void (async () => {
+      if (!ready) throw new HttpError(503, 'Service is starting.');
       if (req.headers.host !== `127.0.0.1:${port}` && req.headers.host !== `localhost:${port}`)
         throw new HttpError(403, 'Invalid host.');
       if (
@@ -125,18 +112,55 @@ export async function startServer(
       );
     });
   });
-  if (dev)
-    vite = await createViteServer({
-      root: join(repositoryRoot, 'apps/video-editor'),
-      configFile: join(repositoryRoot, 'apps/video-editor/vite.config.ts'),
-      server: { middlewareMode: true, ws: { server } },
-      appType: 'spa',
+  try {
+    await new Promise<void>((resolve, reject) => {
+      const failed = (error: Error) => reject(error);
+      server.once('error', failed);
+      server.listen(port, '127.0.0.1', () => {
+        server.removeListener('error', failed);
+        resolve();
+      });
     });
-  await new Promise<void>((resolve, reject) => {
-    server.once('error', reject);
-    server.listen(port, '127.0.0.1', resolve);
-  });
+  } catch (error) {
+    library.close();
+    store.close();
+    throw error;
+  }
+  port = (server.address() as AddressInfo).port;
+  const origin = `http://127.0.0.1:${port}`;
+  const services: Services = {
+    library,
+    connections: new Connections(),
+    workspaces,
+    apps,
+    video: {
+      library,
+      projects,
+      store,
+      root,
+      collaboration: new VideoCollaboration(store, root, origin, projects, library),
+      jobs: new RenderJobs(root),
+    },
+  };
+  const thumbnails = new Thumbnails(root, origin);
+  try {
+    if (dev)
+      vite = await createViteServer({
+        root: join(repositoryRoot, 'apps/video-editor'),
+        configFile: join(repositoryRoot, 'apps/video-editor/vite.config.ts'),
+        server: { port, middlewareMode: true, ws: { server, clientPort: port } },
+        appType: 'spa',
+      });
+    ready = true;
+  } catch (error) {
+    await new Promise<void>((resolve) => server.close(() => resolve()));
+    library.close();
+    store.close();
+    throw error;
+  }
   return {
+    apps,
+    origin,
     server,
     store,
     workspaces,

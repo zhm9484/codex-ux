@@ -47,9 +47,13 @@ inputs to startup, so symlink and copy installations both work.
 
 The launcher starts a detached service with logs in `service.log`, or reuses a service with matching
 API version, runtime fingerprint, and data root. It returns the actual origin instead of requiring
-agents to assume a port. Runtime mismatches do not kill a live service or reset data: finish active
-work and stop that service normally before starting the updated skills. No automatic cache or
-Workspace garbage collection is supplied.
+agents to assume a port. The default is automatic OS allocation, with the last successful port
+preferred on restart when available. `--port` or `CODEX_UX_PORT` accepts `0` for automatic selection
+or 1024–65535 for a strict fixed port; an occupied explicit port fails promptly and logs the cause.
+Port overrides apply to new starts; a matching live service is reused at its current origin. Runtime
+mismatches do not kill a live service or reset data: finish active work and stop that service
+normally before starting the updated skills. No automatic cache or Workspace garbage collection is
+supplied.
 
 ## Connecting and creating video
 

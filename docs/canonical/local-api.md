@@ -6,9 +6,9 @@ session, revision and operation references; video documents belong to `video-dom
 ## Shared endpoints
 
 All API paths below are relative to the service origin plus `/api` (development defaults to
-`http://127.0.0.1:5173/api`; installed skills return their actual origin). JSON mutations use
-`Content-Type: application/json`. Errors contain `{ error, code }`; invalid input is 400, missing
-objects 404 and stale writes 409.
+`http://127.0.0.1:<port>/api`; startup output and `<dataRoot>/runtime.json` provide the actual
+origin). JSON mutations use `Content-Type: application/json`. Errors contain `{ error, code }`;
+invalid input is 400, missing objects 404 and stale writes 409.
 
 | Method and path       | Behavior                                                                                           |
 | --------------------- | -------------------------------------------------------------------------------------------------- |
