@@ -8,13 +8,15 @@ const require = createRequire(import.meta.url);
 export function mediaBinaries() {
   return {
     ffmpeg: process.env.CODEX_UX_FFMPEG ?? (require('ffmpeg-static') as string),
-    ffprobe: process.env.CODEX_UX_FFPROBE ?? (require('ffprobe-static') as { path: string }).path,
+    ffprobe:
+      process.env.CODEX_UX_FFPROBE ??
+      (require('@ffprobe-installer/ffprobe') as { path: string }).path,
   };
 }
 async function probeBinary() {
   if (process.env.CODEX_UX_FFPROBE) return process.env.CODEX_UX_FFPROBE;
   await environments.ensure('probe');
-  return (require('ffprobe-static') as { path: string }).path;
+  return (require('@ffprobe-installer/ffprobe') as { path: string }).path;
 }
 async function probe(file: string) {
   let binary: string;

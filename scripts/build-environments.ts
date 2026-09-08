@@ -28,7 +28,7 @@ export function buildEnvironments(lockText: string) {
     'remotion-export': ['@remotion/bundler', '@remotion/renderer'],
     'hyperframes-export': ['@hyperframes/producer'],
     browser: ['playwright-core'],
-    probe: ['ffprobe-static'],
+    probe: ['@ffprobe-installer/ffprobe'],
     encoder: ['ffmpeg-static'],
   };
   return Object.fromEntries(
@@ -71,7 +71,16 @@ export function buildEnvironments(lockText: string) {
         packages: ordered(packages),
         snapshots: ordered(snapshots),
       });
-      const workspace = 'packages: []\nonlyBuiltDependencies:\n  - esbuild\n  - ffmpeg-static\n';
+      const workspace = stringify({
+        packages: [],
+        onlyBuiltDependencies: [
+          'esbuild',
+          'ffmpeg-static',
+          ...Object.keys(packages)
+            .filter((name) => name.startsWith('@ffprobe-installer/'))
+            .map((name) => name.slice(0, name.lastIndexOf('@'))),
+        ],
+      });
       const build = createHash('sha256')
         .update(manifest + frozen + workspace)
         .digest('hex');

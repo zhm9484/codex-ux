@@ -234,10 +234,19 @@ void test(
         run('start', '--app', join(videoSkill, 'app.json')),
         /incomplete or changed/,
       );
+    } catch (error) {
+      console.error(
+        await readFile(join(data, 'service.log'), 'utf8').catch(() => 'No service log'),
+      );
+      throw error;
     } finally {
       await browser.close();
       if (pid) {
-        process.kill(pid, 'SIGTERM');
+        try {
+          process.kill(pid, 'SIGTERM');
+        } catch {
+          // The failure may already have stopped the service.
+        }
         for (let i = 0; i < 100; i++) {
           try {
             process.kill(pid, 0);

@@ -62,7 +62,8 @@ Never move an installed pnpm tree or delete a cache used by a live service. Sour
 capability installation use separate locks, with atomically published PID/token ownership and
 serialized dead-owner reclamation. Failed installations retain partial files and can be retried;
 capabilities are marked ready only after their own packages resolve and compiler/media binaries pass
-a smoke check. A damaged ready cache is rejected rather than reinstalled in place while another
+a smoke check. FFprobe uses platform-specific `@ffprobe-installer` binaries, including a native
+macOS ARM64 build. A damaged ready cache is rejected rather than reinstalled in place while another
 service may be using it; its error identifies the cache and required stopped-service recovery.
 Trusted dependency builds allow only esbuild and ffmpeg-static. Project source dependencies still
 disable lifecycle scripts.

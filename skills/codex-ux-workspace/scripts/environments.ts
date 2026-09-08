@@ -145,13 +145,21 @@ export class Environments {
               transformSync(text: string, options: { loader: string }): unknown;
             }
           ).transformSync('const x: number = 1', { loader: 'ts' });
-        for (const name of ['ffmpeg-static', 'ffprobe-static']) {
+        for (const name of ['ffmpeg-static', '@ffprobe-installer/ffprobe']) {
           if (!artifact.packages.includes(name)) continue;
           const binary =
             name === 'ffmpeg-static'
               ? (require(name) as string)
               : (require(name) as { path: string }).path;
-          await promisify(execFile)(binary, ['-version'], { timeout: 10000, windowsHide: true });
+          try {
+            await promisify(execFile)(binary, ['-version'], { timeout: 10000, windowsHide: true });
+          } catch (error) {
+            const failure = error as Error & { code?: unknown; signal?: unknown };
+            throw new Error(
+              `${name} validation failed (code ${String(failure.code)}, signal ${String(failure.signal)}): ${failure.message}`,
+              { cause: error },
+            );
+          }
         }
       };
       const marker = await readFile(join(directory, '.ready'), 'utf8').catch(() => '');
