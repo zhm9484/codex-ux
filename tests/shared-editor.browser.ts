@@ -198,6 +198,7 @@ test('3D history requires an explicit restore; stale drafts and uncertain HTTP d
   await page.getByRole('button', { name: 'Send now', exact: true }).click();
   await expect(page.locator('.feedback-composer').getByRole('alert')).toContainText(/changed/);
   await expect(input).toContainText('Keep this request');
+  await page.getByRole('button', { name: 'Draft context' }).click();
   await page.getByRole('button', { name: 'Use current view' }).click();
   const payloads: object[] = [];
   let fail = true;
@@ -239,6 +240,41 @@ for (const app of ['video-editor', '3d-space']) {
     const position = await page.locator('.tool-island').boundingBox();
     await chat.click();
     const input = page.getByRole('textbox', { name: 'Chat message' });
+    await expect(input).toBeFocused();
+    const composer = page.getByRole('dialog', { name: 'Chat', exact: true });
+    await expect(composer.getByRole('button', { name: 'Draft context' })).toHaveAttribute(
+      'aria-expanded',
+      'false',
+    );
+    const beforeWriting = (await composer.boundingBox())!;
+    await input.fill(
+      Array.from(
+        { length: 24 },
+        (_, i) => `Thought ${i + 1}: leave enough room for the subject.`,
+      ).join('\n'),
+    );
+    const afterWriting = (await composer.boundingBox())!;
+    expect(afterWriting.x).toBe(beforeWriting.x);
+    expect(afterWriting.y).toBe(beforeWriting.y);
+    expect(afterWriting.height).toBeGreaterThan(beforeWriting.height);
+    expect(await input.evaluate((element) => element.scrollHeight > element.clientHeight)).toBe(
+      true,
+    );
+    await expect(composer.getByRole('button', { name: 'Send now' })).toBeVisible();
+    const moveComposer = composer.getByRole('button', { name: 'Move composer' });
+    await moveComposer.focus();
+    await moveComposer.press('ArrowRight');
+    expect((await composer.boundingBox())!.x).toBe(beforeWriting.x + 10);
+    const handle = (await moveComposer.boundingBox())!;
+    await page.mouse.move(handle.x + handle.width / 2, handle.y + handle.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(handle.x + handle.width / 2 + 35, handle.y + handle.height / 2 + 20, {
+      steps: 5,
+    });
+    await page.mouse.up();
+    const movedComposer = (await composer.boundingBox())!;
+    expect(movedComposer.x).toBe(beforeWriting.x + 45);
+    expect(movedComposer.y).toBe(beforeWriting.y + 20);
     await input.fill('Keep this draft');
     await input.press('Escape');
     await expect(input).toBeHidden();
@@ -247,12 +283,32 @@ for (const app of ['video-editor', '3d-space']) {
     await expect(input).toHaveText('Keep this draft');
     for (const width of [600, 390, 320]) {
       await page.setViewportSize({ width, height: 700 });
-      const panel = await page.getByRole('dialog', { name: 'Chat', exact: true }).boundingBox();
-      expect(panel!.x).toBeGreaterThanOrEqual(10);
-      expect(panel!.x + panel!.width).toBeLessThanOrEqual(width - 10);
-      expect(panel!.y + panel!.height).toBeLessThanOrEqual(690);
-      expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(width);
+      await expect
+        .poll(async () => {
+          const panel = await composer.boundingBox();
+          return (
+            !!panel &&
+            panel.x >= 10 &&
+            panel.x + panel.width <= width - 10 &&
+            panel.y + panel.height <= 690
+          );
+        })
+        .toBe(true);
+      await expect
+        .poll(() => page.evaluate(() => document.documentElement.scrollWidth))
+        .toBe(width);
     }
+    await composer.getByRole('button', { name: 'Draft context' }).click();
+    await input.fill('A longer thought. '.repeat(60));
+    await page.setViewportSize({ width: 390, height: 350 });
+    await expect
+      .poll(async () => {
+        const action = await composer.getByRole('button', { name: 'Send now' }).boundingBox();
+        return !!action && action.y >= 12 && action.y + action.height <= 338;
+      })
+      .toBe(true);
+    await expect(input).toBeVisible();
+    await page.setViewportSize({ width: 320, height: 700 });
     await page.getByRole('button', { name: 'Close chat' }).click();
     await page.getByRole('button', { name: 'Agent connection' }).click();
     const modal = page.getByRole('dialog', { name: 'Agent connection' });

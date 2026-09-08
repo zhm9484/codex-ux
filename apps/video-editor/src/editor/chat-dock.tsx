@@ -7,7 +7,9 @@ export function ChatDock({ state }: { state: EditorState }) {
       <FloatingPanel
         open={state.chatOpen}
         anchor={state.chatAnchor}
-        title="Chat"
+        title={state.feedbackMode === 'note' ? 'Note' : 'Chat'}
+        heading={false}
+        movable
         className="chat-popover"
         closeLabel="Close chat"
         onClose={() => state.setChatOpen(false)}

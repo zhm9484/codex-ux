@@ -12,6 +12,8 @@ export function FloatingPanel({
   children,
   className = '',
   closeLabel = 'Close panel',
+  heading = true,
+  movable = false,
 }: {
   open: boolean;
   anchor: FloatingAnchor | null;
@@ -20,8 +22,10 @@ export function FloatingPanel({
   children: ReactNode;
   className?: string;
   closeLabel?: string;
+  heading?: boolean;
+  movable?: boolean;
 }) {
-  const ref = useFloatingPosition(open, anchor);
+  const ref = useFloatingPosition(open, anchor, movable);
   useLayoutEffect(() => {
     if (!open) return;
     const previous = document.activeElement;
@@ -40,6 +44,7 @@ export function FloatingPanel({
       aria-label={title}
       tabIndex={-1}
       onKeyDown={(event) => {
+        if ((event.target as Element).closest('dialog')) return;
         if (event.key === 'Escape' && !event.defaultPrevented) {
           event.preventDefault();
           event.stopPropagation();
@@ -47,12 +52,14 @@ export function FloatingPanel({
         }
       }}
     >
-      <div className="chat-heading">
-        <h2>{title}</h2>
-        <IconButton label={closeLabel} onClick={onClose}>
-          <X size={18} />
-        </IconButton>
-      </div>
+      {heading && (
+        <div className="chat-heading">
+          <h2>{title}</h2>
+          <IconButton label={closeLabel} onClick={onClose}>
+            <X size={18} />
+          </IconButton>
+        </div>
+      )}
       {children}
     </section>
   );

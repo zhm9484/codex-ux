@@ -81,9 +81,15 @@ Video Editor keeps its centered, proportioned player and timeline; 3D Space keep
 viewport and spatial tools. Both expose Chat, Notes and app Fullscreen in the same movable island,
 and History, Library and Agent in the header. Compact headers hide text labels and wrap into two
 rows below 600 px. Dialogs manage modal focus; nonmodal panels retain drafts when hidden, restore
-focus on close and clamp to the viewport. Tool positions persist under app-specific storage keys.
-Video notes are a feedback queue; scene annotations are versioned spatial content. Their persistence
-and submission lifecycles remain app-owned.
+focus on close and clamp to the visual viewport, including when a mobile keyboard appears. Composers
+use a single warm writing surface with an expandable context summary, an autogrowing input and one
+action footer. They retain their opening side while content grows. A small grip supports pointer
+dragging and arrow-key movement (Shift for larger steps); its offset survives hiding/reopening from
+the same anchor. Enter creates a line; Cmd/Ctrl+Enter invokes the host's primary action. Image
+references have compact previews below the text. Open/close transitions respect reduced motion. Tool
+positions persist under app-specific storage keys. Video notes are a feedback queue; scene
+annotations are versioned spatial content. Their persistence and submission lifecycles remain
+app-owned.
 
 ## Storage
 

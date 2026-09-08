@@ -105,9 +105,10 @@ test('direct transforms preserve camera, survive refresh, undo, cancel and ancho
   await page.getByRole('button', { name: 'Annotate a place', exact: true }).click();
   const sphere = (await state(page)).objects.find((item) => item.id === 'sphere')!;
   await page.mouse.click(sphere.screen.x, sphere.screen.y);
-  await page.getByRole('button', { name: 'Ask agent about this place' }).click();
-  await page.getByRole('textbox', { name: 'Chat message' }).fill('Make this warmer');
-  await page.getByRole('button', { name: 'Pin note', exact: true }).click();
+  await page.getByRole('textbox', { name: 'Note text' }).fill('Make this warmer');
+  await expect(page.getByRole('textbox', { name: 'Note text' })).toBeFocused();
+  await page.getByRole('textbox', { name: 'Note text' }).press('ControlOrMeta+Enter');
+  await expect(page.getByRole('textbox', { name: 'Note text' })).toBeHidden();
   await expect.poll(async () => (await read()).document.annotations.length).toBe(1);
   expect((await read()).document.annotations[0]!.anchor.objectId).toBe('sphere');
   expect(errors).toEqual([]);

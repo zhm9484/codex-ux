@@ -33,6 +33,7 @@ export function useScene(id: string, instance: BrowserAppInstance, candidate: st
   const viewport = useRef<SceneViewport | null>(null);
   const [library] = useState(() => new WorkspaceLibrary(id));
   const [chatOpen, setChatOpen] = useState(false);
+  const [draftMode, setDraftMode] = useState<'chat' | 'note'>('chat');
   const [attachments, setAttachments] = useState<LibraryReference[]>([]);
   const [draft, setDraft] = useState<{
     revision: string;
@@ -116,6 +117,9 @@ export function useScene(id: string, instance: BrowserAppInstance, candidate: st
   const onAnchor = useEffectEvent((next: SceneAnchor) => {
     setAnchor(next);
     setAnnotating(false);
+    if (!draft || (!text && !attachments.length && !pending.current)) setDraft(captureDraft(next));
+    setDraftMode('note');
+    setChatOpen(true);
   });
   const onNote = useEffectEvent((note: Annotation) => {
     setNotice(note.text);
@@ -337,6 +341,7 @@ export function useScene(id: string, instance: BrowserAppInstance, candidate: st
   }
   function openChat() {
     if (!draft) setDraft(captureDraft());
+    setDraftMode('chat');
     setChatOpen(true);
   }
   function useCurrentView() {
@@ -371,6 +376,7 @@ export function useScene(id: string, instance: BrowserAppInstance, candidate: st
       )
     ) {
       clearDraft();
+      setChatOpen(false);
       setNotice('Note pinned to the scene.');
     }
   }
@@ -439,6 +445,7 @@ export function useScene(id: string, instance: BrowserAppInstance, candidate: st
     openChat,
     useCurrentView,
     draft,
+    draftMode,
     attachments,
     setAttachments,
     checkingDelivery,

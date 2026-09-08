@@ -95,13 +95,14 @@ layers.
 A note records text, revision, seconds/range, optional object reference/region and an intent:
 `change` or `transition`, with optional transition duration. A transition is an instruction for the
 agent to implement in source or regenerated media. Saving it does not composite a transition. Chat
-and Add note open the same composer and preserve the same draft, with a 480 px desktop surface
-constrained to the viewport, 16 px body text, and a single attachment/action footer. Time/selection
-context and request kind sit above the writing area; transition duration appears only for transition
-requests. The floating composer measures its actual size to fit beside the tool island or around a
-selection and repositions when its content or the viewport changes. Enter inserts a new line;
-Cmd/Ctrl+Enter sends the current draft. Both entry points offer **Send now** for the current draft
-only and **Add to notes** to save it locally. Pending notes appear in a draggable, collapsible board
+and Add note share a retained draft in a 440 px, viewport-constrained writing surface. The input
+autogrows to a bounded scroll area, with attachments and actions in one footer. A small thumbnail,
+time and selection label identify the captured context; expanding it reveals a larger preview,
+**Show this moment**, **Use current view**, request kind and optional transition duration. Updating
+the context is explicit and is unavailable after attempting to save that draft. Add note prioritizes
+**Save note**; Chat prioritizes **Send now**. Both keep the other action available. Enter inserts a
+new line; Cmd/Ctrl+Enter performs the entry point's primary action. File drops open Chat. Saving
+closes the composer and returns to the work. Pending notes appear in a draggable, collapsible board
 with a count, locate/edit/delete controls and **Send all**. Its position persists and stays within
 the viewport. A successful batch empties and hides the board; Notes can reopen it to access the
 centered **Notes history** dialog. History shows submitted notes, their original context and

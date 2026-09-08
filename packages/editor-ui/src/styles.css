@@ -29,15 +29,6 @@ button {
   box-shadow: var(--surface-shadow);
   border-radius: var(--radius-panel);
 }
-.ui-floating-panel.chat-popover {
-  width: min(480px, calc(100vw - 24px));
-  border-radius: 20px;
-}
-.composer-shortcut {
-  color: var(--muted);
-  font-size: 11px;
-  margin-top: 12px;
-}
 .ux-message-editor:focus-visible {
   outline: none;
 }

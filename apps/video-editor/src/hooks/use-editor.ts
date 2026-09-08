@@ -31,6 +31,7 @@ export function useEditor(id: string) {
   const lastPaint = useRef(0);
   const [canvasText, setCanvasText] = useState<CanvasText | null>(null);
   const [chatOpen, setChatOpen] = useState(false);
+  const [feedbackMode, setFeedbackMode] = useState<'chat' | 'note'>('chat');
   const [chatAnchor, setChatAnchor] = useState<FloatingAnchor | null>(null);
   const [notePoint, setNotePoint] = useState<{ x: number; y: number } | null>(null);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
@@ -161,6 +162,7 @@ export function useEditor(id: string) {
     setMarking(false);
     setPanel(null);
     setChatOpen(true);
+    setFeedbackMode(retarget ? 'note' : 'chat');
     setContextMenu(null);
     if (retarget) setFeedbackFocus((value) => value + 1);
   }
@@ -293,6 +295,7 @@ export function useEditor(id: string) {
     notePoint,
     setNotePoint,
     feedbackFocus,
+    feedbackMode,
     clearSelection,
     panel,
     setPanel,

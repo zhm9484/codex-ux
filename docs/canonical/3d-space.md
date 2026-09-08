@@ -16,9 +16,14 @@ Chat is hidden initially. The movable collaboration island opens Chat and Notes 
 fullscreen, with a pane-filling fallback if browser fullscreen is unavailable. Closing Chat or
 pressing Escape preserves its draft, attachments and original context until reload. Ordinary
 selection does not open Chat; **Ask agent about selection** and **Ask agent about this place** open
-it explicitly. A draft captures its revision, camera, object bounds, selected point, annotation IDs
-and optional screenshot once. **Use current view** explicitly replaces that context. Stale drafts
-are rejected rather than silently rebased. Enter inserts a new line; Cmd/Ctrl+Enter sends.
+it explicitly. Marking a place opens a Note composer immediately with **Pin note** as its primary
+action; saving closes it and returns to the scene. Chat prioritizes **Send now**. Both actions
+remain available where the captured context and attachments permit them. A draft captures its
+revision, camera, object bounds, selected point, annotation IDs and optional screenshot once. A
+small view thumbnail and label expand to reveal the captured image and **Use current view**, which
+explicitly replaces that context. Stale drafts are rejected rather than silently rebased. Enter
+inserts a new line; Cmd/Ctrl+Enter performs the primary action (pin a Note or send Chat). Successful
+Chat delivery is acknowledged inside the composer.
 
 Library and Agent open centered dialogs. Chat uses the shared mention input for `@` references, file
 selection, paste and attachment drops. Dropping files on the viewport still imports models; the
@@ -54,7 +59,7 @@ those loaders; this is not lossless interchange. Prefer GLB for portable texture
 files produced by Meshy or Tripo. There are no generation-service integrations, Blender conversion,
 CAD editing, general ZIP importer, full-scene file export or automatic asset optimization.
 
-Pin a surface and save a note or send a request to the connected Codex task. A note records the
+Mark a surface and save a note or send a request to the connected Codex task. A note records the
 revision, camera and object-local hit point (world point for empty ground), so it follows later
 object movement. Hidden or missing objects hide their pins without deleting the notes. History can
 restore earlier saved source, placements and annotations. Screenshot saves the rendered view.

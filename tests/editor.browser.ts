@@ -142,7 +142,7 @@ test('range and region comments open chat on demand and keep their original refe
   const actionBox = (await noteAction.boundingBox())!;
   expect(actionBox.x).toBeGreaterThan(strip.x + (strip.width * 5) / 18);
   await noteAction.click();
-  await page.getByRole('textbox', { name: 'Chat message' }).fill('Let this moment breathe.');
+  await page.getByRole('textbox', { name: 'Note text' }).fill('Let this moment breathe.');
   await page.locator('.scene-strip').click({ position: { x: (strip.width * 8) / 18, y: 20 } });
   await expect(page.getByRole('textbox', { name: 'Chat message' })).toBeHidden();
   await page.getByRole('button', { name: 'Chat', exact: true }).click();
@@ -158,8 +158,8 @@ test('range and region comments open chat on demand and keep their original refe
   await page.mouse.up();
   await expect(page.getByRole('textbox', { name: 'Chat message' })).toBeHidden();
   await page.getByRole('button', { name: 'Add note', exact: true }).click();
-  await page.getByRole('textbox', { name: 'Chat message' }).fill('Move this detail.');
-  await page.getByRole('button', { name: 'Add note to list' }).click();
+  await page.getByRole('textbox', { name: 'Note text' }).fill('Move this detail.');
+  await page.getByRole('button', { name: 'Save note' }).click();
   expect(
     (await readWorkspace(request, workspace.workspaceId)).notes.at(-1)?.anchor.region,
   ).toMatchObject({

@@ -4,7 +4,7 @@ export { EditorHeader } from './header';
 export { WorkspacePicker } from './workspace-picker';
 export { ToolIsland } from './tool-island';
 export { FloatingPanel } from './floating-panel';
-export { Composer } from './composer';
+export { Composer, ComposerContext } from './composer';
 export { useIslandPosition } from './use-island-position';
 export {
   useFloatingPosition,

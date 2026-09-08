@@ -32,6 +32,8 @@ export function MentionInput({
   onBusy,
   incomingFiles = null,
   onConsumed,
+  imagePreviews = false,
+  onPreview,
 }: {
   incomingFiles?: File[] | null;
   onConsumed?: () => void;
@@ -49,6 +51,8 @@ export function MentionInput({
   placeholder?: string;
   actions?: ReactNode;
   onBusy?: (busy: boolean) => void;
+  imagePreviews?: boolean;
+  onPreview?: (reference: LibraryReference) => void;
 }) {
   const editor = useRef<HTMLDivElement>(null);
   const popup = useRef<HTMLDivElement>(null);
@@ -75,6 +79,10 @@ export function MentionInput({
   const [error, setError] = useState('');
   const [preview, setPreview] = useState<LibraryReference | null>(null);
   const listId = useId();
+  function showPreview(reference: LibraryReference) {
+    if (onPreview) onPreview(reference);
+    else setPreview(reference);
+  }
   function text() {
     return (editor.current?.innerText ?? '').replaceAll('\u00a0', ' ');
   }
@@ -461,7 +469,8 @@ export function MentionInput({
         onClick={(event) => {
           const id = (event.target as Element).closest<HTMLElement>('[data-reference]')?.dataset
             .reference;
-          if (id) setPreview(known.current.get(id) ?? null);
+          const reference = id ? known.current.get(id) : undefined;
+          if (reference) showPreview(reference);
         }}
         onDragOver={(event) => {
           if (event.dataTransfer.types.includes('Files')) event.preventDefault();
@@ -475,6 +484,24 @@ export function MentionInput({
           }
         }}
       />
+      {imagePreviews &&
+        attachments.some((item) => /^image\/(png|jpeg|webp|gif|avif)$/.test(item.mime)) && (
+          <div className="ux-composer-images" aria-label="Attached images">
+            {attachments
+              .filter((item) => /^image\/(png|jpeg|webp|gif|avif)$/.test(item.mime))
+              .map((item) => (
+                <button
+                  type="button"
+                  key={item.id}
+                  aria-label={`Preview ${item.name}`}
+                  title={item.name}
+                  onClick={() => showPreview(item)}
+                >
+                  <img src={library.content(item)} alt={item.name} />
+                </button>
+              ))}
+          </div>
+        )}
       <div className="ux-attach-tools">
         <button
           type="button"

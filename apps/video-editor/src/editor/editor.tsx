@@ -51,7 +51,7 @@ export function Editor({ id, workspaces, onSelect }: EditorProps) {
     event.preventDefault();
     dragDepth.current = 0;
     setDragging(false);
-    state.openNotes();
+    state.openNotes(undefined, false);
     state.setDroppedFiles(Array.from(event.dataTransfer.files));
   }
   return (

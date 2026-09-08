@@ -89,18 +89,6 @@
 .scene-bottom > * {
   pointer-events: auto;
 }
-.context-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 5px 6px 5px 8px;
-  background: var(--selected);
-  border-radius: 7px;
-  color: var(--muted);
-  font-size: 11px;
-  max-width: 100%;
-  overflow-wrap: anywhere;
-}
 .annotation-hint button,
 .scene-toast > button {
   display: flex;

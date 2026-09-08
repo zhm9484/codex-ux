@@ -1,6 +1,7 @@
 import {
   AgentConnection,
   Composer,
+  ComposerContext,
   EditorHeader,
   FloatingPanel,
   IconButton,
@@ -122,6 +123,40 @@ export function Editor({
     }
     await s.send().catch((error: unknown) => s.setError(errorMessage(error)));
   }
+  const pinAction = (
+    <button
+      className={s.draftMode === 'note' ? 'primary-button' : 'secondary-button'}
+      disabled={
+        !s.editable ||
+        attaching ||
+        !s.text.trim() ||
+        !s.draft?.feedback.anchor ||
+        !!s.attachments.length ||
+        s.checkingDelivery
+      }
+      title={
+        s.attachments.length
+          ? 'Send to include your files; pin notes contain text only.'
+          : !s.draft?.feedback.anchor
+            ? 'Select an object or mark a place to pin a note.'
+            : undefined
+      }
+      onClick={() => void s.pin()}
+    >
+      <Pin size={13} />
+      {s.busy === 'Saving' ? 'Saving…' : 'Pin note'}
+    </button>
+  );
+  const sendAction = (
+    <button
+      className={s.draftMode === 'note' ? 'secondary-button' : 'primary-button'}
+      disabled={!s.editable || attaching || !s.text.trim()}
+      onClick={() => void send()}
+    >
+      {s.checkingDelivery ? 'Check delivery' : s.busy === 'Sending' ? 'Sending…' : 'Send now'}
+      <ArrowUp size={14} />
+    </button>
+  );
   const stateLabel =
     s.busy ||
     (s.project?.source.error
@@ -185,7 +220,21 @@ export function Editor({
           .catch((error: unknown) => s.setError(errorMessage(error)));
       }}
     >
-      <div ref={host} className="scene-canvas" data-testid="scene-viewport" />
+      <div
+        ref={host}
+        className="scene-canvas"
+        data-testid="scene-viewport"
+        onPointerDownCapture={(event) => {
+          if (s.annotating && event.button === 0)
+            setChatAnchor({
+              left: event.clientX,
+              right: event.clientX,
+              top: event.clientY,
+              bottom: event.clientY,
+              placement: 'beside',
+            });
+        }}
+      />
       <div ref={markers} className="scene-markers" />
       <EditorHeader
         homeHref="/apps/3d-space/"
@@ -414,17 +463,27 @@ export function Editor({
           <FloatingPanel
             open={s.chatOpen && !s.preview}
             anchor={chatAnchor}
-            title="Chat"
+            title={s.draftMode === 'note' ? 'Note' : 'Chat'}
+            heading={false}
+            movable
             className="chat-popover"
             closeLabel="Close chat"
             onClose={() => s.setChatOpen(false)}
           >
             <Composer
+              onClose={() => s.setChatOpen(false)}
+              closeLabel={s.draftMode === 'note' ? 'Close note' : 'Close chat'}
+              status={s.notice}
+              submitLabel={s.draftMode === 'note' ? 'pin note' : 'send'}
               library={s.library}
               value={s.text}
               attachments={s.attachments}
-              label="Chat message"
-              placeholder="What would you like to change? Use @ to reference a file."
+              label={s.draftMode === 'note' ? 'Note text' : 'Chat message'}
+              placeholder={
+                s.draftMode === 'note'
+                  ? 'Leave a thought on this place…'
+                  : 'What would you like to change?'
+              }
               active={s.chatOpen && !s.preview && !modal}
               disabled={!!s.busy || s.checkingDelivery}
               onBusy={setAttaching}
@@ -437,13 +496,17 @@ export function Editor({
                 if (!s.draft) s.openChat();
               }}
               onManage={() => setModal('library')}
-              onSubmit={() => void send()}
+              onSubmit={() => {
+                if (s.draftMode === 'note') {
+                  if (!attaching && s.editable) void s.pin();
+                } else void send();
+              }}
               context={
-                <div className="composer-context">
-                  <span className="context-chip">
-                    <Pin size={12} />
-                    {s.draft?.label ?? (s.editable ? 'Scene view' : 'Waiting for the scene…')}
-                  </span>
+                <ComposerContext
+                  title={s.draft?.label ?? (s.editable ? 'Scene view' : 'Opening scene…')}
+                  subtitle={`${s.draftMode === 'note' ? 'Note' : 'Chat'} · ${s.draft?.feedback.anchor ? 'Selected place' : 'Captured view'}`}
+                  image={s.draft?.screenshot}
+                >
                   <button
                     className="text-button"
                     disabled={!s.editable || s.checkingDelivery}
@@ -452,38 +515,12 @@ export function Editor({
                     Use current view
                   </button>
                   {!!s.attachments.length && (
-                    <span className="field-help">
-                      Attachments are sent with messages. Spatial annotations contain text.
-                    </span>
+                    <span>Pin notes use text only. Send to include your files.</span>
                   )}
-                </div>
+                </ComposerContext>
               }
-              secondaryAction={
-                <button
-                  className="secondary-button"
-                  disabled={
-                    !s.editable ||
-                    attaching ||
-                    !s.text.trim() ||
-                    !s.draft?.feedback.anchor ||
-                    !!s.attachments.length ||
-                    s.checkingDelivery
-                  }
-                  onClick={() => void s.pin()}
-                >
-                  Pin note
-                </button>
-              }
-              primaryAction={
-                <button
-                  className="primary-button"
-                  disabled={!s.editable || attaching || !s.text.trim()}
-                  onClick={() => void send()}
-                >
-                  <ArrowUp size={15} />
-                  {s.checkingDelivery ? 'Check delivery' : 'Send now'}
-                </button>
-              }
+              secondaryAction={s.draftMode === 'note' ? sendAction : pinAction}
+              primaryAction={s.draftMode === 'note' ? pinAction : sendAction}
               error={s.chatOpen && !s.preview ? s.error : undefined}
             />
           </FloatingPanel>
@@ -524,7 +561,9 @@ export function Editor({
           )}
         </Modal>
       )}
-      {((s.error && (!s.chatOpen || s.preview)) || s.project?.source.error || s.notice) && (
+      {((s.error && (!s.chatOpen || s.preview)) ||
+        s.project?.source.error ||
+        (s.notice && (!s.chatOpen || s.preview))) && (
         <div
           className={`scene-toast glass${s.error || s.project?.source.error ? ' has-error' : ''}`}
           role={s.error || s.project?.source.error ? 'alert' : 'status'}

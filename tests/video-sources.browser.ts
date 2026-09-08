@@ -136,6 +136,7 @@ test('Remotion source updates, seeks, compares immutable builds, recovers from e
     await page.getByRole('button', { name: 'Pause', exact: true }).click();
     await page.getByRole('button', { name: 'Chat', exact: true }).click();
     await page.getByRole('textbox', { name: 'Chat message' }).fill('Crossfade into the next shot');
+    await page.getByRole('button', { name: 'Draft context' }).click();
     await page.getByRole('combobox', { name: 'Request kind' }).selectOption('transition');
     await page.getByRole('spinbutton', { name: 'Transition duration' }).fill('0.4');
     const working = (
