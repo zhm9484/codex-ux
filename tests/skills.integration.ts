@@ -20,7 +20,7 @@ void test(
     const data = join(directory, 'data');
     const workspaceSkill = join(directory, 'skills/codex-ux-workspace');
     const videoSkill = join(directory, 'skills/codex-ux-video-editor');
-    const sceneSkill = join(directory, 'skills/codex-ux-scene-3d');
+    const sceneSkill = join(directory, 'skills/codex-ux-3d-space');
     const task = randomUUID();
     let pid: number | undefined;
     const env = {
@@ -54,7 +54,7 @@ void test(
     try {
       await cp(resolve('skills/codex-ux-workspace'), workspaceSkill, { recursive: true });
       await cp(resolve('skills/codex-ux-video-editor'), videoSkill, { recursive: true });
-      await cp(resolve('skills/codex-ux-scene-3d'), sceneSkill, { recursive: true });
+      await cp(resolve('skills/codex-ux-3d-space'), sceneSkill, { recursive: true });
       const started = await run('start', '--app', join(videoSkill, 'app.json'));
       const origin = started.origin as string;
       const located = await run('locate');
@@ -83,13 +83,13 @@ void test(
       const project = (await post(base, {})) as unknown as VideoProject;
       const sceneStarted = await run('start', '--app', join(sceneSkill, 'app.json'));
       assert.equal(sceneStarted.origin, origin);
-      const scene = await post(`${origin}/api/workspaces/${String(created.id)}/apps/scene-3d`, {});
+      const scene = await post(`${origin}/api/workspaces/${String(created.id)}/apps/3d-space`, {});
       const sceneInvitation = await run(
         'connect',
         '--workspace',
         String(created.id),
         '--app',
-        'scene-3d',
+        '3d-space',
       );
       const scenePage = await browser.newPage();
       await scenePage.goto(sceneInvitation.url as string);
@@ -105,7 +105,7 @@ void test(
       );
       const sceneReceipt = await run('status', '--code', sceneInvitation.code as string);
       assert.equal(sceneReceipt.state, 'connected');
-      assert.equal(sceneReceipt.appId, 'scene-3d');
+      assert.equal(sceneReceipt.appId, '3d-space');
       await scenePage.close();
       const invitation = await run('connect', '--workspace', String(created.id));
       const page = await browser.newPage();

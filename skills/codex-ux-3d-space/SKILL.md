@@ -1,13 +1,13 @@
 ---
-name: codex-ux-scene-3d
+name: codex-ux-3d-space
 description:
-  Create, import, explore and collaboratively edit 3D scenes with the local Codex UX Scene app. Use
-  for Three.js worlds, procedural environments, model assembly, direct object manipulation, or
+  Create, import, explore and collaboratively edit 3D scenes with the local Codex UX 3D Space app.
+  Use for Three.js worlds, procedural environments, model assembly, direct object manipulation, or
   spatial feedback with an agent. Imports Meshy and Tripo output files without integrating their
   generation APIs.
 ---
 
-# Scene
+# 3D Space
 
 Use the app as the shared view while editing ordinary Three.js source. People can move, rotate,
 resize, focus and annotate objects without learning an object hierarchy. This skill ships the built
@@ -20,14 +20,14 @@ the app page to this conversation. When installed together, read
 [Workspace](../codex-ux-workspace/SKILL.md). If missing, install both from the same repository/ref:
 
 ```sh
-npx skills add zhm9484/codex-ux --skill codex-ux-workspace codex-ux-scene-3d
+npx skills add zhm9484/codex-ux --skill codex-ux-workspace codex-ux-3d-space
 ```
 
-Follow Workspace startup with `--app /absolute/path/to/codex-ux-scene-3d/app.json` and connection
-with app ID `scene-3d`. Do not send to an unrelated task or replace a page's connection without user
-authorization. Open `/apps/scene-3d/w/<workspaceId>`. Initialize the scene with
-`POST /api/workspaces/<workspaceId>/apps/scene-3d` and `{}`; read
-`GET /api/workspaces/<workspaceId>/apps/scene-3d/context` for its source directory and revision.
+Follow Workspace startup with `--app /absolute/path/to/codex-ux-3d-space/app.json` and connection
+with app ID `3d-space`. Do not send to an unrelated task or replace a page's connection without user
+authorization. Open `/apps/3d-space/w/<workspaceId>`. Initialize the scene with
+`POST /api/workspaces/<workspaceId>/apps/3d-space` and `{}`; read
+`GET /api/workspaces/<workspaceId>/apps/3d-space/context` for its source directory and revision.
 
 ## Author the scene
 
@@ -80,5 +80,5 @@ resource counters. Check framing from useful viewpoints and use Explore for clic
 behavior.
 
 Explain relevant controls briefly: drag the object, choose Rotate/Resize or the lift handle,
-double-click to focus, zoom or Show whole scene, and pin a place for feedback. Keep the user in the
+double-click to focus, zoom or Show whole space, and pin a place for feedback. Keep the user in the
 immersive view; avoid exposing implementation choices as required setup steps. Match their language.

@@ -43,4 +43,4 @@ jobs:
         run:
           git diff --exit-code -- skills/codex-ux-workspace/assets/runtime.json
           skills/codex-ux-video-editor/app.json skills/codex-ux-video-editor/dist
-          skills/codex-ux-scene-3d/app.json skills/codex-ux-scene-3d/dist
+          skills/codex-ux-3d-space/app.json skills/codex-ux-3d-space/dist

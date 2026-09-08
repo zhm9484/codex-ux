@@ -34,9 +34,11 @@ async function open(page: Page, request: APIRequestContext) {
   const workspace = (await (
     await request.post('/api/workspaces', { data: { name: 'Scene browser verification' } })
   ).json()) as Workspace;
-  const path = `/api/workspaces/${workspace.id}/apps/scene-3d`;
+  const path = `/api/workspaces/${workspace.id}/apps/3d-space`;
   const initial = (await (await request.post(path, { data: {} })).json()) as SceneProject;
-  await page.goto(`/apps/scene-3d/w/${workspace.id}`);
+  await page.goto(`/apps/3d-space/w/${workspace.id}`);
+  await expect(page).toHaveTitle('3D Space · Codex UX');
+  await expect(page.locator('.scene-brand > span').first()).toHaveText('3D Space');
   await expect
     .poll(async () => (await state(page)).revisionId, { timeout: 15000 })
     .toBe(initial.revisionId);
@@ -175,9 +177,14 @@ test('model import uses real loaders; mobile navigation remains clear of compose
   ).toBe(true);
   await page.setViewportSize({ width: 390, height: 844 });
   await page.emulateMedia({ reducedMotion: 'reduce' });
-  await page.getByRole('button', { name: 'Show whole scene', exact: true }).click();
-  const nav = await page.getByRole('navigation', { name: 'Scene navigation' }).boundingBox();
+  await page.getByRole('button', { name: 'Show whole space', exact: true }).click();
+  expect(
+    await page
+      .locator('.scene-header')
+      .evaluate((header) => header.scrollWidth <= header.clientWidth),
+  ).toBe(true);
+  const nav = await page.getByRole('navigation', { name: 'Space navigation' }).boundingBox();
   const composer = await page.locator('.scene-composer').boundingBox();
   expect(nav!.y + nav!.height).toBeLessThanOrEqual(composer!.y);
-  await expect(page.getByRole('button', { name: 'Add to scene', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Add to space', exact: true })).toBeVisible();
 });

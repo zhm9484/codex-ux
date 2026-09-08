@@ -84,7 +84,7 @@ export class SceneViewport {
     this.canvas.tabIndex = 0;
     this.canvas.setAttribute(
       'aria-label',
-      '3D scene. Drag empty space to orbit, scroll to zoom. Select an object to move it.',
+      '3D Space. Drag empty space to orbit, scroll to zoom. Select an object to move it.',
     );
     this.canvas.setAttribute('role', 'application');
     host.append(this.canvas);
@@ -134,7 +134,7 @@ export class SceneViewport {
     if (this.disposed) return;
     event.preventDefault();
     this.callbacks.error(
-      'The graphics context was lost. Your saved scene is safe; reload to reconnect to the GPU.',
+      'The graphics context was lost. Your saved space is safe; reload to reconnect to the GPU.',
     );
     this.editable = false;
   };

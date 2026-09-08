@@ -63,9 +63,9 @@ these restrictions. Packages expose TypeScript source and use Node.js 24 type st
 Vite builds the frontend and splits React and the HTML parser into cacheable chunks. Hyperframes
 timeline metadata is cached per immutable document.
 
-Scene uses `apps/scene-3d/`, `packages/scene-domain/` and `packages/local-server/src/scene/` for its
-React viewport, portable scene contracts and backend revisions/imports/builds. See
-[Scene](scene-3d.md) for its source/runtime boundary. There is no runtime-generated UI, automatic
+3D Space uses `apps/3d-space/`, `packages/scene-domain/` and `packages/local-server/src/scene/` for
+its React viewport, portable scene contracts and backend revisions/imports/builds. See
+[3D Space](3d-space.md) for its source/runtime boundary. There is no runtime-generated UI, automatic
 custom app build manager, multi-agent coordinator or generic domain editing SDK.
 
 The [shared local library](library.md) belongs to a Workspace. `packages/library-react/` provides
@@ -131,7 +131,7 @@ selection and creation. A selected workspace has URL `/apps/video-editor/w/<work
 selects independently. `/` lists hosted apps, and `GET /api/apps` returns their IDs and names.
 
 The backend embeds Vite in development. `pnpm build` writes the Video Editor frontend to
-`skills/codex-ux-video-editor/dist/` and `skills/codex-ux-scene-3d/dist/` and generates the
+`skills/codex-ux-video-editor/dist/` and `skills/codex-ux-3d-space/dist/` and generates the
 Workspace skill's source runtime bundle. `pnpm start` serves that build. These distribution
 artifacts are committed and verified by CI; other build output remains ignored. Installed skills run
 without a repository checkout or frontend build. See [skills](skills.md) for installation, cache

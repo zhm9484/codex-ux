@@ -49,7 +49,7 @@ export function useScene(id: string, instance: BrowserAppInstance, candidate: st
   const [objects, setObjects] = useState<VisibleObject[]>([]);
   const [session, setSession] = useState(() => instance.session(id));
   const [pairing, setPairing] = useState(instance.connections?.connection ?? null);
-  const base = `/workspaces/${id}/apps/scene-3d`;
+  const base = `/workspaces/${id}/apps/3d-space`;
   const contextPath = candidate ? `${base}/requests/${candidate}/preview` : `${base}/context`;
   const editable =
     !candidate &&
