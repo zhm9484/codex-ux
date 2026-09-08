@@ -5,10 +5,10 @@ import { createVideo } from './browser-helpers.ts';
 import type { CollaborationTarget } from '../packages/protocol/src/index.ts';
 
 async function connection(page: Page) {
-  if (!(await page.getByRole('button', { name: 'Configure Codex connection' }).isVisible()))
-    await page.getByRole('button', { name: 'Notes', exact: true }).click();
+  if (!(await page.getByRole('dialog', { name: 'Agent connection' }).isVisible()))
+    await page.getByRole('button', { name: 'Agent connection' }).click();
   if (!(await page.getByRole('textbox', { name: 'Session ID or task link' }).isVisible()))
-    await page.getByRole('button', { name: 'Configure Codex connection' }).click();
+    await page.getByText('Use a task ID or link', { exact: true }).click();
   return page.getByRole('textbox', { name: 'Session ID or task link' });
 }
 async function bind(page: Page, sessionId: string) {
@@ -17,8 +17,8 @@ async function bind(page: Page, sessionId: string) {
   await expect(page.getByText('Codex session saved', { exact: true })).toBeVisible();
 }
 async function select(page: Page, name: string) {
-  if (await page.getByRole('button', { name: 'Close panel' }).isVisible())
-    await page.getByRole('button', { name: 'Close panel' }).click();
+  if (await page.getByRole('button', { name: 'Close agent connection' }).isVisible())
+    await page.getByRole('button', { name: 'Close agent connection' }).click();
   await page.getByRole('button', { name: 'Select workspace' }).click();
   await page.locator('.workspace-option').filter({ hasText: name }).click();
   await expect(page.getByRole('button', { name: 'Select workspace' })).toContainText(name);
@@ -109,7 +109,8 @@ test('sending captures the current instance and session before switching workspa
     await pending;
     await route.fulfill({ json: { requestId: randomUUID() } });
   });
-  await page.getByRole('button', { name: 'Send 1 note to Codex' }).click();
+  await page.getByRole('button', { name: 'Close agent connection' }).click();
+  await page.getByRole('button', { name: 'Send all' }).click();
   const body = await captured;
   try {
     await select(page, second.name);

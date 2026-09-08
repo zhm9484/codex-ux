@@ -77,7 +77,7 @@ test('page code supports deliberate takeover and workspace changes cancel the re
   const video = await createVideo(request, 'Page pairing');
   const other = await createVideo(request, 'Other pairing workspace');
   await page.goto(`/apps/video-editor/w/${video.workspaceId}`);
-  await page.getByRole('button', { name: 'Notes', exact: true }).click();
+  await page.getByRole('button', { name: 'Agent connection', exact: true }).click();
   await page.getByRole('button', { name: 'Connect current agent' }).click();
   const code = await page.getByLabel('Give this connection code to your agent').inputValue();
   const session = { provider: 'codex', sessionId: randomUUID() };
@@ -102,9 +102,9 @@ test('page code supports deliberate takeover and workspace changes cancel the re
       })
     ).ok(),
   ).toBe(true);
-  await expect(page.getByText(`Task: ${replacement.sessionId}`)).toBeVisible();
+  await expect(page.getByText(replacement.sessionId)).toBeVisible();
   // The existing workspace picker changes the selected page, not a global binding.
-  await page.getByRole('button', { name: 'Close panel' }).click();
+  await page.getByRole('button', { name: 'Close agent connection' }).click();
   await page.getByRole('button', { name: 'Select workspace' }).click();
   await page.getByRole('button', { name: 'Other pairing workspace', exact: true }).click();
   await expect

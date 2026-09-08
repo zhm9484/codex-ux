@@ -1,3 +1,5 @@
+import { EditorModals } from './editor-modals';
+import { NotesBoard } from '../panels/notes';
 import { NotePopover } from '../components/note-popover';
 import { ToolIsland } from './tool-island';
 import { useFullscreen } from '../hooks/use-fullscreen';
@@ -50,7 +52,7 @@ export function Editor({ id, workspaces, onSelect }: EditorProps) {
     dragDepth.current = 0;
     setDragging(false);
     state.control.current?.pause();
-    state.setPanel('assets');
+    state.setModal('files');
     try {
       for (const file of Array.from(event.dataTransfer.files)) await state.upload(file);
     } catch (error) {
@@ -64,7 +66,7 @@ export function Editor({ id, workspaces, onSelect }: EditorProps) {
       onPointerDown={(event) => {
         if (
           !(event.target as Element).closest(
-            'button,input,textarea,select,.chat-dock,.side-panel,.timeline-navigation,.element-timeline,.stage-section,.context-tools,.text-selection,.canvas-menu',
+            'dialog,.notes-board,button,input,textarea,select,.chat-dock,.side-panel,.timeline-navigation,.element-timeline,.stage-section,.context-tools,.text-selection,.canvas-menu',
           )
         )
           state.clearSelection();
@@ -90,6 +92,9 @@ export function Editor({ id, workspaces, onSelect }: EditorProps) {
       onDrop={(event) => void drop(event)}
     >
       <Header
+        onAgent={() => state.setModal('agent')}
+        onFiles={() => state.setModal('files')}
+        connected={!!state.session}
         project={project}
         workspaces={workspaces}
         saving={state.saving}
@@ -223,6 +228,8 @@ export function Editor({ id, workspaces, onSelect }: EditorProps) {
           <NotePopover point={state.notePoint} onNote={state.openNotes} />
         )}
       <SidePanel state={state} />
+      <NotesBoard state={state} />
+      <EditorModals state={state} />
       {dragging && (
         <div className="drop-overlay">
           <Upload size={28} />

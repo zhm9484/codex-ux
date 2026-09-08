@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
-import { ArrowUp, MessageSquare } from 'lucide-react';
+import { ArrowUp, MessageSquare, Plus } from 'lucide-react';
 import type { FeedbackAnchor } from '@codex-ux/protocol';
 import { formatTime, type VideoIntent } from '@codex-ux/video-domain';
 import type { EditorState } from '../hooks/use-editor';
-import { IconButton } from '../components/ui';
+import { api, post, videoPath } from '../lib/api';
+import type { VideoProject } from '@codex-ux/video-domain';
 
 export function FeedbackComposer({ state }: { state: EditorState }) {
   const [text, setText] = useState('');
@@ -12,6 +13,14 @@ export function FeedbackComposer({ state }: { state: EditorState }) {
     null,
   );
   const anchor = reference?.anchor ?? state.anchor;
+  const draftId = useRef<string | null>(null);
+  const draftPayload = useRef<{ text: string; anchor: FeedbackAnchor; intent: VideoIntent } | null>(
+    null,
+  );
+  const busyRef = useRef(false);
+  const [busy, setBusy] = useState(false);
+  const [attempted, setAttempted] = useState(false);
+  const [draftError, setDraftError] = useState('');
   const [saved, setSaved] = useState(false);
   const input = useRef<HTMLTextAreaElement>(null);
   const count = state.project?.notes.filter((note) => !note.requestId).length ?? 0;
@@ -24,15 +33,66 @@ export function FeedbackComposer({ state }: { state: EditorState }) {
     const timer = setTimeout(() => setSaved(false), 2000);
     return () => clearTimeout(timer);
   }, [saved]);
-  async function save() {
-    if (!text.trim() || !state.displayedRevision) return;
-    if (await state.addNote(text, anchor, intent)) {
-      setText('');
-      setIntent({ kind: 'change' });
-      setReference(null);
-      setSaved(true);
-      state.clearSelection();
+  function reset() {
+    setText('');
+    setIntent({ kind: 'change' });
+    setReference(null);
+    draftId.current = null;
+    draftPayload.current = null;
+    setAttempted(false);
+    state.clearSelection();
+  }
+  async function persist(send: boolean) {
+    if (!text.trim() || !state.displayedRevision || busyRef.current) return;
+    busyRef.current = true;
+    setBusy(true);
+    setAttempted(true);
+    setDraftError('');
+    draftId.current ??= crypto.randomUUID();
+    draftPayload.current ??= { text, anchor, intent };
+    try {
+      const destination = send ? state.target() : undefined;
+      const project = await post<VideoProject>(`${videoPath(state.project!.workspaceId)}/notes`, {
+        id: draftId.current,
+        ...draftPayload.current,
+      });
+      const note = project.notes.find((note) => note.id === draftId.current)!;
+      if (note.requestId) {
+        setDraftError(
+          'This draft already has a submission. Check Notes history for its delivery status.',
+        );
+        await state.refresh();
+        return;
+      }
+      if (text.trim() !== note.text) {
+        await api(`${videoPath(state.project!.workspaceId)}/notes/${note.id}`, {
+          method: 'PATCH',
+          body: JSON.stringify({ text, previousText: draftPayload.current.text.trim() }),
+        });
+        draftPayload.current.text = text;
+      }
+      if (send) {
+        if (await state.sendNotes([note.id], destination)) reset();
+      } else {
+        await state.refresh();
+        state.setNotesOpen(true);
+        setSaved(true);
+        reset();
+      }
+    } catch (error) {
+      setDraftError(error instanceof Error ? error.message : 'Could not save your draft.');
+    } finally {
+      busyRef.current = false;
+      setBusy(false);
     }
+  }
+  function sendNow() {
+    if (!state.session) {
+      state.setConnectionAction(() => async () => {
+        await persist(true);
+      });
+      state.setModal('agent');
+    } else void persist(true);
   }
   return (
     <div className="feedback-dock">
@@ -40,7 +100,7 @@ export function FeedbackComposer({ state }: { state: EditorState }) {
         className={`feedback-composer ${anchored ? 'has-anchor' : ''}`}
         onSubmit={(event) => {
           event.preventDefault();
-          void save();
+          void persist(false);
         }}
       >
         {anchored && (
@@ -70,6 +130,7 @@ export function FeedbackComposer({ state }: { state: EditorState }) {
           Request
           <select
             aria-label="Request kind"
+            disabled={busy || attempted}
             value={intent.kind}
             onChange={(event) =>
               setIntent(
@@ -86,6 +147,7 @@ export function FeedbackComposer({ state }: { state: EditorState }) {
             Duration (seconds, optional)
             <input
               aria-label="Transition duration"
+              disabled={busy || attempted}
               type="number"
               min="0.01"
               max="60"
@@ -106,6 +168,7 @@ export function FeedbackComposer({ state }: { state: EditorState }) {
           aria-label="Feedback note"
           placeholder="Describe a change, or point to something…"
           value={text}
+          disabled={busy}
           rows={1}
           maxLength={4000}
           onFocus={() => {
@@ -113,11 +176,13 @@ export function FeedbackComposer({ state }: { state: EditorState }) {
             if (!reference || (!text && reference.focus !== state.feedbackFocus))
               setReference({ anchor: state.anchor, focus: state.feedbackFocus });
           }}
-          onChange={(event) => setText(event.target.value)}
+          onChange={(event) => {
+            setText(event.target.value);
+          }}
           onKeyDown={(event) => {
             if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) {
               event.preventDefault();
-              void save();
+              void persist(false);
             }
           }}
         />
@@ -126,26 +191,45 @@ export function FeedbackComposer({ state }: { state: EditorState }) {
             type="button"
             className="notes-trigger"
             aria-label="Notes"
-            onClick={() => state.setPanel(state.panel === 'notes' ? null : 'notes')}
+            onClick={() => state.setNotesOpen(!state.notesOpen)}
           >
             <MessageSquare size={15} />
             <span>{saved ? 'Note saved' : count ? `${count} to send` : 'Notes'}</span>
             {count > 0 && <span className="unread-dot" />}
           </button>
-          <IconButton
+          <button
             type="submit"
-            label="Save note"
-            className="save-note-button"
-            disabled={!text.trim() || state.saving || !state.displayedRevision}
+            className="secondary-button"
+            aria-label="Add note to list"
+            disabled={
+              !text.trim() || state.saving || busy || state.sending || !state.displayedRevision
+            }
           >
-            <ArrowUp size={18} />
-          </IconButton>
+            <Plus size={15} />
+            Add
+          </button>
+          <button
+            type="button"
+            className="primary-button"
+            onClick={sendNow}
+            disabled={
+              !text.trim() || state.saving || busy || state.sending || !state.displayedRevision
+            }
+          >
+            <ArrowUp size={15} />
+            {busy ? 'Sending…' : 'Send now'}
+          </button>
         </div>
+        {(draftError || state.deliveryError) && (
+          <p role="alert" className="inline-error">
+            {draftError || state.deliveryError}
+          </p>
+        )}
       </form>
       <span className="composer-hint">
         {state.marking
           ? 'Draw on the frame to mark a detail.'
-          : 'Your notes stay here until you send them to Codex.'}
+          : 'Send this draft now, or add it to your notes for later.'}
       </span>
     </div>
   );

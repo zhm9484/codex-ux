@@ -96,7 +96,7 @@ test('native projects preserve runtime dependencies, UI edits and drafts through
     await expect(frame().locator('#root')).toHaveCSS('background-color', 'rgb(239, 237, 244)');
     expect(updated.notes[0]!.anchor.revisionId).toBe(original.revisionId);
     await page.screenshot({ path: '.codex-ux/native-preview.png' });
-    await page.getByRole('button', { name: 'Save note' }).click();
+    await page.getByRole('button', { name: 'Add note to list' }).click();
     expect((await read()).notes.at(-1)!.anchor.revisionId).toBe(current.revisionId);
     await writeFile(join(source.directory, 'app.js'), 'throw new Error("Broken external script");');
     await expect(page.locator('.preview-error')).toBeVisible({ timeout: 18000 });

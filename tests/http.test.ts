@@ -93,6 +93,38 @@ void test('HTTP rejects cross-origin writes, stale edits and cross-workspace ref
       ).status,
       404,
     );
+    const noteId = randomUUID();
+    const draft = {
+      id: noteId,
+      text: 'Original draft',
+      intent: { kind: 'change' },
+      anchor: { revisionId: first.revisionId, start: 0, end: 1 },
+    };
+    assert.equal((await post(base + '/notes', draft)).status, 200);
+    const replay = await post(base + '/notes', draft);
+    assert.equal(
+      ((await replay.json()) as VideoProject).notes.filter((note) => note.id === noteId).length,
+      1,
+    );
+    assert.equal(
+      (await post(base + '/notes', { ...draft, text: 'Conflicting replay' })).status,
+      409,
+    );
+    const edit = (text: string, previousText: string) =>
+      fetch(origin + base + '/notes/' + noteId, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text, previousText }),
+      });
+    assert.equal((await edit('Edited draft', 'Original draft')).status, 200);
+    assert.equal((await edit('Stale draft', 'Original draft')).status, 409);
+    const files = await fetch(origin + `/api/workspaces/${first.workspaceId}/files?path=video`);
+    assert.equal(files.status, 200);
+    assert.ok(
+      ((await files.json()) as { entries: { name: string }[] }).entries.some(
+        (entry) => entry.name === 'index.html',
+      ),
+    );
     const change = {
       requestId: randomUUID(),
       baseRevision: first.revisionId,

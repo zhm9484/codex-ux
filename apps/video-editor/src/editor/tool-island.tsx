@@ -1,16 +1,7 @@
-import {
-  MessageCircle,
-  StickyNote,
-  Maximize,
-  Minimize,
-  GripHorizontal,
-  FolderOpen,
-  Image,
-} from 'lucide-react';
+import { MessageCircle, StickyNote, Maximize, Minimize, GripHorizontal } from 'lucide-react';
 import type { EditorState } from '../hooks/use-editor';
 import { useIslandPosition } from '../hooks/use-island-position';
 import { IconButton } from '../components/ui';
-import type { Panel } from './types';
 export function ToolIsland({
   state,
   fullscreen,
@@ -21,13 +12,6 @@ export function ToolIsland({
   onFullscreen: () => void;
 }) {
   const { ref: islandRef, handlers } = useIslandPosition();
-  function panel(name: Panel, event: React.MouseEvent<HTMLElement>) {
-    const rect = event.currentTarget.getBoundingClientRect();
-    const left = rect.right + 12 < window.innerWidth - 350 ? rect.right + 12 : rect.left - 350;
-    state.setPanelAnchor({ left, top: rect.top - 10, bottom: rect.top - 10 });
-    state.setChatOpen(false);
-    state.setPanel(state.panel === name ? null : name);
-  }
   return (
     <div
       ref={islandRef}
@@ -56,23 +40,12 @@ export function ToolIsland({
       </IconButton>
       <IconButton
         data-panel-trigger
-        className={state.panel === 'notes' ? 'active' : ''}
+        className={state.notesOpen ? 'active' : ''}
         label="Notes"
-        onClick={(event) => panel('notes', event)}
+        onClick={() => state.setNotesOpen(!state.notesOpen)}
       >
         <StickyNote size={18} />
         {state.project?.notes.some((note) => !note.requestId) && <span className="island-dot" />}
-      </IconButton>
-      <span className="island-divider" />
-      <IconButton
-        data-panel-trigger
-        label="Video source"
-        onClick={(event) => panel('source', event)}
-      >
-        <FolderOpen size={17} />
-      </IconButton>
-      <IconButton data-panel-trigger label="Assets" onClick={(event) => panel('assets', event)}>
-        <Image size={17} />
       </IconButton>
       <span className="island-divider" />
       <IconButton label={fullscreen ? 'Exit fullscreen' : 'Fullscreen'} onClick={onFullscreen}>

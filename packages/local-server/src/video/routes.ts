@@ -109,8 +109,24 @@ export async function videoApi(
   }
   if (rest === '/notes' && method === 'POST') {
     const body = z
-      .strictObject({ text: z.string().trim().min(1).max(4000), anchor, intent: intentSchema })
+      .strictObject({
+        id: z.string().uuid().optional(),
+        text: z.string().trim().min(1).max(4000),
+        anchor,
+        intent: intentSchema,
+      })
       .parse(await readJson(req));
+    const existing = body.id && s.store.get(id).notes.find((note) => note.id === body.id);
+    if (existing) {
+      if (
+        existing.text !== body.text ||
+        JSON.stringify(existing.anchor) !== JSON.stringify(body.anchor) ||
+        JSON.stringify(existing.intent) !== JSON.stringify(body.intent)
+      )
+        throw new HttpError(409, 'This note ID already belongs to another draft.');
+      json(res, s.store.get(id));
+      return;
+    }
     const revision = s.store.revision(id, body.anchor.revisionId);
     if (body.anchor.end > revision.document.duration)
       throw new HttpError(400, 'The note is outside its video revision.');
@@ -118,13 +134,26 @@ export async function videoApi(
       .database(id)
       .prepare('INSERT INTO notes VALUES(?,?,?,?,?,?)')
       .run(
-        randomUUID(),
+        body.id ?? randomUUID(),
         body.text,
         JSON.stringify(body.anchor),
         JSON.stringify(body.intent),
         new Date().toISOString(),
         null,
       );
+    json(res, s.store.get(id));
+    return;
+  }
+  if (rest.startsWith('/notes/') && method === 'PATCH') {
+    const { text, previousText } = z
+      .strictObject({ text: z.string().trim().min(1).max(4000), previousText: z.string() })
+      .parse(await readJson(req));
+    const result = s.store
+      .database(id)
+      .prepare('UPDATE notes SET text=? WHERE id=? AND text=? AND request_id IS NULL')
+      .run(text, rest.slice(7), previousText);
+    if (!result.changes)
+      throw new HttpError(409, 'This note was changed, sent or removed. Refresh before editing.');
     json(res, s.store.get(id));
     return;
   }

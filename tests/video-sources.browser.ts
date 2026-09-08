@@ -94,7 +94,8 @@ test('Remotion source updates, seeks, compares immutable builds, recovers from e
       await imageGate;
       await route.continue();
     });
-    await page.getByRole('button', { name: 'Video source', exact: true }).click();
+    await page.getByRole('button', { name: 'Workspace files', exact: true }).click();
+    await page.getByRole('tab', { name: 'Import', exact: true }).click();
     await page.getByRole('textbox', { name: 'Source path' }).fill(directory);
     await page.getByRole('button', { name: 'Import source', exact: true }).click();
     await expect
@@ -146,7 +147,7 @@ test('Remotion source updates, seeks, compares immutable builds, recovers from e
     const second = await read(request, initial.workspaceId);
     await displayed(page, second);
     await expect(frame.locator('#message')).toHaveText('Updated composition');
-    await page.getByRole('button', { name: 'Save note', exact: true }).click();
+    await page.getByRole('button', { name: 'Add note to list', exact: true }).click();
     await expect.poll(async () => (await read(request, initial.workspaceId)).notes.length).toBe(1);
     const note = (await read(request, initial.workspaceId)).notes[0]!;
     expect(note.anchor.revisionId).toBe(first.revisionId);
@@ -269,7 +270,8 @@ test('direct video replacement keeps seconds, audio, old notes, original export 
     const initial = await createVideo(request, 'Direct video');
     await page.goto(`/apps/video-editor/w/${initial.workspaceId}`);
     await displayed(page, initial);
-    await page.getByRole('button', { name: 'Video source', exact: true }).click();
+    await page.getByRole('button', { name: 'Workspace files', exact: true }).click();
+    await page.getByRole('tab', { name: 'Import', exact: true }).click();
     await page.getByLabel('Replace video').setInputFiles(firstFile);
     await expect
       .poll(async () => (await read(request, initial.workspaceId)).revision.document.source.kind)
@@ -293,7 +295,8 @@ test('direct video replacement keeps seconds, audio, old notes, original export 
         anchor: { revisionId: first.revisionId, start: 0.5, end: 1.5 },
       },
     });
-    await page.getByRole('button', { name: 'Video source', exact: true }).click();
+    await page.getByRole('button', { name: 'Workspace files', exact: true }).click();
+    await page.getByRole('tab', { name: 'Import', exact: true }).click();
     await page.getByLabel('Replace video').setInputFiles(secondFile);
     await expect
       .poll(async () => (await read(request, initial.workspaceId)).revision.document.width)
