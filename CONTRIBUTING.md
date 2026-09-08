@@ -5,11 +5,32 @@ English for issues, pull requests and review discussions so more people can part
 languages are welcome when needed. Repository content, including documentation, comments and UI
 copy, must be in English.
 
+## Visual summaries for issues and pull requests
+
+Agents must start every issue and PR body with a `## Summary` section combining brief text with a
+clear visual explanation. This also applies to blank issues and draft PRs. Human contributors may
+use their judgment about whether to include this section and its visual.
+
+Choose the smallest view that makes the point clear, and place it next to the text it supports.
+Explain the problem or use case, what is being proposed or changed, and the intended or observed
+result so readers can understand the contribution quickly. For bugs and questions, show actual
+versus expected behavior or the point of uncertainty; a solution is not required. Distinguish
+proposed behavior from verified results.
+
+- Use a screenshot or annotated before/after comparison for visible UI changes.
+- Use a Mermaid diagram for interactions, control flow or data flow.
+- Use a short pseudocode block, call tree, component/file tree or focused diff for logic, structure
+  or documentation changes.
+
+Keep labels concrete and omit unrelated detail. Render the visual directly in the GitHub body using
+GitHub-supported Markdown: Mermaid fenced blocks, code/diff fenced blocks or Markdown images. Do not
+use HTML for the Summary or its visuals. A local artifact or external link alone is not enough.
+
 ## Opening an issue
 
 Search existing issues before opening a new one. Use the general issue template for most reports,
 questions and proposals. Adapt or omit sections that do not apply; a blank issue is available when
-the template does not fit.
+the template does not fit. Agents must retain the Summary requirement above in either format.
 
 Describe the problem or use case and the result you expected. For bugs, include reproduction steps,
 actual behavior and relevant environment details. For proposals, explain the current limitation and
@@ -42,9 +63,10 @@ declared in the repository, and update the lockfile when dependencies change.
   [runtime and app builds](docs/canonical/architecture.md#runtime-and-app-builds).
 - Keep credentials, user projects and generated media out of Git, and respect third-party licenses.
 
-Use the PR template to explain the problem, resulting behavior and validation. Link related issues
-when available; an issue is not required for every PR. Include screenshots or a short demonstration
-for UI changes. Draft PRs are welcome for work that needs early feedback.
+Use the PR template and the Summary guidance above to explain the problem, resulting behavior and
+validation. Link related issues when available; an issue is not required for every PR. Include
+screenshots or a short demonstration for UI changes. Draft PRs are welcome for work that needs early
+feedback.
 
 AI-assisted contributions are welcome. The contributor is responsible for understanding the change,
 checking its results and responding to review. Full AI conversation logs are not required.

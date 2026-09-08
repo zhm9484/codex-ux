@@ -1,8 +1,13 @@
 <!-- Prefer English. Keep the description proportional to the change. -->
 
-## Problem and change
+## Summary
 
-<!-- What problem does this solve, and what is the resulting behavior? Link related issues if any.
+<!-- Agents: this section and a visual are mandatory, including draft PRs. Humans: use your judgment.
+Explain the problem, change and resulting behavior in brief text alongside a clear visual.
+Use the smallest useful view: screenshot/before-after, Mermaid diagram, pseudocode,
+call/component/file tree or focused diff. Use only GitHub-renderable Markdown (including Mermaid,
+fenced code/diffs or Markdown images), never HTML. Embed it here so readers can understand quickly.
+See CONTRIBUTING.md#visual-summaries-for-issues-and-pull-requests. Link related issues if any.
 For UI changes, include screenshots or a short demonstration. -->
 
 ## Validation

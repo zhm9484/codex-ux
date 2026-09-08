@@ -27,7 +27,11 @@ description:
    ```
 
 5. Push with `git push -u origin <branch>` and open the PR with `gh pr create`. Use a concise
-   Conventional Commit-style title; summarize the change and list the checks run in the PR body.
+   Conventional Commit-style title. Start the PR body with `## Summary`: brief text and an embedded
+   visual explaining the problem, change and result, as required by
+   [Contributing](../../../CONTRIBUTING.md#visual-summaries-for-issues-and-pull-requests). Use only
+   GitHub-renderable Markdown for the Summary and visual, never HTML. Use the PR template for
+   validation and documentation impact, and list the checks run.
 6. Return the commit hash and PR URL.
 
 Never commit credentials, force-push, bypass hooks, or include unrelated changes. Do not push or

@@ -17,5 +17,8 @@ Research, proposals, and historical context belong in [non-canonical](../non-can
 
 For contribution workflow and review policy, see [Contributing](../../CONTRIBUTING.md). Most issues
 use the general template, with free-form issues available when needed. PRs use a concise template
-covering the change, validation and documentation impact. English is preferred for discussions and
-required for repository content.
+covering the summary, validation and documentation impact. Agents must begin every issue and PR with
+a Summary combining brief text and a clear visual, including blank issues and draft PRs; human
+contributors may use their judgment. Summaries use GitHub-renderable Markdown, never HTML. See the
+[visual summary guidance](../../CONTRIBUTING.md#visual-summaries-for-issues-and-pull-requests).
+English is preferred for discussions and required for repository content.
