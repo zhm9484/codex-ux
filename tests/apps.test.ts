@@ -9,7 +9,7 @@ import { validateApps } from '../packages/local-server/src/apps.ts';
 void test('multiple external app bundles share a workspace directory without copying their code into it', async () => {
   const root = await mkdtemp(join(tmpdir(), 'codex-ux-apps-'));
   const data = join(root, 'data');
-  const port = 38000 + (process.pid % 10000);
+  const port = 0;
   const apps = ['first-app', 'second-app'].map((id) => ({
     id,
     name: id,
@@ -21,7 +21,7 @@ void test('multiple external app bundles share a workspace directory without cop
     await writeFile(join(app.distDirectory, 'app.js'), `export const appId = '${app.id}';`);
   }
   const server = await startServer(data, port, false, apps);
-  const origin = `http://127.0.0.1:${port}`;
+  const { origin } = server;
   try {
     assert.deepEqual(
       await (await fetch(`${origin}/api/apps`)).json(),

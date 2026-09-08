@@ -1,12 +1,27 @@
-import { mkdir, open, readFile, rm, writeFile } from 'node:fs/promises';
+import { mkdir, open, readFile, rename, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { dataRoot, port, origin } from './config.ts';
+import { dataRoot, port } from './config.ts';
 import { startServer } from './server.ts';
 
 await mkdir(dataRoot, { recursive: true });
 const lock = join(dataRoot, 'service.lock');
+let savedPort = 0;
 try {
-  const info = (await fetch(`${origin}/api/health`).then((r) => r.json())) as {
+  const saved = JSON.parse(await readFile(join(dataRoot, 'runtime.json'), 'utf8')) as {
+    origin: string;
+  };
+  const url = new URL(saved.origin);
+  if (
+    url.protocol !== 'http:' ||
+    url.hostname !== '127.0.0.1' ||
+    url.origin !== saved.origin ||
+    !url.port
+  )
+    throw new Error('Invalid saved service origin.');
+  savedPort = Number(url.port);
+  const info = (await fetch(`${saved.origin}/api/health`, {
+    signal: AbortSignal.timeout(1500),
+  }).then((r) => r.json())) as {
     service?: string;
     version?: number;
     dataRoot?: string;
@@ -18,11 +33,11 @@ try {
     info.dataRoot === dataRoot &&
     info.runtimeBuild === (process.env.CODEX_UX_RUNTIME_BUILD ?? 'development')
   ) {
-    console.log(`Codex UX is already running at ${origin}`);
+    console.log(`Codex UX is already running at ${saved.origin}`);
     process.exit(0);
   }
 } catch {
-  /* First launch. */
+  /* Missing, stale or unavailable runtime; the PID lock still protects a live service. */
 }
 try {
   const old = Number(await readFile(lock, 'utf8'));
@@ -42,12 +57,25 @@ const handle = await open(lock, 'wx');
 await handle.writeFile(String(process.pid));
 await handle.close();
 try {
-  const app = await startServer(dataRoot, port, process.argv.includes('--dev'));
-  await writeFile(
-    join(dataRoot, 'runtime.json'),
-    JSON.stringify({ origin, pid: process.pid, dataRoot }, null, 2),
+  const dev = process.argv.includes('--dev');
+  const app = await startServer(dataRoot, port || savedPort, dev).catch((error: unknown) => {
+    if (
+      port === 0 &&
+      savedPort &&
+      error instanceof Error &&
+      'code' in error &&
+      error.code === 'EADDRINUSE'
+    )
+      return startServer(dataRoot, 0, dev);
+    throw error;
+  });
+  const { origin } = app;
+  const stagedRuntime = join(dataRoot, `.runtime-${process.pid}.json`);
+  await writeFile(stagedRuntime, JSON.stringify({ origin, pid: process.pid, dataRoot }, null, 2));
+  await rename(stagedRuntime, join(dataRoot, 'runtime.json'));
+  console.log(
+    `Codex UX · ${origin}\n${app.apps.map((hosted) => `${hosted.name} · ${origin}/apps/${hosted.id}/`).join('\n')}\nLocal data · ${dataRoot}`,
   );
-  console.log(`Codex UX · ${origin}\nLocal data · ${dataRoot}`);
   let closing = false;
   const close = () => {
     if (closing) return;

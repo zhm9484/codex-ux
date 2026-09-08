@@ -37,8 +37,9 @@ pnpm install
 pnpm dev
 ```
 
-Open <http://127.0.0.1:5173/apps/video-editor/>. Run `pnpm check` to verify formatting, lint, types,
-tests and production builds. Use `pnpm format` to format files.
+Open the Video Editor URL printed by the service; its port is selected automatically. Run
+`pnpm check` to verify formatting, lint, types, tests and production builds. Use `pnpm format` to
+format files.
 
 ## Structure
 

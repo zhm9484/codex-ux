@@ -30,16 +30,43 @@ node "$WORKSPACE_SKILL/scripts/workspace.ts" create --name "My project"
 
 `start` verifies and caches the app's bundled web files, prepares pinned dependencies and Chromium
 when needed, registers the app, and starts or reuses a matching service. It returns JSON with the
-actual origin and app URL. Use that origin throughout the task. Reuse the user's specified
-Workspace; create one for a new work item when appropriate. Do not silently choose a similarly named
-Workspace. Creating a Workspace does not initialize any app's document. Read the relevant app skill
-for that step.
+actual origin and app URL. Use that origin throughout the task; never assume a fixed port. Startup
+automatically selects an available port, preferring the last successful one on restart. Use `--port`
+or `CODEX_UX_PORT` only when a fixed port is needed (`0` restores automatic selection). Reuse the
+user's specified Workspace; create one for a new work item when appropriate. Do not silently choose
+a similarly named Workspace. Creating a Workspace does not initialize any app's document. Read the
+relevant app skill for that step.
 
 The default data root is `~/.codex-ux/`; runtime dependencies are cached separately under
 `~/.cache/codex-ux/`. `CODEX_UX_DATA_DIR`, `CODEX_UX_CACHE_DIR`, `CODEX_UX_PORT`, and
 `CODEX_UX_CHROME` override these defaults. Pass the same data root to later launcher commands. Keep
 user content out of skill installation directories. Never edit app-private databases, blobs, or
 prepared previews. Get actual working paths through `GET /api/workspaces/:id` and app APIs.
+
+## Get a usable service address
+
+Use `start --app "$APP_SKILL/app.json"` as the normal entry point. It is idempotent: it starts a
+service if needed or reuses a matching live one, then returns verified `origin`, `apiBase`, and
+`url`. Do not ask the user for a port or read/edit `runtime.json` manually.
+
+To recover the address later without starting anything:
+
+```sh
+node "$WORKSPACE_SKILL/scripts/workspace.ts" locate
+```
+
+Keep the same `--data-dir` or `CODEX_UX_DATA_DIR` across calls. Success is JSON on stdout with
+`state: "ready"`; discovery failures exit nonzero and emit JSON on stderr with `error.code`, the
+exact data root, and recovery instructions/command arguments. For `service_not_started`,
+`service_unreachable`, `service_record_invalid`, or `service_mismatch`, run `start` once for that
+same root (include the intended app manifest), then use the newly returned address. If the same
+failure persists, report the code and log path; do not guess ports, scan directories, or silently
+switch to another data root. For `runtime_mismatch` or `service_restart_required`, review the live
+service and matching skill versions before restarting; do not automatically kill it.
+
+If an HTTP operation fails after a restart, run `locate` and refresh the address. Retry a read with
+the new origin; for a mutation, check its recorded result before retrying to avoid duplicates. Never
+reuse an old pairing code after a service restart; request a fresh one.
 
 ## Connect this conversation
 

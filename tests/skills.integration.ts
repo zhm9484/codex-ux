@@ -27,7 +27,7 @@ void test(
       CODEX_UX_DATA_DIR: data,
       CODEX_UX_CACHE_DIR: process.env.CODEX_UX_CACHE_DIR ?? join(directory, 'cache'),
       CODEX_THREAD_ID: task,
-      CODEX_UX_PORT: String(31000 + (process.pid % 10000)),
+      CODEX_UX_PORT: '0',
     };
     const run = async (...args: string[]) => {
       const result = await execute(
@@ -54,6 +54,11 @@ void test(
       await cp(resolve('skills/codex-ux-video-editor'), videoSkill, { recursive: true });
       const started = await run('start', '--app', join(videoSkill, 'app.json'));
       const origin = started.origin as string;
+      const located = await run('locate');
+      assert.equal(located.state, 'ready');
+      assert.equal(located.origin, origin);
+      assert.equal(located.apiBase, `${origin}/api`);
+      assert.equal(located.dataRoot, data);
       pid = (JSON.parse(await readFile(join(data, 'runtime.json'), 'utf8')) as { pid: number }).pid;
       const again = await run('start', '--app', join(videoSkill, 'app.json'));
       assert.equal(again.origin, origin);

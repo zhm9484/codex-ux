@@ -47,9 +47,24 @@ inputs to startup, so symlink and copy installations both work.
 
 The launcher starts a detached service with logs in `service.log`, or reuses a service with matching
 API version, runtime fingerprint, and data root. It returns the actual origin instead of requiring
-agents to assume a port. Runtime mismatches do not kill a live service or reset data: finish active
-work and stop that service normally before starting the updated skills. No automatic cache or
-Workspace garbage collection is supplied.
+agents to assume a port. The default is automatic OS allocation, with the last successful port
+preferred on restart when available. `--port` or `CODEX_UX_PORT` accepts `0` for automatic selection
+or 1024–65535 for a strict fixed port; an occupied explicit port fails promptly and logs the cause.
+Port overrides apply to new starts; a matching live service is reused at its current origin. Runtime
+mismatches do not kill a live service or reset data: finish active work and stop that service
+normally before starting the updated skills. No automatic cache or Workspace garbage collection is
+supplied.
+
+`start` is the agent's idempotent startup entry point and returns `state: "ready"`, `origin`,
+`apiBase`, and the app `url`. `locate` is read-only discovery with the same verified address fields.
+It checks loopback origin, service identity, data root, API version and runtime fingerprint. If the
+record changes during a failed health check, it retries discovery once at the new origin; it never
+replays an app operation. Discovery failures emit structured JSON on stderr (nonzero exit), with an
+error code, data root and recovery instructions/argv. Missing, invalid, stale or unreachable records
+direct the agent to start once for the same root. Version mismatches or an unusable live PID require
+review before restart. Agents must not guess ports, change roots to hide a failure or blindly retry
+mutations. The service publishes `runtime.json` through an atomic rename so readers cannot observe a
+partially written record.
 
 ## Connecting and creating video
 

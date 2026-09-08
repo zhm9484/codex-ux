@@ -10,9 +10,8 @@ import type { VideoProject } from '../packages/video-domain/src/schema.ts';
 
 void test('HTTP rejects cross-origin writes, stale edits and cross-workspace references', async () => {
   const root = await mkdtemp(join(tmpdir(), 'codex-ux-http-'));
-  const port = 24000 + (process.pid % 12000);
-  const app = await startServer(root, port);
-  const origin = `http://127.0.0.1:${port}`;
+  const app = await startServer(root, 0);
+  const { origin } = app;
   const post = (path: string, body: unknown) =>
     fetch(origin + path, {
       method: 'POST',
