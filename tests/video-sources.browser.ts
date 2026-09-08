@@ -94,10 +94,13 @@ test('Remotion source updates, seeks, compares immutable builds, recovers from e
       await imageGate;
       await route.continue();
     });
-    await page.getByRole('button', { name: 'Workspace files', exact: true }).click();
-    await page.getByRole('tab', { name: 'Import', exact: true }).click();
-    await page.getByRole('textbox', { name: 'Source path' }).fill(directory);
-    await page.getByRole('button', { name: 'Import source', exact: true }).click();
+    expect(
+      (
+        await request.post(`${base(initial.workspaceId)}/source`, {
+          data: { path: directory, baseRevision: initial.revisionId },
+        })
+      ).ok(),
+    ).toBe(true);
     await expect
       .poll(async () => (await read(request, initial.workspaceId)).revision.document.source.kind, {
         timeout: 45000,
@@ -132,7 +135,7 @@ test('Remotion source updates, seeks, compares immutable builds, recovers from e
       .toBeGreaterThan(30);
     await page.getByRole('button', { name: 'Pause', exact: true }).click();
     await page.getByRole('button', { name: 'Chat', exact: true }).click();
-    await page.getByRole('textbox', { name: 'Feedback note' }).fill('Crossfade into the next shot');
+    await page.getByRole('textbox', { name: 'Chat message' }).fill('Crossfade into the next shot');
     await page.getByRole('combobox', { name: 'Request kind' }).selectOption('transition');
     await page.getByRole('spinbutton', { name: 'Transition duration' }).fill('0.4');
     const working = (
@@ -270,9 +273,18 @@ test('direct video replacement keeps seconds, audio, old notes, original export 
     const initial = await createVideo(request, 'Direct video');
     await page.goto(`/apps/video-editor/w/${initial.workspaceId}`);
     await displayed(page, initial);
-    await page.getByRole('button', { name: 'Workspace files', exact: true }).click();
-    await page.getByRole('tab', { name: 'Import', exact: true }).click();
-    await page.getByLabel('Replace video').setInputFiles(firstFile);
+    expect(
+      (
+        await request.post(`${base(initial.workspaceId)}/source/media`, {
+          data: await readFile(firstFile),
+          headers: {
+            'Content-Type': 'video/mp4',
+            'X-File-Name': 'replacement.mp4',
+            'X-Base-Revision': (await read(request, initial.workspaceId)).revisionId,
+          },
+        })
+      ).ok(),
+    ).toBe(true);
     await expect
       .poll(async () => (await read(request, initial.workspaceId)).revision.document.source.kind)
       .toBe('media');
@@ -295,9 +307,18 @@ test('direct video replacement keeps seconds, audio, old notes, original export 
         anchor: { revisionId: first.revisionId, start: 0.5, end: 1.5 },
       },
     });
-    await page.getByRole('button', { name: 'Workspace files', exact: true }).click();
-    await page.getByRole('tab', { name: 'Import', exact: true }).click();
-    await page.getByLabel('Replace video').setInputFiles(secondFile);
+    expect(
+      (
+        await request.post(`${base(initial.workspaceId)}/source/media`, {
+          data: await readFile(secondFile),
+          headers: {
+            'Content-Type': 'video/mp4',
+            'X-File-Name': 'replacement.mp4',
+            'X-Base-Revision': (await read(request, initial.workspaceId)).revisionId,
+          },
+        })
+      ).ok(),
+    ).toBe(true);
     await expect
       .poll(async () => (await read(request, initial.workspaceId)).revision.document.width)
       .toBe(360);

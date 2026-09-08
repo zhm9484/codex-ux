@@ -1,4 +1,5 @@
-import { Download, Undo2, Redo2, History, Bot, FolderOpen } from 'lucide-react';
+import { LibraryIcon } from '@codex-ux/library-react';
+import { Download, Undo2, Redo2, History, Bot } from 'lucide-react';
 import type { VideoProject } from '@codex-ux/video-domain';
 import type { Workspace } from '@codex-ux/protocol';
 import { IconButton } from '../components/ui';
@@ -55,9 +56,14 @@ export function Header(p: HeaderProps) {
         >
           <History size={16} />
         </IconButton>
-        <IconButton label="Workspace files" onClick={p.onFiles}>
-          <FolderOpen size={17} />
-        </IconButton>
+        <button
+          className="agent-button library-header-button"
+          aria-label="Library"
+          onClick={p.onFiles}
+        >
+          <LibraryIcon />
+          <span>Library</span>
+        </button>
         <button className="agent-button" onClick={p.onAgent} aria-label="Agent connection">
           <Bot size={17} />
           <span>Agent</span>

@@ -29,6 +29,25 @@ bindings are page-owned, managed by the browser SDK. They have no workspace-glob
 Agent references use `{ provider, sessionId }`; the server currently accepts only
 `provider: "codex"`. The Codex adapter maps `sessionId` to the external task's `threadId`.
 
+## Workspace library
+
+The following routes are relative to `/workspaces/:id/library`; they are shared by all apps.
+
+| Method and path               | Behavior                                                                                           |
+| ----------------------------- | -------------------------------------------------------------------------------------------------- |
+| `GET`                         | Registered `LibrarySource[]`, including managed Workspace attachments                              |
+| `POST /sources`               | Register an absolute `{ path }` to a local directory or file; same-path registration is idempotent |
+| `DELETE /sources/:sourceId`   | Remove a location registration without deleting files or saved references                          |
+| `GET /browse?path=…`          | Local directory picker: canonical path, parent, bounded entries and truncation; defaults to home   |
+| `GET /search?q=…&source=…`    | Optional name/path query and source filter; `{ entries, truncated, unavailable }`                  |
+| `POST /references`            | Capture `{ sourceId, relativePath }` as a `LibraryReference` with absolute path and file metadata  |
+| `POST /uploads`               | Save raw bytes with percent-encoded `X-File-Name`, up to 100 MB; returns a reference               |
+| `GET /references/:id/content` | Validated file content, including byte-range playback; active formats download in a sandbox        |
+
+References are Workspace-scoped. Missing files/references return 404, changed reference contents
+409, and path escapes 403. Folder references identify a directory rather than a recursive snapshot.
+Read [Shared local library](library.md) for UI, storage, limits and reuse contracts.
+
 ## App-instance pairing
 
 The generic broker is shared by apps; no video document is involved. It stores transient receipts in
@@ -67,26 +86,30 @@ instructions and launcher commands are described in [skills](skills.md).
 
 The following paths are relative to `/workspaces/:id/apps/video-editor`.
 
-| Method and path                     | Behavior                                                                                               |
-| ----------------------------------- | ------------------------------------------------------------------------------------------------------ |
-| `POST` (base path)                  | Open/initialize a video project with `{}`                                                              |
-| `GET` (base path) or `GET /context` | VideoProject: workspace, title, revision/document, notes, history and source status                    |
-| `GET /revisions/:revisionId`        | Immutable historical document and file manifest                                                        |
-| `GET /source`                       | Absolute working directory and last scan error                                                         |
-| `POST /source`                      | Import `{ baseRevision, path }`, an absolute project directory or MP4/WebM file                        |
-| `POST /source/media`                | Replace from raw MP4/WebM bytes; `Content-Type`, percent-encoded `X-File-Name`, UUID `X-Base-Revision` |
-| `POST /revisions`                   | Commit `{ requestId, baseRevision, label, document }`                                                  |
-| `POST /undo` or `/redo`             | Move history using `{ baseRevision }`                                                                  |
-| `POST /notes`                       | Save `{ id?, text, anchor, intent }`; an identical optional UUID replay returns the existing note      |
-| `PATCH /notes/:noteId`              | Edit unsent text with `{ text, previousText }`; changed, removed or submitted notes return 409         |
-| `DELETE /notes/:noteId`             | Remove an unsubmitted note                                                                             |
-| `POST /assets`                      | Upload raw bytes with MIME Content-Type and percent-encoded `X-File-Name`                              |
-| `POST /requests`                    | Submit `{ noteIds, target: { instanceId, session: { provider, sessionId } } }`                         |
-| `GET /requests/:requestId`          | Submission snapshot, target, state and candidate paths                                                 |
-| `POST /requests/:requestId/publish` | Publish candidate with `{ label }`                                                                     |
-| `POST /requests/:requestId/error`   | Record `{ message }` on a request                                                                      |
-| `POST /exports`                     | Export `{ revisionId }`                                                                                |
-| `GET /exports/:jobId`               | Export result or error                                                                                 |
+| Method and path                     | Behavior                                                                                                                               |
+| ----------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| `POST` (base path)                  | Open/initialize a video project with `{}`                                                                                              |
+| `GET` (base path) or `GET /context` | VideoProject: workspace, title, revision/document, notes, history and source status                                                    |
+| `GET /revisions/:revisionId`        | Immutable historical document and file manifest                                                                                        |
+| `GET /source`                       | Absolute working directory and last scan error                                                                                         |
+| `POST /source`                      | Import `{ baseRevision, path }`, an absolute project directory or MP4/WebM file                                                        |
+| `POST /source/media`                | Replace from raw MP4/WebM bytes; `Content-Type`, percent-encoded `X-File-Name`, UUID `X-Base-Revision`                                 |
+| `POST /revisions`                   | Commit `{ requestId, baseRevision, label, document }`                                                                                  |
+| `POST /undo` or `/redo`             | Move history using `{ baseRevision }`                                                                                                  |
+| `POST /notes`                       | Save `{ id?, text, anchor, intent, attachmentIds? }`; an identical optional UUID replay returns the existing note                      |
+| `PATCH /notes/:noteId`              | Edit unsent text with `{ text, previousText, attachmentIds?, previousAttachmentIds? }`; changed, removed or submitted notes return 409 |
+| `DELETE /notes/:noteId`             | Remove an unsubmitted note                                                                                                             |
+| `POST /assets`                      | Upload raw bytes with MIME Content-Type and percent-encoded `X-File-Name`                                                              |
+| `POST /requests`                    | Submit `{ noteIds, target: { instanceId, session: { provider, sessionId } } }`                                                         |
+| `GET /requests/:requestId`          | Submission snapshot, target, state and candidate paths                                                                                 |
+| `POST /requests/:requestId/publish` | Publish candidate with `{ label }`                                                                                                     |
+| `POST /requests/:requestId/error`   | Record `{ message }` on a request                                                                                                      |
+| `POST /exports`                     | Export `{ revisionId }`                                                                                                                |
+| `GET /exports/:jobId`               | Export result or error                                                                                                                 |
+
+Attachment arrays contain up to 20 Workspace reference UUIDs. Notes store resolved reference
+metadata. Replacing attachments requires their previous IDs; sends recheck files and reserve the
+captured notes before delivery.
 
 Opening is idempotent. It adopts nonempty `files/video/`, or creates starter files in an empty
 source directory. Invalid existing source fails without overwriting files or creating a head.

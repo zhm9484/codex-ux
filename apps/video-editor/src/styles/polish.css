@@ -420,3 +420,7 @@ button:active:not(:disabled) {
     min-width: 0;
   }
 }
+
+.ux-message-editor:focus-visible {
+  outline: none;
+}

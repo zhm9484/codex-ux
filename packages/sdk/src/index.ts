@@ -118,3 +118,6 @@ export async function openAppInstance(appId: string): Promise<BrowserAppInstance
   await claim(state.instance.id);
   return new BrowserAppInstance(state, key);
 }
+
+export { WorkspaceLibrary } from './library.ts';
+export type { LocalDirectory } from './library.ts';

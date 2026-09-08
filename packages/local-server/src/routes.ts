@@ -1,3 +1,5 @@
+import { libraryApi } from './library-routes.ts';
+import type { LibraryStore } from './storage/library.ts';
 import { listWorkspaceFiles } from './storage/files.ts';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { z } from 'zod';
@@ -12,6 +14,7 @@ import { validateApps } from './apps.ts';
 import { codexCapability } from '@codex-ux/adapter-codex';
 
 export interface Services {
+  library: LibraryStore;
   workspaces: WorkspaceStore;
   apps: HostedApp[];
   video: VideoServices;
@@ -58,6 +61,10 @@ export async function api(req: IncomingMessage, res: ServerResponse, path: strin
     s.workspaces.get(id);
     if (rest === '' && req.method === 'GET') {
       json(res, s.workspaces.context(id));
+      return;
+    }
+    if (rest === '/library' || rest.startsWith('/library/')) {
+      await libraryApi(req, res, id, rest.slice(8), s.library);
       return;
     }
     if (rest === '/files' && req.method === 'GET') {

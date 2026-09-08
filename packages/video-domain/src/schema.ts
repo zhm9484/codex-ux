@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import type { FeedbackAnchor } from '@codex-ux/protocol';
+import type { FeedbackAnchor, LibraryReference } from '@codex-ux/protocol';
 
 export const projectPath = z
   .string()
@@ -117,6 +117,7 @@ export const intentSchema = z.discriminatedUnion('kind', [
 ]);
 export type VideoIntent = z.infer<typeof intentSchema>;
 export interface Note {
+  attachments?: LibraryReference[];
   id: string;
   text: string;
   anchor: FeedbackAnchor;

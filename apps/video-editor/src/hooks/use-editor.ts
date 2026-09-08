@@ -1,4 +1,5 @@
-import { useEffect, useEffectEvent, useRef, useState } from 'react';
+import { WorkspaceLibrary } from '@codex-ux/sdk';
+import { useEffect, useEffectEvent, useRef, useState, useMemo } from 'react';
 import { durationOf, clampTime, type TextElement, type Revision } from '@codex-ux/video-domain';
 import type { FeedbackAnchor, Region } from '@codex-ux/protocol';
 import type { FloatingAnchor } from './use-floating-position';
@@ -13,13 +14,15 @@ import { api } from '../lib/api';
 import type { Panel, PlayerControl, TimeRange } from '../editor/types';
 
 export function useEditor(id: string) {
+  const library = useMemo(() => new WorkspaceLibrary(id), [id]);
+  const [droppedFiles, setDroppedFiles] = useState<File[] | null>(null);
   const control = useRef<PlayerControl | null>(null);
   const binding = useSessionBinding(id);
   const storage = useVideoProject(id, () => control.current?.isTextEditing() ?? false);
   const delivery = useFeedbackDelivery(id, binding.target, storage.refresh);
   const [connectionAction, setConnectionAction] = useState<(() => Promise<void>) | null>(null);
   const [displayed, setDisplayed] = useState<Revision | null>(null);
-  const [modal, setModal] = useState<'agent' | 'files' | 'notes-history' | null>(null);
+  const [modal, setModal] = useState<'agent' | 'library' | 'notes-history' | null>(null);
   const [notesOpen, setNotesOpen] = useState(false);
   const [panel, setPanel] = useState<Panel>(null);
   const [panelAnchor, setPanelAnchor] = useState<FloatingAnchor | null>(null);
@@ -216,7 +219,11 @@ export function useEditor(id: string) {
   }, []);
 
   const dismiss = useEffectEvent((event: PointerEvent) => {
-    if (!(event.target as Element).closest('.chat-popover,.tool-island,dialog,.notes-board'))
+    if (
+      !(event.target as Element).closest(
+        '.chat-popover,.tool-island,dialog,.notes-board,.ux-mention-menu',
+      )
+    )
       setChatOpen(false);
     if (!(event.target as Element).closest('.canvas-menu')) setContextMenu(null);
     if (!(event.target as Element).closest('.side-panel,[data-panel-trigger]')) setPanel(null);
@@ -240,6 +247,9 @@ export function useEditor(id: string) {
   };
   return {
     ...storage,
+    library,
+    droppedFiles,
+    setDroppedFiles,
     modal,
     setModal,
     notesOpen,

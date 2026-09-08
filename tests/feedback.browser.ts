@@ -40,7 +40,7 @@ test('draft delivery stays separate from queued notes, preserves retries, and ex
   await expect(page.locator('.preview-loading')).toHaveCount(0);
   await expect(page.locator('iframe[data-revision]')).toHaveCount(1);
   await page.getByRole('button', { name: 'Chat', exact: true }).click();
-  await page.getByLabel('Feedback note').fill('Save this for later');
+  await page.getByLabel('Chat message').fill('Save this for later');
   await page.getByRole('button', { name: 'Add note to list' }).click();
   const board = page.getByRole('region', { name: 'Pending notes' });
   await expect(board.getByText('Save this for later')).toBeVisible();
@@ -49,7 +49,7 @@ test('draft delivery stays separate from queued notes, preserves retries, and ex
   await page.getByRole('button', { name: 'Save changes' }).click();
   await expect(board.getByText('Save this edited note for later')).toBeVisible();
   await page.getByRole('button', { name: 'Chat', exact: true }).click();
-  await page.getByLabel('Feedback note').fill('Send only this draft');
+  await page.getByLabel('Chat message').fill('Send only this draft');
   await page.getByRole('button', { name: 'Send now', exact: true }).click();
   const modal = page.getByRole('dialog', { name: 'Agent connection' });
   await expect(modal).toBeVisible();
@@ -57,7 +57,7 @@ test('draft delivery stays separate from queued notes, preserves retries, and ex
   await modal.getByLabel('Session ID or task link').fill(randomUUID());
   await modal.getByRole('button', { name: 'Save connection' }).click();
   await modal.getByRole('button', { name: 'Continue sending' }).click();
-  await expect(page.getByLabel('Feedback note')).toHaveValue('Send only this draft');
+  await expect(page.getByLabel('Chat message')).toHaveText('Send only this draft');
   await expect(page.locator('.feedback-composer').getByRole('alert')).toContainText(
     'Temporary delivery failure',
   );
@@ -101,11 +101,10 @@ test('notes board clamps and remembers its position, and header dialogs fit a na
   const board = await page.locator('.notes-board').boundingBox();
   expect(board!.x).toBeGreaterThanOrEqual(0);
   expect(board!.x + board!.width).toBeLessThanOrEqual(390);
-  await page.getByRole('button', { name: 'Workspace files' }).click();
-  const modal = page.getByRole('dialog', { name: 'Workspace files' });
+  await page.getByRole('button', { name: 'Library' }).click();
+  const modal = page.getByRole('dialog', { name: 'Library' });
   await expect(modal).toBeVisible();
-  await modal.getByRole('button', { name: 'video directory' }).click();
-  await expect(modal.getByText('index.html', { exact: true })).toBeVisible();
+  await expect(modal.getByText('Your local materials', { exact: true })).toBeVisible();
   const rect = await modal.boundingBox();
   expect(rect!.x).toBeGreaterThanOrEqual(0);
   expect(rect!.x + rect!.width).toBeLessThanOrEqual(390);
@@ -131,7 +130,7 @@ test('Send now captures its destination before asynchronous draft storage', asyn
   await page.getByRole('button', { name: 'Save connection' }).click();
   await page.getByRole('button', { name: 'Close agent connection' }).click();
   await page.getByRole('button', { name: 'Chat', exact: true }).click();
-  await page.getByLabel('Feedback note').fill('Keep the original destination');
+  await page.getByLabel('Chat message').fill('Keep the original destination');
   let release!: () => void;
   const gate = new Promise<void>((resolve) => {
     release = resolve;
