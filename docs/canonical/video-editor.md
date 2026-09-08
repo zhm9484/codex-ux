@@ -92,15 +92,19 @@ layers.
 
 A note records text, revision, seconds/range, optional object reference/region and an intent:
 `change` or `transition`, with optional transition duration. A transition is an instruction for the
-agent to implement in source or regenerated media. Saving it does not composite a transition. Both
-Chat and Add note offer **Send now** for the current draft only and **Add to notes** to save it
-locally. Pending notes appear in a draggable, collapsible board with a count, locate/edit/delete
-controls and **Send all**. Its position persists and stays within the viewport. A successful batch
-empties and hides the board; Notes can reopen it to access the centered **Notes history** dialog.
-History shows submitted notes, their original context and delivery state. Editing checks the
-previous text and rejects notes changed, removed or submitted in another page. Notes also retain
-attachment references; editing uses the shared mention input and checks previous text and
-attachments together.
+agent to implement in source or regenerated media. Saving it does not composite a transition. Chat
+and Add note open the same composer and preserve the same draft, with a 480 px desktop surface
+constrained to the viewport, 16 px body text, and a single attachment/action footer. Time/selection
+context and request kind sit above the writing area; transition duration appears only for transition
+requests. The floating composer measures its actual size to fit beside the tool island or around a
+selection and repositions when its content or the viewport changes. Both entry points offer **Send
+now** for the current draft only and **Add to notes** to save it locally. Pending notes appear in a
+draggable, collapsible board with a count, locate/edit/delete controls and **Send all**. Its
+position persists and stays within the viewport. A successful batch empties and hides the board;
+Notes can reopen it to access the centered **Notes history** dialog. History shows submitted notes,
+their original context and delivery state. Editing checks the previous text and rejects notes
+changed, removed or submitted in another page. Notes also retain attachment references; editing uses
+the shared mention input and checks previous text and attachments together.
 
 An unbound send opens Agent connection and preserves the draft; **Continue sending** resumes the
 chosen action after binding. Canceling preserves the draft without sending. Sending disables

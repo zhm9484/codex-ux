@@ -74,6 +74,11 @@ The protocol stays independent of React, Codex, and video or 3D engines. See
 [Canonical documentation](docs/canonical/README.md) for current behavior and
 [Non-canonical notes](docs/non-canonical/README.md) for research and plans.
 
+## Contributing
+
+See [Contributing](CONTRIBUTING.md) for issue and PR guidance, verification expectations and review
+policy. Prefer English for discussions; repository content must be in English.
+
 ## License
 
 [MIT](LICENSE). Third-party dependencies and assets retain their own licenses.

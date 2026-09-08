@@ -76,21 +76,6 @@
   .transport-side.right {
     gap: 1px;
   }
-  .feedback-dock {
-    padding-top: 12px;
-  }
-  .feedback-composer {
-    border-radius: 17px;
-    padding: 12px 10px 9px;
-  }
-  .feedback-composer textarea {
-    font-size: 13px;
-    min-height: 32px;
-  }
-  .composer-hint {
-    font-size: 9px;
-    margin-top: 9px;
-  }
   .side-panel {
     left: 12px;
     right: 12px;

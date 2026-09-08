@@ -4,6 +4,8 @@ export interface FloatingAnchor {
   left: number;
   top: number;
   bottom: number;
+  right?: number;
+  placement?: 'beside';
 }
 export function useFloatingPosition(open: boolean, anchor: FloatingAnchor | null) {
   const ref = useRef<HTMLElement>(null);
@@ -14,10 +16,20 @@ export function useFloatingPosition(open: boolean, anchor: FloatingAnchor | null
       const margin = 12;
       const width = element.offsetWidth,
         height = element.offsetHeight;
-      const left = Math.max(margin, Math.min(anchor.left, window.innerWidth - width - margin));
+      const beside = anchor.placement === 'beside';
+      const fitsRight = (anchor.right ?? anchor.left) + width + margin * 2 <= window.innerWidth;
+      const fitsLeft = anchor.left - width - margin >= margin;
+      const besideFits = beside && (fitsRight || fitsLeft);
+      const preferredLeft = besideFits
+        ? fitsRight
+          ? (anchor.right ?? anchor.left) + margin
+          : anchor.left - width - margin
+        : anchor.left;
+      const left = Math.max(margin, Math.min(preferredLeft, window.innerWidth - width - margin));
       const below = anchor.bottom + 10;
-      const top =
-        below + height <= window.innerHeight - margin
+      const top = besideFits
+        ? anchor.top
+        : below + height <= window.innerHeight - margin
           ? below
           : Math.max(margin, anchor.top - height - 10);
       element.style.left = `${left}px`;

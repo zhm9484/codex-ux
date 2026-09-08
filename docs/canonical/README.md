@@ -13,3 +13,8 @@ to the project; maintenance rules are in [AGENTS.md](../../AGENTS.md).
 - [Skills](skills.md): installable app/runtime artifacts, startup, connection and release checks.
 
 Research, proposals, and historical context belong in [non-canonical](../non-canonical/README.md).
+
+For contribution workflow and review policy, see [Contributing](../../CONTRIBUTING.md). Most issues
+use the general template, with free-form issues available when needed. PRs use a concise template
+covering the change, validation and documentation impact. English is preferred for discussions and
+required for repository content.

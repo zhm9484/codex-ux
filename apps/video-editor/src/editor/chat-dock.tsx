@@ -7,12 +7,12 @@ import { IconButton } from '../components/ui';
 export function ChatDock({ state }: { state: EditorState }) {
   const popup = useFloatingPosition(state.chatOpen, state.chatAnchor);
   return (
-    <div className={`chat-dock ${state.chatOpen ? 'open' : ''}`}>
+    <div className="chat-dock">
       <section ref={popup} className="chat-popover" hidden={!state.chatOpen} aria-label="Chat">
         <div className="chat-heading">
-          <span>Add note</span>
+          <h2>Add note</h2>
           <IconButton label="Close chat" onClick={() => state.setChatOpen(false)}>
-            <X size={15} />
+            <X size={18} />
           </IconButton>
         </div>
         <FeedbackComposer state={state} />
