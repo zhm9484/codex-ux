@@ -95,6 +95,13 @@ export function useVideoProject(id: string, deferPreview: () => boolean = () => 
     run(() => post<VideoProject>(`${base}/notes`, { text, anchor, intent }));
   const removeNote = (noteId: string) =>
     run(() => api<VideoProject>(`${base}/notes/${noteId}`, { method: 'DELETE' }));
+  const editNote = (noteId: string, text: string, previousText: string) =>
+    run(() =>
+      api<VideoProject>(`${base}/notes/${noteId}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ text, previousText }),
+      }),
+    );
   const upload = async (file: File) => {
     const fonts: Record<string, string> = {
       woff2: 'font/woff2',
@@ -142,6 +149,7 @@ export function useVideoProject(id: string, deferPreview: () => boolean = () => 
     travel,
     addNote,
     removeNote,
+    editNote,
     upload,
     refresh,
     setError,

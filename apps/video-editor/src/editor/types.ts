@@ -1,6 +1,6 @@
 import type { CanvasText } from '../canvas/text-model';
 import type { TextElement } from '@codex-ux/video-domain';
-export type Panel = 'notes' | 'source' | 'assets' | 'history' | null;
+export type Panel = 'history' | null;
 export interface TimeRange {
   start: number;
   end: number;

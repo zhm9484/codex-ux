@@ -6,10 +6,12 @@ agent requests use the same interface for all three. An engine's authoring model
 ordinary files; the editor does not translate those files into a universal clip arrangement.
 
 The workspace selector switches this app instance without changing other pages. Workspace names are
-independent of video titles. Chat, Notes, Video source, Assets and app Fullscreen live in a movable
-vertical tool island; history, undo/redo and Export are in the header. Drag the island grip or use
-its arrow keys; its position is saved locally and clamped to the pane. Floating surfaces close on
-outside click or Escape. Reduced-motion settings suppress animations.
+independent of video titles. Chat, Notes and app Fullscreen live in a movable vertical tool island.
+Agent connection and Workspace files open centered dialogs from the header, alongside version
+history, undo/redo and Export. Workspace files browses directories and consolidates source import,
+video replacement and asset uploads. Drag the tool grip or use arrow keys; its position is saved
+locally and clamped to the pane. Dialogs trap focus, restore it on close and support Escape.
+Reduced-motion settings suppress animations.
 
 **Video fullscreen** expands just the video with playback, mute, seeking and an exit button. The
 same player stays mounted, retaining time and playback state; scrubbing preserves whether it was
@@ -19,10 +21,10 @@ the app pane when the browser rejects fullscreen. Escape exits the fallback.
 ## Source and engine capabilities
 
 The working directory is `workspaces/<id>/files/video/`. First opening a video adopts existing
-source there, or creates an original 18-second Hyperframes sample if empty. **Video source** shows
-this directory, imports an absolute project directory/video path, or replaces the video with an
-uploaded MP4/WebM. Import copies files without modifying the original. A replacement is an undoable
-revision, including when it changes engine, dimensions or duration.
+source there, or creates an original 18-second Hyperframes sample if empty. **Workspace files →
+Import** shows this directory, imports an absolute project directory/video path, or replaces the
+video with an uploaded MP4/WebM. Import copies files without modifying the original. A replacement
+is an undoable revision, including when it changes engine, dimensions or duration.
 
 An optional `video.json` manifest identifies the source. With no manifest, a root `index.html`
 identifies Hyperframes; otherwise a single root MP4/WebM identifies media. Remotion requires a
@@ -89,10 +91,20 @@ layers.
 
 A note records text, revision, seconds/range, optional object reference/region and an intent:
 `change` or `transition`, with optional transition duration. A transition is an instruction for the
-agent to implement in source or regenerated media. Saving it does not composite a transition. Notes
-are stored locally until the user selects them and explicitly sends them to the connected Codex
-session. The draft pins its reference when opened; closing/reopening and background updates preserve
-typed drafts and their original anchors. Drafts are not persisted across reload.
+agent to implement in source or regenerated media. Saving it does not composite a transition. Both
+Chat and Add note offer **Send now** for the current draft only and **Add** to save it locally.
+Pending notes appear in a draggable, collapsible board with a count, locate/edit/delete controls and
+**Send all**. Its position persists and stays within the viewport. A successful batch empties and
+hides the board; Notes can reopen it to access the centered **Notes history** dialog. History shows
+submitted notes, their original context and delivery state. Editing checks the previous text and
+rejects notes changed, removed or submitted in another page.
+
+An unbound send opens Agent connection and preserves the draft; **Continue sending** resumes the
+chosen action after binding. Canceling preserves the draft without sending. Sending disables
+repeated submissions. Draft creation uses a stable ID so a failed request can be retried without
+duplicating notes. Uncertain delivery remains submitted and requires checking history rather than
+automatic resending. The draft pins its reference when opened; closing/reopening and background
+updates preserve typed drafts and their original anchors. Drafts are not persisted across reload.
 
 The visible page polls every 1.8 seconds. Files must be stable across two observations at least 650
 ms apart. Capture validates source and builds Remotion before committing an external revision.
@@ -119,19 +131,20 @@ receives HTTP context plus an isolated candidate directory containing ordinary p
 previews and publishes a candidate as one revision, or edits working files for polling to capture.
 See [local API](local-api.md) for the publication contract.
 
-The Notes panel offers **Connect current agent** to create a code for this page. Agents can also
-open an invitation URL in a new page through the Workspace skill. Pairing confirms the actual
-page/session; it never sends notes automatically. Manual task-ID/link entry remains available and is
-labeled as a saved session, without implying verified delivery. An existing other-session connection
-requires explicit takeover; opening a new page preserves it. Connection receipt errors do not delete
-the saved binding or user notes.
+The header’s Agent connection dialog offers **Connect current agent** to create a code for this
+page. Agents can also open an invitation URL in a new page through the Workspace skill. Pairing
+confirms the actual page/session; it never sends notes automatically. Manual task-ID/link entry
+remains available and is labeled as a saved session, without implying verified delivery. An existing
+other-session connection requires explicit takeover; opening a new page preserves it. Connection
+receipt errors do not delete the saved binding or user notes.
 
 ## Assets and output
 
-Assets accepts images, video, audio and fonts up to 100 MB each, including iframe file drops.
-Uploaded resources become `assets/` files for the agent to use. Hyperframes fonts also receive local
-font-face declarations. Assets do not automatically become timeline layers. Files attached to a
-Codex task are not discovered automatically; the agent can upload them through the local API.
+Workspace files → Import accepts images, video, audio and fonts up to 100 MB each, including iframe
+file drops. Uploaded resources become `assets/` files for the agent to use. Hyperframes fonts also
+receive local font-face declarations. Assets do not automatically become timeline layers. Files
+attached to a Codex task are not discovered automatically; the agent can upload them through the
+local API.
 
 Hyperframes and Remotion render the selected saved snapshot to H.264 MP4. Direct media exports its
 original MP4/WebM bytes, preserving audio and encoding. One export runs at a time; errors do not

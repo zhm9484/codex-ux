@@ -146,7 +146,7 @@ test('range and region comments open chat on demand and keep their original refe
   await page.locator('.scene-strip').click({ position: { x: (strip.width * 8) / 18, y: 20 } });
   await expect(page.getByRole('textbox', { name: 'Feedback note' })).toBeHidden();
   await page.getByRole('button', { name: 'Chat', exact: true }).click();
-  await page.getByRole('button', { name: 'Save note', exact: true }).click();
+  await page.getByRole('button', { name: 'Add note to list', exact: true }).click();
   const saved = await readWorkspace(request, workspace.workspaceId);
   expect(saved.notes[0]?.anchor).toMatchObject({ start: 3, end: 5 });
   const canvas = (await page.locator('.stage-canvas').boundingBox())!;
@@ -159,7 +159,7 @@ test('range and region comments open chat on demand and keep their original refe
   await expect(page.getByRole('textbox', { name: 'Feedback note' })).toBeHidden();
   await page.getByRole('button', { name: 'Add note', exact: true }).click();
   await page.getByRole('textbox', { name: 'Feedback note' }).fill('Move this detail.');
-  await page.getByRole('button', { name: 'Save note' }).click();
+  await page.getByRole('button', { name: 'Add note to list' }).click();
   expect(
     (await readWorkspace(request, workspace.workspaceId)).notes.at(-1)?.anchor.region,
   ).toMatchObject({
@@ -282,6 +282,7 @@ test('file drops import once, drafts survive closing chat and history compares s
       ),
     )
     .toEqual(['Canvas.png']);
+  await page.getByRole('tab', { name: 'Import', exact: true }).click();
   await drop(page.locator('.asset-drop'), 'Panel.png');
   await expect
     .poll(async () =>
@@ -291,6 +292,7 @@ test('file drops import once, drafts survive closing chat and history compares s
     )
     .toEqual(['Canvas.png', 'Panel.png']);
   await expect(page.locator('.drop-overlay')).toHaveCount(0);
+  await page.getByRole('button', { name: 'Close workspace files' }).click();
   await page.getByRole('button', { name: 'History', exact: true }).click();
   await page.getByRole('button', { name: 'Compare', exact: true }).last().click();
   await expect(page.locator('.stage-canvas')).toHaveCount(2);
@@ -386,7 +388,7 @@ test('tool island moves, remembers its position, opens adjacent notes and suppor
   await page.goto(`/apps/video-editor/w/${workspace.workspaceId}`);
   await readyPreview(page, request, workspace.workspaceId);
   await expect(page.locator('.preview-loading')).toHaveCount(0);
-  await expect(page.getByRole('button', { name: 'Assets', exact: true })).toHaveCount(1);
+  await expect(page.getByRole('button', { name: 'Assets', exact: true })).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'HyperFrames project' })).toHaveCount(0);
   await expect(page.locator('.app-header').getByRole('button', { name: 'History' })).toBeVisible();
   const grip = page.getByRole('button', { name: 'Move video tools' });

@@ -1,9 +1,12 @@
-import { Download, Undo2, Redo2, History } from 'lucide-react';
+import { Download, Undo2, Redo2, History, Bot, FolderOpen } from 'lucide-react';
 import type { VideoProject } from '@codex-ux/video-domain';
 import type { Workspace } from '@codex-ux/protocol';
 import { IconButton } from '../components/ui';
 import { WorkspaceMenu } from '../components/workspace-menu';
 interface HeaderProps {
+  onAgent: () => void;
+  onFiles: () => void;
+  connected: boolean;
   project: VideoProject;
   workspaces: Workspace[];
   saving: boolean;
@@ -52,6 +55,14 @@ export function Header(p: HeaderProps) {
         >
           <History size={16} />
         </IconButton>
+        <IconButton label="Workspace files" onClick={p.onFiles}>
+          <FolderOpen size={17} />
+        </IconButton>
+        <button className="agent-button" onClick={p.onAgent} aria-label="Agent connection">
+          <Bot size={17} />
+          <span>Agent</span>
+          <i className={`connection-dot ${p.connected ? 'connected' : ''}`} />
+        </button>
         <button className="export-button" onClick={p.onExport}>
           <Download size={15} />
           <span>Export</span>

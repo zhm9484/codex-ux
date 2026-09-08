@@ -6,6 +6,7 @@ import { createPlaybackClock } from '../lib/playback-clock';
 import { editSourceText, type CanvasText } from '../canvas/text-model';
 import { deleteElement } from '../editor/element-edits';
 import type { TimelineItem } from '../editor/timeline-items';
+import { useFeedbackDelivery } from './use-feedback-delivery';
 import { useVideoProject } from './use-video-project';
 import { useSessionBinding } from './use-session-binding';
 import { api } from '../lib/api';
@@ -15,7 +16,11 @@ export function useEditor(id: string) {
   const control = useRef<PlayerControl | null>(null);
   const binding = useSessionBinding(id);
   const storage = useVideoProject(id, () => control.current?.isTextEditing() ?? false);
+  const delivery = useFeedbackDelivery(id, binding.target, storage.refresh);
+  const [connectionAction, setConnectionAction] = useState<(() => Promise<void>) | null>(null);
   const [displayed, setDisplayed] = useState<Revision | null>(null);
+  const [modal, setModal] = useState<'agent' | 'files' | 'notes-history' | null>(null);
+  const [notesOpen, setNotesOpen] = useState(false);
   const [panel, setPanel] = useState<Panel>(null);
   const [panelAnchor, setPanelAnchor] = useState<FloatingAnchor | null>(null);
   const [clock] = useState(createPlaybackClock);
@@ -171,6 +176,7 @@ export function useEditor(id: string) {
     control.current?.setMuted(!muted);
   }
   const keyHandler = useEffectEvent((event: KeyboardEvent) => {
+    if (event.target instanceof Element && event.target.closest('dialog')) return;
     if (event.key === 'Escape') {
       setPanel(null);
       clearSelection();
@@ -210,7 +216,8 @@ export function useEditor(id: string) {
   }, []);
 
   const dismiss = useEffectEvent((event: PointerEvent) => {
-    if (!(event.target as Element).closest('.chat-popover,.tool-island')) setChatOpen(false);
+    if (!(event.target as Element).closest('.chat-popover,.tool-island,dialog,.notes-board'))
+      setChatOpen(false);
     if (!(event.target as Element).closest('.canvas-menu')) setContextMenu(null);
     if (!(event.target as Element).closest('.side-panel,[data-panel-trigger]')) setPanel(null);
   });
@@ -233,7 +240,14 @@ export function useEditor(id: string) {
   };
   return {
     ...storage,
+    modal,
+    setModal,
+    notesOpen,
+    setNotesOpen,
     ...binding,
+    ...delivery,
+    connectionAction,
+    setConnectionAction,
     error: storage.error || binding.bindingError || project?.source?.error || '',
     document,
     presentedProject:

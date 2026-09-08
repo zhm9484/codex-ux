@@ -1,7 +1,6 @@
 import { useLayoutEffect, useRef } from 'react';
 type Point = { x: number; y: number };
-const key = 'video-editor:tool-position';
-export function useIslandPosition() {
+export function useIslandPosition(key = 'video-editor:tool-position', right = false) {
   const ref = useRef<HTMLDivElement>(null);
   const position = useRef<Point>({ x: 16, y: 180 });
   const drag = useRef<{ point: Point; pointer: Point; id: number } | null>(null);
@@ -24,7 +23,10 @@ export function useIslandPosition() {
     }
   };
   useLayoutEffect(() => {
-    let initial = { x: 16, y: Math.max(80, window.innerHeight * 0.35) };
+    let initial = {
+      x: right ? window.innerWidth - 370 : 16,
+      y: Math.max(80, window.innerHeight * 0.35),
+    };
     try {
       const saved: unknown = JSON.parse(localStorage.getItem(key) ?? 'null');
       if (
@@ -43,9 +45,14 @@ export function useIslandPosition() {
     }
     place(initial);
     const resize = () => place(position.current);
+    const observer = new ResizeObserver(resize);
+    if (ref.current) observer.observe(ref.current);
     window.addEventListener('resize', resize);
-    return () => window.removeEventListener('resize', resize);
-  }, []);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener('resize', resize);
+    };
+  }, [key, right]);
   return {
     ref,
     handlers: {

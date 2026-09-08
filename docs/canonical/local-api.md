@@ -20,6 +20,10 @@ objects 404 and stale writes 409.
 | `POST /workspaces`    | Create a file container from `{ name }`; no app data is initialized                                |
 | `GET /workspaces/:id` | Workspace identity plus absolute `directory` and `filesDirectory`                                  |
 
+`GET /workspaces/:id/files?path=relative/directory` lists one directory under `filesDirectory` as
+`{ path, entries: [{ name, kind }] }`, with directories first. Kinds are `directory`, `file` and
+`link`; links are shown but cannot be opened. Traversal and symlink directories are rejected.
+
 The workspace contract contains neither a video document nor an agent binding. App instances and
 bindings are page-owned, managed by the browser SDK. They have no workspace-global mutation API.
 Agent references use `{ provider, sessionId }`; the server currently accepts only
@@ -73,7 +77,8 @@ The following paths are relative to `/workspaces/:id/apps/video-editor`.
 | `POST /source/media`                | Replace from raw MP4/WebM bytes; `Content-Type`, percent-encoded `X-File-Name`, UUID `X-Base-Revision` |
 | `POST /revisions`                   | Commit `{ requestId, baseRevision, label, document }`                                                  |
 | `POST /undo` or `/redo`             | Move history using `{ baseRevision }`                                                                  |
-| `POST /notes`                       | Save `{ text, anchor, intent }`                                                                        |
+| `POST /notes`                       | Save `{ id?, text, anchor, intent }`; an identical optional UUID replay returns the existing note      |
+| `PATCH /notes/:noteId`              | Edit unsent text with `{ text, previousText }`; changed, removed or submitted notes return 409         |
 | `DELETE /notes/:noteId`             | Remove an unsubmitted note                                                                             |
 | `POST /assets`                      | Upload raw bytes with MIME Content-Type and percent-encoded `X-File-Name`                              |
 | `POST /requests`                    | Submit `{ noteIds, target: { instanceId, session: { provider, sessionId } } }`                         |

@@ -1,3 +1,4 @@
+import { listWorkspaceFiles } from './storage/files.ts';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { z } from 'zod';
 import type { WorkspaceStore } from './storage/workspaces.ts';
@@ -57,6 +58,16 @@ export async function api(req: IncomingMessage, res: ServerResponse, path: strin
     s.workspaces.get(id);
     if (rest === '' && req.method === 'GET') {
       json(res, s.workspaces.context(id));
+      return;
+    }
+    if (rest === '/files' && req.method === 'GET') {
+      json(
+        res,
+        await listWorkspaceFiles(
+          s.workspaces.context(id).filesDirectory,
+          new URL(req.url!, 'http://localhost').searchParams.get('path') ?? '',
+        ),
+      );
       return;
     }
     const app = /^\/apps\/([a-z0-9-]+)(.*)$/.exec(rest);
