@@ -68,6 +68,9 @@ importers:
 
   apps/video-editor:
     dependencies:
+      '@codex-ux/library-react':
+        specifier: workspace:*
+        version: link:../../packages/library-react
       '@codex-ux/protocol':
         specifier: workspace:*
         version: link:../../packages/protocol
@@ -104,6 +107,28 @@ importers:
         version: 8.2.2(@types/node@24.13.3)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.51.2)
 
   packages/adapter-codex: {}
+
+  packages/library-react:
+    dependencies:
+      '@codex-ux/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+      '@codex-ux/sdk':
+        specifier: workspace:*
+        version: link:../sdk
+    devDependencies:
+      '@types/react':
+        specifier: 'catalog:'
+        version: 19.2.18
+      '@types/react-dom':
+        specifier: 'catalog:'
+        version: 19.2.7(@types/react@19.2.18)
+      react:
+        specifier: 'catalog:'
+        version: 19.2.8
+      react-dom:
+        specifier: 'catalog:'
+        version: 19.2.8(react@19.2.8)
 
   packages/local-server:
     dependencies:

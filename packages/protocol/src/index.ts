@@ -60,3 +60,30 @@ export interface FeedbackAnchor {
   objectId?: string;
   region?: Region;
 }
+
+/** Local material references are workspace-owned and independent of any app engine. */
+export interface LibrarySource {
+  id: string;
+  name: string;
+  path: string;
+  kind: 'file' | 'directory';
+  managed: boolean;
+}
+export interface LibraryEntry {
+  sourceId: string;
+  relativePath: string;
+  name: string;
+  kind: 'file' | 'directory';
+  mime: string;
+}
+export interface LibraryReference extends LibraryEntry {
+  id: string;
+  path: string;
+  size: number;
+  modifiedAt: number;
+}
+export interface LibrarySearch {
+  entries: LibraryEntry[];
+  truncated: boolean;
+  unavailable: string[];
+}

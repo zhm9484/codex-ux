@@ -47,17 +47,12 @@ export function Editor({ id, workspaces, onSelect }: EditorProps) {
     );
   const document = state.document!;
   const comparison = state.comparison;
-  async function drop(event: React.DragEvent) {
+  function drop(event: React.DragEvent) {
     event.preventDefault();
     dragDepth.current = 0;
     setDragging(false);
-    state.control.current?.pause();
-    state.setModal('files');
-    try {
-      for (const file of Array.from(event.dataTransfer.files)) await state.upload(file);
-    } catch (error) {
-      state.setError(error instanceof Error ? error.message : 'Import failed.');
-    }
+    state.openNotes();
+    state.setDroppedFiles(Array.from(event.dataTransfer.files));
   }
   return (
     <main
@@ -66,7 +61,7 @@ export function Editor({ id, workspaces, onSelect }: EditorProps) {
       onPointerDown={(event) => {
         if (
           !(event.target as Element).closest(
-            'dialog,.notes-board,button,input,textarea,select,.chat-dock,.side-panel,.timeline-navigation,.element-timeline,.stage-section,.context-tools,.text-selection,.canvas-menu',
+            '.ux-mention-menu,dialog,.notes-board,button,input,textarea,select,.chat-dock,.side-panel,.timeline-navigation,.element-timeline,.stage-section,.context-tools,.text-selection,.canvas-menu',
           )
         )
           state.clearSelection();
@@ -93,7 +88,7 @@ export function Editor({ id, workspaces, onSelect }: EditorProps) {
     >
       <Header
         onAgent={() => state.setModal('agent')}
-        onFiles={() => state.setModal('files')}
+        onFiles={() => state.setModal('library')}
         connected={!!state.session}
         project={project}
         workspaces={workspaces}
@@ -233,7 +228,7 @@ export function Editor({ id, workspaces, onSelect }: EditorProps) {
       {dragging && (
         <div className="drop-overlay">
           <Upload size={28} />
-          <span>Drop to add to this video</span>
+          <span>Drop to attach to your message</span>
         </div>
       )}
       {state.exporting && (

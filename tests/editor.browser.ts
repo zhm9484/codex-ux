@@ -49,7 +49,7 @@ test('canvas titles edit, drag, resize and undo without timeline editing control
   await readyPreview(page, request, workspace.workspaceId);
   const frame = page.frameLocator('iframe[data-revision]').frameLocator('iframe');
   const title = () => frame.locator('#title-1');
-  await expect(page.getByRole('textbox', { name: 'Feedback note' })).toBeHidden();
+  await expect(page.getByRole('textbox', { name: 'Chat message' })).toBeHidden();
   await expect(page.getByRole('button', { name: 'Split at playhead' })).toHaveCount(0);
   await title().dblclick();
   await frame.getByRole('textbox', { name: 'Canvas text' }).fill('Made together.');
@@ -137,14 +137,14 @@ test('range and region comments open chat on demand and keep their original refe
   await page.mouse.down();
   await page.mouse.move(strip.x + (strip.width * 5) / 18, strip.y + 20, { steps: 10 });
   await page.mouse.up();
-  await expect(page.getByRole('textbox', { name: 'Feedback note' })).toBeHidden();
+  await expect(page.getByRole('textbox', { name: 'Chat message' })).toBeHidden();
   const noteAction = page.getByRole('button', { name: 'Add note', exact: true });
   const actionBox = (await noteAction.boundingBox())!;
   expect(actionBox.x).toBeGreaterThan(strip.x + (strip.width * 5) / 18);
   await noteAction.click();
-  await page.getByRole('textbox', { name: 'Feedback note' }).fill('Let this moment breathe.');
+  await page.getByRole('textbox', { name: 'Chat message' }).fill('Let this moment breathe.');
   await page.locator('.scene-strip').click({ position: { x: (strip.width * 8) / 18, y: 20 } });
-  await expect(page.getByRole('textbox', { name: 'Feedback note' })).toBeHidden();
+  await expect(page.getByRole('textbox', { name: 'Chat message' })).toBeHidden();
   await page.getByRole('button', { name: 'Chat', exact: true }).click();
   await page.getByRole('button', { name: 'Add note to list', exact: true }).click();
   const saved = await readWorkspace(request, workspace.workspaceId);
@@ -156,9 +156,9 @@ test('range and region comments open chat on demand and keep their original refe
     steps: 10,
   });
   await page.mouse.up();
-  await expect(page.getByRole('textbox', { name: 'Feedback note' })).toBeHidden();
+  await expect(page.getByRole('textbox', { name: 'Chat message' })).toBeHidden();
   await page.getByRole('button', { name: 'Add note', exact: true }).click();
-  await page.getByRole('textbox', { name: 'Feedback note' }).fill('Move this detail.');
+  await page.getByRole('textbox', { name: 'Chat message' }).fill('Move this detail.');
   await page.getByRole('button', { name: 'Add note to list' }).click();
   expect(
     (await readWorkspace(request, workspace.workspaceId)).notes.at(-1)?.anchor.region,
@@ -168,8 +168,8 @@ test('range and region comments open chat on demand and keep their original refe
   await page.setViewportSize({ width: 390, height: 844 });
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(390);
   await page.getByRole('button', { name: 'Chat', exact: true }).click();
-  await page.getByRole('textbox', { name: 'Feedback note' }).press('Escape');
-  await expect(page.getByRole('textbox', { name: 'Feedback note' })).toBeHidden();
+  await page.getByRole('textbox', { name: 'Chat message' }).press('Escape');
+  await expect(page.getByRole('textbox', { name: 'Chat message' })).toBeHidden();
 });
 
 test('playhead paints between runtime samples and replacement previews retain the previous frame', async ({
@@ -240,7 +240,7 @@ test('playhead paints between runtime samples and replacement previews retain th
   await expect(frame.locator('#title-1')).toHaveText('A clearer thought.');
 });
 
-test('file drops import once, drafts survive closing chat and history compares saved edits', async ({
+test('file drops attach once, drafts survive closing chat and attachments do not change the video', async ({
   page,
   request,
 }) => {
@@ -249,11 +249,11 @@ test('file drops import once, drafts survive closing chat and history compares s
   await readyPreview(page, request, workspace.workspaceId);
   await expect(page.locator('.preview-loading')).toHaveCount(0);
   await page.getByRole('button', { name: 'Chat', exact: true }).click();
-  const note = page.getByRole('textbox', { name: 'Feedback note' });
+  const note = page.getByRole('textbox', { name: 'Chat message' });
   await note.fill('Keep this draft.');
   await page.getByRole('button', { name: 'Close chat' }).click();
   await page.getByRole('button', { name: 'Chat', exact: true }).click();
-  await expect(note).toHaveValue('Keep this draft.');
+  await expect(note).toHaveText('Keep this draft.');
   expect((await readWorkspace(request, workspace.workspaceId)).notes).toHaveLength(0);
   async function drop(target: Locator, name: string) {
     await target.evaluate((element, name) => {
@@ -275,27 +275,21 @@ test('file drops import once, drafts survive closing chat and history compares s
     page.frameLocator('iframe[data-revision]').frameLocator('iframe').locator('body'),
     'Canvas.png',
   );
+  await expect(note.locator('[data-reference]')).toHaveCount(1);
+  await drop(note, 'Panel.png');
+  await expect(note.locator('[data-reference]')).toHaveCount(2);
+  await page.getByRole('button', { name: 'Add note to list' }).click();
   await expect
     .poll(async () =>
-      (await readWorkspace(request, workspace.workspaceId)).revision.document.assets.map(
-        (a) => a.name,
-      ),
-    )
-    .toEqual(['Canvas.png']);
-  await page.getByRole('tab', { name: 'Import', exact: true }).click();
-  await drop(page.locator('.asset-drop'), 'Panel.png');
-  await expect
-    .poll(async () =>
-      (await readWorkspace(request, workspace.workspaceId)).revision.document.assets.map(
+      (await readWorkspace(request, workspace.workspaceId)).notes[0]?.attachments?.map(
         (a) => a.name,
       ),
     )
     .toEqual(['Canvas.png', 'Panel.png']);
+  expect((await readWorkspace(request, workspace.workspaceId)).revisionId).toBe(
+    workspace.revisionId,
+  );
   await expect(page.locator('.drop-overlay')).toHaveCount(0);
-  await page.getByRole('button', { name: 'Close workspace files' }).click();
-  await page.getByRole('button', { name: 'History', exact: true }).click();
-  await page.getByRole('button', { name: 'Compare', exact: true }).last().click();
-  await expect(page.locator('.stage-canvas')).toHaveCount(2);
 });
 
 test('failed scene-text saves restore the canvas and leave history intact', async ({

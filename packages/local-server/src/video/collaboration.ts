@@ -1,3 +1,4 @@
+import type { LibraryStore } from '../storage/library.ts';
 import type { VideoProjects } from '../sources/projects.ts';
 import { randomUUID } from 'node:crypto';
 import { deliver, collaborationTarget } from '../agents.ts';
@@ -19,11 +20,19 @@ interface RequestRow {
   error: string | null;
 }
 export class VideoCollaboration {
+  readonly library: LibraryStore | undefined;
   readonly store: VideoStore;
   readonly root: string;
   readonly origin: string;
   readonly projects: VideoProjects;
-  constructor(store: VideoStore, root: string, origin: string, projects: VideoProjects) {
+  constructor(
+    store: VideoStore,
+    root: string,
+    origin: string,
+    projects: VideoProjects,
+    library?: LibraryStore,
+  ) {
+    this.library = library;
     this.projects = projects;
     this.store = store;
     this.root = root;
@@ -46,9 +55,26 @@ export class VideoCollaboration {
         409,
         'Some selected notes have already been sent or removed. Refresh before sending.',
       );
+    if (this.library)
+      await this.library.validate(
+        id,
+        notes.flatMap((note) => (note.attachments ?? []).map((ref) => ref.id)),
+      );
+    const currentNotes = this.store.get(id).notes;
+    if (
+      notes.some(
+        (note) =>
+          JSON.stringify(currentNotes.find((current) => current.id === note.id)) !==
+          JSON.stringify(note),
+      )
+    )
+      throw new HttpError(
+        409,
+        'A selected note changed while attachments were checked. Review it before sending.',
+      );
     const requestId = randomUUID();
     const db = this.store.database(id);
-    // Capture routing and reserve notes before any asynchronous file work or delivery.
+    // Recheck and reserve the captured notes after attachment validation, before delivery.
     db.exec('BEGIN IMMEDIATE');
     try {
       db.prepare('INSERT INTO requests VALUES(?,?,?,?,?,?,?,?,?)').run(
@@ -62,11 +88,12 @@ export class VideoCollaboration {
         new Date().toISOString(),
         null,
       );
-      for (const note of notes)
-        db.prepare('UPDATE notes SET request_id=? WHERE id=? AND request_id IS NULL').run(
-          requestId,
-          note.id,
-        );
+      for (const note of notes) {
+        const reserved = db
+          .prepare('UPDATE notes SET request_id=? WHERE id=? AND request_id IS NULL')
+          .run(requestId, note.id);
+        if (!reserved.changes) throw new HttpError(409, 'A selected note was already submitted.');
+      }
       db.exec('COMMIT');
     } catch (error) {
       db.exec('ROLLBACK');
@@ -77,7 +104,7 @@ export class VideoCollaboration {
       const dir = await writeCandidate(this.root, id, requestId, w.revision);
       const endpoint = `${this.origin}/api/workspaces/${id}/apps/video-editor/requests/${requestId}`;
       const sourceInstructions = `This is a ${w.revision.document.source.kind} source project. video.json describes the entry and playback metadata. Edit the ordinary source files or replace the media file in the candidate. Preserve unrelated files and stable IDs. Transition notes express user intent: implement them in the source or regenerate the media. The working directory is ${this.projects.status(id).directory}; edit the isolated candidate for this request and publish it once.`;
-      const message = `Video Editor feedback request ${requestId} for workspace ${id}. Read the JSON context at ${endpoint} using HTTP GET. This request was explicitly submitted by the user. Edit the candidate at ${dir}. ${sourceInstructions} Do not modify immutable revision files. Preview the candidate, then POST JSON {"label":"A concise description"} to ${endpoint}/publish. Publication checks the base revision and records one undoable agent version. If blocked, POST {"message":"..."} to ${endpoint}/error. Do not queue another agent session.`;
+      const message = `Video Editor feedback request ${requestId} for workspace ${id}. Read the JSON context at ${endpoint} using HTTP GET. Each note may include attachments with absolute local paths. Read those files or directories as reference material; copy needed resources into the candidate before using them in the video, leaving originals untouched. This request was explicitly submitted by the user. Edit the candidate at ${dir}. ${sourceInstructions} Do not modify immutable revision files. Preview the candidate, then POST JSON {"label":"A concise description"} to ${endpoint}/publish. Publication checks the base revision and records one undoable agent version. If blocked, POST {"message":"..."} to ${endpoint}/error. Do not queue another agent session.`;
       db.prepare("UPDATE requests SET state='sending' WHERE id=?").run(requestId);
       deliveryStarted = true;
       await deliver(target.session, message);

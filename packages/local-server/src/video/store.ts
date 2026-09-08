@@ -99,6 +99,10 @@ export class VideoStore {
     const notes = (
       db.prepare('SELECT * FROM notes ORDER BY created_at').all() as unknown as NoteRow[]
     ).map((n) => ({
+      attachments: JSON.parse(
+        (db.prepare('SELECT refs FROM note_attachments WHERE note_id=?').get(n.id)?.refs as
+          string | undefined) ?? '[]',
+      ) as NonNullable<Note['attachments']>,
       id: n.id,
       text: n.text,
       anchor: JSON.parse(n.anchor) as Note['anchor'],

@@ -1,3 +1,5 @@
+import type { LibraryReference } from '@codex-ux/protocol';
+import { AttachmentList, MentionInput } from '@codex-ux/library-react';
 import { useState } from 'react';
 import {
   ArrowUp,
@@ -28,6 +30,11 @@ export function NoteCard({
   const [editing, setEditing] = useState(false);
   const [text, setText] = useState(note.text);
   const [original, setOriginal] = useState(note.text);
+  const [refs, setRefs] = useState<LibraryReference[]>(note.attachments ?? []);
+  const [originalRefs, setOriginalRefs] = useState<string[]>(
+    (note.attachments ?? []).map((ref) => ref.id),
+  );
+  const [attaching, setAttaching] = useState(false);
   return (
     <article className="note-card">
       <div className="note-heading">
@@ -51,6 +58,8 @@ export function NoteCard({
               onClick={() => {
                 setText(note.text);
                 setOriginal(note.text);
+                setRefs(note.attachments ?? []);
+                setOriginalRefs((note.attachments ?? []).map((ref) => ref.id));
                 setEditing(true);
               }}
             >
@@ -70,17 +79,45 @@ export function NoteCard({
         <form
           onSubmit={(event) => {
             event.preventDefault();
-            void state.editNote(note.id, text, original).then((saved) => {
-              if (saved) setEditing(false);
-            });
+            void state
+              .editNote(
+                note.id,
+                text,
+                original,
+                refs.map((ref) => ref.id),
+                originalRefs,
+              )
+              .then((saved) => {
+                if (saved) setEditing(false);
+              });
           }}
         >
-          <textarea
-            aria-label={`Edit note ${index + 1} text`}
+          <MentionInput
+            library={state.library}
+            label={`Edit note ${index + 1} text`}
             value={text}
-            maxLength={4000}
-            onChange={(event) => setText(event.target.value)}
-            autoFocus
+            attachments={refs}
+            onChange={(value, attachments) => {
+              setText(value);
+              setRefs(attachments);
+            }}
+            onManage={() => state.setModal('library')}
+            onBusy={setAttaching}
+            disabled={state.saving || state.sending}
+            onSubmit={() => {
+              if (!attaching)
+                void state
+                  .editNote(
+                    note.id,
+                    text,
+                    original,
+                    refs.map((ref) => ref.id),
+                    originalRefs,
+                  )
+                  .then((saved) => {
+                    if (saved) setEditing(false);
+                  });
+            }}
           />
           <div className="note-edit-actions">
             <button type="button" className="text-button" onClick={() => setEditing(false)}>
@@ -88,7 +125,7 @@ export function NoteCard({
             </button>
             <button
               className="secondary-button"
-              disabled={!text.trim() || state.saving || state.sending}
+              disabled={!text.trim() || state.saving || state.sending || attaching}
             >
               Save changes
             </button>
@@ -96,6 +133,9 @@ export function NoteCard({
         </form>
       ) : (
         <p>{note.text}</p>
+      )}
+      {!editing && !!note.attachments?.length && (
+        <AttachmentList library={state.library} items={note.attachments} />
       )}
       <div className="note-context">
         {note.intent.kind === 'transition'

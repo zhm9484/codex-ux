@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useEffectEvent, useRef, useState } from 'react';
-import type { Asset, VideoIntent, VideoDocument, VideoProject } from '@codex-ux/video-domain';
-import type { FeedbackAnchor } from '@codex-ux/protocol';
+import type { VideoDocument, VideoProject } from '@codex-ux/video-domain';
 import { api, post, videoPath } from '../lib/api';
 
 export function useVideoProject(id: string, deferPreview: () => boolean = () => false) {
@@ -91,66 +90,29 @@ export function useVideoProject(id: string, deferPreview: () => boolean = () => 
     run(() =>
       post<VideoProject>(`${base}/${direction}`, { baseRevision: current.current?.revisionId }),
     );
-  const addNote = (text: string, anchor: FeedbackAnchor, intent: VideoIntent) =>
-    run(() => post<VideoProject>(`${base}/notes`, { text, anchor, intent }));
   const removeNote = (noteId: string) =>
     run(() => api<VideoProject>(`${base}/notes/${noteId}`, { method: 'DELETE' }));
-  const editNote = (noteId: string, text: string, previousText: string) =>
+  const editNote = (
+    noteId: string,
+    text: string,
+    previousText: string,
+    attachmentIds?: string[],
+    previousAttachmentIds?: string[],
+  ) =>
     run(() =>
       api<VideoProject>(`${base}/notes/${noteId}`, {
         method: 'PATCH',
-        body: JSON.stringify({ text, previousText }),
-      }),
-    );
-  const upload = async (file: File) => {
-    const fonts: Record<string, string> = {
-      woff2: 'font/woff2',
-      woff: 'font/woff',
-      ttf: 'font/ttf',
-      otf: 'font/otf',
-    };
-    const mime = fonts[file.name.split('.').at(-1) ?? ''] ?? file.type;
-    const asset = await api<Asset>(`${base}/assets`, {
-      method: 'POST',
-      headers: { 'Content-Type': mime, 'X-File-Name': encodeURIComponent(file.name) },
-      body: file,
-    });
-    const doc = current.current?.revision.document;
-    if (!doc || !(await save({ ...doc, assets: [...doc.assets, asset] }, `Import ${file.name}`))) {
-      throw new Error(
-        'The asset was uploaded but could not be added. Refresh and import it again.',
-      );
-    }
-    return asset;
-  };
-  const importSource = (path: string) =>
-    run(() =>
-      post<VideoProject>(`${base}/source`, { path, baseRevision: current.current?.revisionId }),
-    );
-  const replaceMedia = (file: File) =>
-    run(() =>
-      api<VideoProject>(`${base}/source/media`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': file.type || (file.name.endsWith('.webm') ? 'video/webm' : 'video/mp4'),
-          'X-File-Name': encodeURIComponent(file.name),
-          'X-Base-Revision': current.current!.revisionId,
-        },
-        body: file,
+        body: JSON.stringify({ text, previousText, attachmentIds, previousAttachmentIds }),
       }),
     );
   return {
     project,
-    importSource,
-    replaceMedia,
     error,
     saving,
     save,
     travel,
-    addNote,
     removeNote,
     editNote,
-    upload,
     refresh,
     setError,
   };

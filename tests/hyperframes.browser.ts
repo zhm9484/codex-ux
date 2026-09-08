@@ -75,7 +75,7 @@ test('native projects preserve runtime dependencies, UI edits and drafts through
     const strip = (await page.locator('.scene-strip').boundingBox())!;
     await page.locator('.scene-strip').click({ position: { x: (strip.width * 3) / 8, y: 20 } });
     await page.getByRole('button', { name: 'Chat', exact: true }).click();
-    await page.getByRole('textbox', { name: 'Feedback note' }).fill('Keep my unsent draft');
+    await page.getByRole('textbox', { name: 'Chat message' }).fill('Keep my unsent draft');
     await writeFile(
       join(source.directory, 'style.css'),
       (await readFile(join(source.directory, 'style.css'), 'utf8')) + '\n#root{background:#efedf4}',
@@ -88,7 +88,7 @@ test('native projects preserve runtime dependencies, UI edits and drafts through
       page.locator(`iframe[data-revision][data-revision="${updated.revisionId}"]`),
     ).toHaveCSS('opacity', '1');
     await expect(page.locator('iframe[data-revision]')).toHaveCount(1);
-    await expect(page.getByRole('textbox', { name: 'Feedback note' })).toHaveValue(
+    await expect(page.getByRole('textbox', { name: 'Chat message' })).toHaveText(
       'Keep my unsent draft',
     );
     await expect(page.getByRole('button', { name: 'Play', exact: true })).toBeVisible();

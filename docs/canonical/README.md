@@ -7,6 +7,7 @@ to the project; maintenance rules are in [AGENTS.md](../../AGENTS.md).
 - [Architecture](architecture.md): workspace/app/session concepts, storage ownership, module
   boundaries and development commands.
 - [Video editor](video-editor.md): editing, responsive UI, collaboration and export.
+- [Shared local library](library.md): workspace materials, attachment references and reusable UI.
 - [Local API](local-api.md): HTTP contracts, candidate publication and source conventions.
 - [Skills](skills.md): installable app/runtime artifacts, startup, connection and release checks.
 

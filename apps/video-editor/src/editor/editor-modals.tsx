@@ -1,10 +1,8 @@
+import { LibraryBrowser } from '@codex-ux/library-react';
 import { useEffect, useState } from 'react';
-import { File, Folder, ArrowLeft } from 'lucide-react';
 import { formatTime } from '@codex-ux/video-domain';
 import type { EditorState } from '../hooks/use-editor';
 import { Modal } from '../components/modal';
-import { SourcePanel } from '../panels/source';
-import { AssetsPanel } from '../panels/assets';
 import { NoteCard } from '../panels/notes';
 import { api, videoPath } from '../lib/api';
 
@@ -19,10 +17,10 @@ export function EditorModals({ state }: { state: EditorState }) {
         <Agent state={state} onClose={close} />
       </Modal>
     );
-  if (state.modal === 'files')
+  if (state.modal === 'library')
     return (
-      <Modal title="Workspace files" onClose={close}>
-        <Files state={state} />
+      <Modal title="Library" onClose={close}>
+        <LibraryBrowser library={state.library} />
       </Modal>
     );
   if (state.modal === 'notes-history')
@@ -125,92 +123,6 @@ function Agent({ state, onClose }: { state: EditorState; onClose: () => void }) 
         </button>
       )}
     </div>
-  );
-}
-type Directory = { path: string; entries: { name: string; kind: string }[] };
-function Files({ state }: { state: EditorState }) {
-  const [tab, setTab] = useState<'browse' | 'import'>('browse');
-  const [path, setPath] = useState('');
-  const [listing, setListing] = useState<Directory | null>(null);
-  const [error, setError] = useState('');
-  useEffect(() => {
-    let active = true;
-    void api<Directory>(
-      `/workspaces/${state.project!.workspaceId}/files?path=${encodeURIComponent(path)}`,
-    )
-      .then((value) => {
-        if (active) {
-          setListing(value);
-          setError('');
-        }
-      })
-      .catch((error: unknown) => {
-        if (active) setError(error instanceof Error ? error.message : 'Could not read directory.');
-      });
-    return () => {
-      active = false;
-    };
-  }, [path, state.project, tab]);
-  return (
-    <>
-      <div className="modal-tabs" role="tablist" aria-label="Workspace files">
-        <button role="tab" aria-selected={tab === 'browse'} onClick={() => setTab('browse')}>
-          Files
-        </button>
-        <button role="tab" aria-selected={tab === 'import'} onClick={() => setTab('import')}>
-          Import
-        </button>
-      </div>
-      {tab === 'browse' ? (
-        <div className="file-browser">
-          <div className="file-breadcrumb">
-            <button
-              className="text-button"
-              disabled={!path}
-              onClick={() => setPath(path.split('/').slice(0, -1).join('/'))}
-            >
-              <ArrowLeft size={15} />
-              Back
-            </button>
-            <code>files/{path}</code>
-          </div>
-          {error && (
-            <p role="alert" className="inline-error">
-              {error}
-            </p>
-          )}
-          {!listing ? (
-            <p className="muted-copy">Loading files…</p>
-          ) : listing.entries.length ? (
-            listing.entries.map((entry) => (
-              <button
-                key={entry.name}
-                className="file-row"
-                disabled={entry.kind !== 'directory'}
-                onClick={() => setPath([path, entry.name].filter(Boolean).join('/'))}
-              >
-                {entry.kind === 'directory' ? <Folder size={17} /> : <File size={17} />}
-                <span>{entry.name}</span>
-                <small>{entry.kind}</small>
-              </button>
-            ))
-          ) : (
-            <p className="muted-copy">This directory is empty.</p>
-          )}
-        </div>
-      ) : (
-        <div className="workspace-import">
-          <SourcePanel state={state} onClose={() => setTab('browse')} />
-          <AssetsPanel
-            workspaceId={state.project!.workspaceId}
-            document={state.project!.revision.document}
-            disabled={state.saving}
-            onClose={() => setTab('browse')}
-            onUpload={state.upload}
-          />
-        </div>
-      )}
-    </>
   );
 }
 function NotesHistory({ state }: { state: EditorState }) {

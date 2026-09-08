@@ -1,3 +1,4 @@
+import { LibraryStore } from './storage/library.ts';
 import { createServer } from 'node:http';
 import { join } from 'node:path';
 import { ZodError } from 'zod';
@@ -28,16 +29,19 @@ export async function startServer(
   const apps = validateApps(hostedApps);
   const workspaces = new WorkspaceStore(root);
   const store = new VideoStore(workspaces);
+  const library = new LibraryStore(workspaces);
   const projects = new VideoProjects(root, store);
   const services: Services = {
+    library,
     connections: new Connections(),
     workspaces,
     apps,
     video: {
+      library,
       projects,
       store,
       root,
-      collaboration: new VideoCollaboration(store, root, origin, projects),
+      collaboration: new VideoCollaboration(store, root, origin, projects, library),
       jobs: new RenderJobs(root),
     },
   };
@@ -142,6 +146,7 @@ export async function startServer(
       await new Promise<void>((resolve, reject) =>
         server.close((e) => (e ? reject(e) : resolve())),
       );
+      library.close();
       store.close();
     },
   };

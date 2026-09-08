@@ -66,6 +66,10 @@ timeline metadata is cached per immutable document.
 `apps/scene-3d/` remains reserved. There is no runtime-generated UI, automatic custom app build
 manager, multi-agent coordinator or generic domain editing SDK.
 
+The [shared local library](library.md) belongs to a Workspace. `packages/library-react/` provides
+reusable material browsing and mention input components; the SDK and local service provide the same
+reference and file APIs to every app. Video context remains app-owned.
+
 ## Storage
 
 ```text
@@ -74,7 +78,8 @@ manager, multi-agent coordinator or generic domain editing SDK.
   runtime.json
   workspaces/
     <workspaceId>/
-      workspace.json
+      library.sqlite              # Shared material locations and references
+    workspace.json
       files/
         video/
       apps/

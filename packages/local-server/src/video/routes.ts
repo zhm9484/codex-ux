@@ -1,3 +1,4 @@
+import type { LibraryStore } from '../storage/library.ts';
 import { randomUUID } from 'node:crypto';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { z } from 'zod';
@@ -35,6 +36,7 @@ const anchor = z
   })
   .refine((a) => a.end >= a.start, 'Invalid time range.');
 export interface VideoServices {
+  library: LibraryStore;
   store: VideoStore;
   collaboration: VideoCollaboration;
   jobs: RenderJobs;
@@ -111,14 +113,18 @@ export async function videoApi(
     const body = z
       .strictObject({
         id: z.string().uuid().optional(),
+        attachmentIds: z.array(z.string().uuid()).max(20).default([]),
         text: z.string().trim().min(1).max(4000),
         anchor,
         intent: intentSchema,
       })
       .parse(await readJson(req));
+    const attachments = await s.library.validate(id, body.attachmentIds);
     const existing = body.id && s.store.get(id).notes.find((note) => note.id === body.id);
     if (existing) {
       if (
+        JSON.stringify((existing.attachments ?? []).map((ref) => ref.id)) !==
+          JSON.stringify(body.attachmentIds) ||
         existing.text !== body.text ||
         JSON.stringify(existing.anchor) !== JSON.stringify(body.anchor) ||
         JSON.stringify(existing.intent) !== JSON.stringify(body.intent)
@@ -130,30 +136,61 @@ export async function videoApi(
     const revision = s.store.revision(id, body.anchor.revisionId);
     if (body.anchor.end > revision.document.duration)
       throw new HttpError(400, 'The note is outside its video revision.');
+    const noteId = body.id ?? randomUUID();
     s.store
       .database(id)
       .prepare('INSERT INTO notes VALUES(?,?,?,?,?,?)')
       .run(
-        body.id ?? randomUUID(),
+        noteId,
         body.text,
         JSON.stringify(body.anchor),
         JSON.stringify(body.intent),
         new Date().toISOString(),
         null,
       );
+    s.store
+      .database(id)
+      .prepare('INSERT INTO note_attachments VALUES(?,?)')
+      .run(noteId, JSON.stringify(attachments));
     json(res, s.store.get(id));
     return;
   }
   if (rest.startsWith('/notes/') && method === 'PATCH') {
-    const { text, previousText } = z
-      .strictObject({ text: z.string().trim().min(1).max(4000), previousText: z.string() })
+    const { text, previousText, attachmentIds, previousAttachmentIds } = z
+      .strictObject({
+        text: z.string().trim().min(1).max(4000),
+        previousText: z.string(),
+        attachmentIds: z.array(z.string().uuid()).max(20).optional(),
+        previousAttachmentIds: z.array(z.string().uuid()).max(20).optional(),
+      })
       .parse(await readJson(req));
-    const result = s.store
-      .database(id)
-      .prepare('UPDATE notes SET text=? WHERE id=? AND text=? AND request_id IS NULL')
-      .run(text, rest.slice(7), previousText);
-    if (!result.changes)
+    if (attachmentIds && !previousAttachmentIds)
+      throw new HttpError(400, 'Previous attachments are required.');
+    const refs = attachmentIds ? await s.library.validate(id, attachmentIds) : undefined;
+    const db = s.store.database(id);
+    const current = s.store.get(id).notes.find((note) => note.id === rest.slice(7));
+    if (
+      !current ||
+      current.requestId ||
+      current.text !== previousText ||
+      (previousAttachmentIds &&
+        JSON.stringify((current.attachments ?? []).map((ref) => ref.id)) !==
+          JSON.stringify(previousAttachmentIds))
+    )
       throw new HttpError(409, 'This note was changed, sent or removed. Refresh before editing.');
+    db.exec('BEGIN IMMEDIATE');
+    try {
+      db.prepare('UPDATE notes SET text=? WHERE id=?').run(text, current.id);
+      if (refs)
+        db.prepare('INSERT OR REPLACE INTO note_attachments VALUES(?,?)').run(
+          current.id,
+          JSON.stringify(refs),
+        );
+      db.exec('COMMIT');
+    } catch (error) {
+      db.exec('ROLLBACK');
+      throw error;
+    }
     json(res, s.store.get(id));
     return;
   }

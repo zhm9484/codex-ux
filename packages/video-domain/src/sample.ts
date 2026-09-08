@@ -3,19 +3,19 @@ export function starterFiles(): Record<string, string> {
   const names = ['opening', 'shape', 'ending'];
   const titles = ['Make room for\na good idea.', 'Give it\nsome shape.', 'Make it\nyours.'];
   const labels = ['A little space', 'Taking shape', 'Make it yours'];
-  const papers = ['#e6e9ce', '#3b483e', '#e9c9ac'];
-  const inks = ['#333b2b', '#d6ddc6', '#483c32'];
+  const papers = ['#ececf0', '#24242a', '#e3e7ff'];
+  const inks = ['#292934', '#dcdce5', '#343469'];
   const files: Record<string, string> = {
     'video.json':
       JSON.stringify({ kind: 'hyperframes', entry: 'index.html', fps: 30 }, null, 2) + '\n',
     'index.html': `<!doctype html><html><head><meta charset="utf-8"><script src="vendor/gsap.js"></script><style>
 html,body{margin:0;width:1280px;height:720px;overflow:hidden}
-#root{position:relative;width:1280px;height:720px;background:#e6e9ce;overflow:hidden}
+#root{position:relative;width:1280px;height:720px;background:#ececf0;overflow:hidden}
 .scene{position:absolute;inset:0;pointer-events:none}
-.text-clip{position:absolute;left:6%;top:44%;width:65%;transform:translateY(-50%);white-space:pre-wrap;line-height:1.04;letter-spacing:-0.045em;font:100px Georgia;color:#242820;pointer-events:auto}
+.text-clip{position:absolute;left:6%;top:44%;width:65%;transform:translateY(-50%);white-space:pre-wrap;line-height:1.04;letter-spacing:-0.045em;font:100px Georgia;color:#24242a;pointer-events:auto}
 </style></head><body><div id="root" data-composition-id="main" data-width="1280" data-height="720" data-duration="18">
 ${names.map((id, i) => `<div id="${id}" class="scene" data-name="${labels[i]}" data-composition-id="${id}" data-composition-src="scenes/${id}.html" data-start="${i * 6}" data-duration="6" data-width="1280" data-height="720"></div>`).join('\n')}
-${titles.map((text, i) => `<div id="title-${i + 1}" class="text-clip" data-start="${i * 6}" data-duration="6" style="${i === 1 ? 'color:#f4efe2' : ''}">${text}</div>`).join('\n')}
+${titles.map((text, i) => `<div id="title-${i + 1}" class="text-clip" data-start="${i * 6}" data-duration="6" style="${i === 1 ? 'color:#f4f4f6' : ''}">${text}</div>`).join('\n')}
 </div><script>window.__timelines=window.__timelines||{};window.__timelines.main=gsap.timeline({paused:true}).to({}, {duration:18});</script></body></html>`,
   };
   names.forEach((id, i) => {
