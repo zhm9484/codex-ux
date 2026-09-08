@@ -26,14 +26,17 @@ export class VideoCollaboration {
   readonly root: string;
   readonly origin: string;
   readonly projects: VideoProjects;
+  readonly send: typeof deliver;
   constructor(
     store: VideoStore,
     root: string,
     origin: string,
     projects: VideoProjects,
     library?: LibraryStore,
+    send: typeof deliver = deliver,
   ) {
     this.library = library;
+    this.send = send;
     this.projects = projects;
     this.store = store;
     this.root = root;
@@ -108,9 +111,15 @@ export class VideoCollaboration {
       const message = `Video Editor feedback request ${requestId} for workspace ${id}. Read the JSON context at ${endpoint} using HTTP GET. Each note may include attachments with absolute local paths. Read those files or directories as reference material; copy needed resources into the candidate before using them in the video, leaving originals untouched. This request was explicitly submitted by the user. Edit the candidate at ${dir}. ${sourceInstructions} Do not modify immutable revision files. Preview the candidate, then POST JSON {"label":"A concise description"} to ${endpoint}/publish. Publication checks the base revision and records one undoable agent version. If blocked, POST {"message":"..."} to ${endpoint}/error. Do not queue another agent session.`;
       db.prepare("UPDATE requests SET state='sending' WHERE id=?").run(requestId);
       deliveryStarted = true;
-      await deliver(target.session, message);
+      await this.send(
+        target.session,
+        `${message} Before starting work, POST JSON {} to ${endpoint}/received to acknowledge receipt. Reading context alone does not acknowledge this request.`,
+      );
       db.prepare("UPDATE requests SET state='sent' WHERE id=? AND state='sending'").run(requestId);
     } catch (error) {
+      // An agent callback is stronger evidence than a late queue process error.
+      const confirmed = this.request(id, requestId).state;
+      if (confirmed === 'received' || confirmed === 'published') return { requestId };
       if (error instanceof DeliveryUnavailableError) deliveryStarted = false;
       const state = deliveryStarted ? 'delivery-unknown' : 'failed';
       db.prepare(
@@ -145,10 +154,21 @@ export class VideoCollaboration {
       candidateDirectory: join(videoDirectory(this.root, id), 'requests', requestId),
       previewUrl: `${this.origin}/media/video-editor/candidate/${id}/${requestId}/player.html`,
       publishUrl: `${this.origin}/api/workspaces/${id}/apps/video-editor/requests/${requestId}/publish`,
+      receiptUrl: `${this.origin}/api/workspaces/${id}/apps/video-editor/requests/${requestId}/received`,
       source: this.projects.status(id),
       state: r.state,
       error: r.error,
     };
+  }
+  received(id: string, requestId: string) {
+    this.request(id, requestId);
+    this.store
+      .database(id)
+      .prepare(
+        "UPDATE requests SET state='received',error=NULL WHERE id=? AND state IN ('sending','sent','delivery-unknown')",
+      )
+      .run(requestId);
+    return this.context(id, requestId);
   }
   async publish(id: string, requestId: string, label: string) {
     const r = this.request(id, requestId);

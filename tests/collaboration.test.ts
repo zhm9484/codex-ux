@@ -9,6 +9,55 @@ import { WorkspaceStore } from '../packages/local-server/src/storage/workspaces.
 import { VideoProjects } from '../packages/local-server/src/sources/projects.ts';
 import { VideoCollaboration } from '../packages/local-server/src/video/collaboration.ts';
 
+void test('agent receipt survives a late queue failure and unknown delivery can be acknowledged', async (t) => {
+  const root = await mkdtemp(join(tmpdir(), 'ux-receipt-'));
+  const workspaces = new WorkspaceStore(root);
+  const store = new VideoStore(workspaces);
+  t.after(async () => {
+    store.close();
+    await rm(root, { recursive: true, force: true });
+  });
+  const projects = new VideoProjects(root, store);
+  const workspace = await projects.open(workspaces.create('Receipt race').id);
+  const db = store.database(workspace.workspaceId);
+  const noteId = randomUUID();
+  db.prepare('INSERT INTO notes VALUES(?,?,?,?,?,?)').run(
+    noteId,
+    'Adjust the title',
+    JSON.stringify({ revisionId: workspace.revisionId, start: 0, end: 1 }),
+    JSON.stringify({ kind: 'change' }),
+    new Date().toISOString(),
+    null,
+  );
+  const collaboration: VideoCollaboration = new VideoCollaboration(
+    store,
+    root,
+    'http://127.0.0.1:5173',
+    projects,
+    undefined,
+    (_session, message) => {
+      const requestId = String(db.prepare('SELECT id FROM requests').get()!.id);
+      assert.ok(message.includes(`/requests/${requestId}/received`));
+      assert.equal(collaboration.context(workspace.workspaceId, requestId).state, 'sending');
+      collaboration.received(workspace.workspaceId, requestId);
+      return Promise.reject(new Error('Queue timed out after delivery'));
+    },
+  );
+  const { requestId } = await collaboration.submit(workspace.workspaceId, [noteId], {
+    instanceId: randomUUID(),
+    session: { provider: 'codex', sessionId: randomUUID() },
+  });
+  assert.equal(collaboration.context(workspace.workspaceId, requestId).state, 'received');
+  assert.equal(store.get(workspace.workspaceId).notes[0]?.requestId, requestId);
+  db.prepare("UPDATE requests SET state='delivery-unknown',error='timeout' WHERE id=?").run(
+    requestId,
+  );
+  const receipt = collaboration.received(workspace.workspaceId, requestId);
+  assert.equal(receipt.state, 'received');
+  assert.equal(receipt.error, null);
+  assert.throws(() => collaboration.received(workspace.workspaceId, randomUUID()), /not found/);
+});
+
 void test('a missing Codex executable releases notes instead of leaving delivery unknown', async (t) => {
   const root = await mkdtemp(join(tmpdir(), 'ux-unsent-'));
   const workspaces = new WorkspaceStore(root);
@@ -51,11 +100,15 @@ void test('a queued request publishes source edits once and refuses a stale cand
   const store = new VideoStore(workspaces);
   const previous = process.env.CODEX_UX_CODEX_BIN;
   try {
-    const executable = join(root, 'fake-codex');
-    await writeFile(executable, '#!/bin/sh\nprintf "%s\\n" "$@"\n', { mode: 0o755 });
-    process.env.CODEX_UX_CODEX_BIN = executable;
     const projects = new VideoProjects(root, store);
-    const collaboration = new VideoCollaboration(store, root, 'http://127.0.0.1:5173', projects);
+    const collaboration = new VideoCollaboration(
+      store,
+      root,
+      'http://127.0.0.1:5173',
+      projects,
+      undefined,
+      () => Promise.resolve('queued'),
+    );
     const workspace = await projects.open(workspaces.create('Agent test').id);
     const db = store.database(workspace.workspaceId);
     const target = {
@@ -84,7 +137,16 @@ void test('a queued request publishes source edits once and refuses a stale cand
     assert.equal(context.baseRevision, workspace.revisionId);
     assert.deepEqual(context.target, originalTarget);
     assert.equal(context.appId, 'video-editor');
-    assert.ok(context.candidateDirectory.includes('apps/video-editor/requests'));
+    assert.ok(context.candidateDirectory.includes(join('apps', 'video-editor', 'requests')));
+    assert.equal(context.state, 'sent');
+    assert.equal(
+      collaboration.received(workspace.workspaceId, request.requestId).state,
+      'received',
+    );
+    assert.equal(
+      collaboration.received(workspace.workspaceId, request.requestId).state,
+      'received',
+    );
     const other = await projects.open(workspaces.create('Another workspace').id);
     assert.throws(() => collaboration.context(other.workspaceId, request.requestId), /not found/);
     assert.equal(store.get(workspace.workspaceId).notes[0]?.requestId, request.requestId);
@@ -96,6 +158,10 @@ void test('a queued request publishes source edits once and refuses a stale cand
       'Warmer words',
     );
     assert.equal(published.revision.author, 'agent');
+    assert.equal(
+      collaboration.received(workspace.workspaceId, request.requestId).state,
+      'published',
+    );
     assert.match(published.revision.document.files['scenes/opening.html']!.text!, /OUR NOTES/);
     assert.equal(
       (await collaboration.publish(workspace.workspaceId, request.requestId, 'Retry')).history

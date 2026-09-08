@@ -86,26 +86,27 @@ instructions and launcher commands are described in [skills](skills.md).
 
 The following paths are relative to `/workspaces/:id/apps/video-editor`.
 
-| Method and path                     | Behavior                                                                                                                               |
-| ----------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
-| `POST` (base path)                  | Open/initialize a video project with `{}`                                                                                              |
-| `GET` (base path) or `GET /context` | VideoProject: workspace, title, revision/document, notes, history and source status                                                    |
-| `GET /revisions/:revisionId`        | Immutable historical document and file manifest                                                                                        |
-| `GET /source`                       | Absolute working directory and last scan error                                                                                         |
-| `POST /source`                      | Import `{ baseRevision, path }`, an absolute project directory or MP4/WebM file                                                        |
-| `POST /source/media`                | Replace from raw MP4/WebM bytes; `Content-Type`, percent-encoded `X-File-Name`, UUID `X-Base-Revision`                                 |
-| `POST /revisions`                   | Commit `{ requestId, baseRevision, label, document }`                                                                                  |
-| `POST /undo` or `/redo`             | Move history using `{ baseRevision }`                                                                                                  |
-| `POST /notes`                       | Save `{ id?, text, anchor, intent, attachmentIds? }`; an identical optional UUID replay returns the existing note                      |
-| `PATCH /notes/:noteId`              | Edit unsent text with `{ text, previousText, attachmentIds?, previousAttachmentIds? }`; changed, removed or submitted notes return 409 |
-| `DELETE /notes/:noteId`             | Remove an unsubmitted note                                                                                                             |
-| `POST /assets`                      | Upload raw bytes with MIME Content-Type and percent-encoded `X-File-Name`                                                              |
-| `POST /requests`                    | Submit `{ noteIds, target: { instanceId, session: { provider, sessionId } } }`                                                         |
-| `GET /requests/:requestId`          | Submission snapshot, target, state and candidate paths                                                                                 |
-| `POST /requests/:requestId/publish` | Publish candidate with `{ label }`                                                                                                     |
-| `POST /requests/:requestId/error`   | Record `{ message }` on a request                                                                                                      |
-| `POST /exports`                     | Export `{ revisionId }`                                                                                                                |
-| `GET /exports/:jobId`               | Export result or error                                                                                                                 |
+| Method and path                      | Behavior                                                                                                                               |
+| ------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------- |
+| `POST` (base path)                   | Open/initialize a video project with `{}`                                                                                              |
+| `GET` (base path) or `GET /context`  | VideoProject: workspace, title, revision/document, notes, history and source status                                                    |
+| `GET /revisions/:revisionId`         | Immutable historical document and file manifest                                                                                        |
+| `GET /source`                        | Absolute working directory and last scan error                                                                                         |
+| `POST /source`                       | Import `{ baseRevision, path }`, an absolute project directory or MP4/WebM file                                                        |
+| `POST /source/media`                 | Replace from raw MP4/WebM bytes; `Content-Type`, percent-encoded `X-File-Name`, UUID `X-Base-Revision`                                 |
+| `POST /revisions`                    | Commit `{ requestId, baseRevision, label, document }`                                                                                  |
+| `POST /undo` or `/redo`              | Move history using `{ baseRevision }`                                                                                                  |
+| `POST /notes`                        | Save `{ id?, text, anchor, intent, attachmentIds? }`; an identical optional UUID replay returns the existing note                      |
+| `PATCH /notes/:noteId`               | Edit unsent text with `{ text, previousText, attachmentIds?, previousAttachmentIds? }`; changed, removed or submitted notes return 409 |
+| `DELETE /notes/:noteId`              | Remove an unsubmitted note                                                                                                             |
+| `POST /assets`                       | Upload raw bytes with MIME Content-Type and percent-encoded `X-File-Name`                                                              |
+| `POST /requests`                     | Submit `{ noteIds, target: { instanceId, session: { provider, sessionId } } }`                                                         |
+| `GET /requests/:requestId`           | Submission snapshot, target, state and candidate paths                                                                                 |
+| `POST /requests/:requestId/received` | Agent acknowledges receipt with `{}`; idempotent and never downgrades a published result                                               |
+| `POST /requests/:requestId/publish`  | Publish candidate with `{ label }`                                                                                                     |
+| `POST /requests/:requestId/error`    | Record `{ message }` on a request                                                                                                      |
+| `POST /exports`                      | Export `{ revisionId }`                                                                                                                |
+| `GET /exports/:jobId`                | Export result or error                                                                                                                 |
 
 Attachment arrays contain up to 20 Workspace reference UUIDs. Notes store resolved reference
 metadata. Replacing attachments requires their previous IDs; sends recheck files and reserve the
@@ -211,12 +212,15 @@ context URL, exact candidate directory, preview URL and publication/error endpoi
 state.
 
 The request is durable before invoking the external queue. Successful queue acceptance is `sent`,
-not agent completion. Preparation failures are `failed` and release the selected notes. Unconfirmed
-CLI delivery is `delivery-unknown`; notes stay reserved and there is no automatic retry. Missing or
-unstartable executables (`ENOENT`/`EACCES`) and failed automatic executable discovery are definitely
-unsent: requests are `failed` and video notes are released for retry. Inspect the external session
-before resubmitting. The CLI timeout is 15 seconds. The app does not create or terminate sessions,
-schedule agents or resume interrupted delivery.
+not agent receipt or completion. Agents must POST `{}` to the context's `receiptUrl` before working;
+this changes `sending`, `sent` or `delivery-unknown` to `received`. Reading context has no receipt
+side effect. A receipt or publication arriving before a queue error takes precedence over that
+error. Late receipt/error callbacks cannot downgrade `published`. Preparation failures are `failed`
+and release the selected notes. Unconfirmed CLI delivery is `delivery-unknown`; notes stay reserved
+and there is no automatic retry. Missing or unstartable executables (`ENOENT`/`EACCES`) and failed
+automatic executable discovery are definitely unsent: requests are `failed` and video notes are
+released for retry. Inspect the external session before resubmitting. The CLI timeout is 15 seconds.
+The app does not create or terminate sessions, schedule agents or resume interrupted delivery.
 
 Publication reads the full candidate, validates resources, prepares required bundles, checks its
 base and working source, then records one agent-authored revision. Repeated publication does not

@@ -112,10 +112,14 @@ checks previous text and attachments together.
 
 An unbound send opens Agent connection and preserves the draft; **Continue sending** resumes the
 chosen action after binding. Canceling preserves the draft without sending. Sending disables
-repeated submissions. Draft creation uses a stable ID so a failed request can be retried without
-duplicating notes. Uncertain delivery remains submitted and requires checking history rather than
-automatic resending. The draft pins its reference when opened; closing/reopening and background
-updates preserve typed drafts and their original anchors. Drafts are not persisted across reload.
+repeated submissions. Every send rechecks local queue capability before submitting a request;
+unavailable delivery retains saved notes and the composer draft. Successful composer submissions
+open Notes history, distinguishing queue acceptance, explicit agent receipt and published
+completion. Queue availability alone does not prove task reachability. Draft creation uses a stable
+ID so a failed request can be retried without duplicating notes. Uncertain delivery remains
+submitted and requires checking history rather than automatic resending. The draft pins its
+reference when opened; closing/reopening and background updates preserve typed drafts and their
+original anchors. Drafts are not persisted across reload.
 
 The visible page polls every 1.8 seconds. Files must be stable across two observations at least 650
 ms apart. Capture validates source and builds Remotion before committing an external revision.
