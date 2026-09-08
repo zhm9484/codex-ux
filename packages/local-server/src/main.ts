@@ -1,4 +1,4 @@
-import { mkdir, open, readFile, rm, writeFile } from 'node:fs/promises';
+import { mkdir, open, readFile, rename, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { dataRoot, port } from './config.ts';
 import { startServer } from './server.ts';
@@ -70,10 +70,9 @@ try {
     throw error;
   });
   const { origin } = app;
-  await writeFile(
-    join(dataRoot, 'runtime.json'),
-    JSON.stringify({ origin, pid: process.pid, dataRoot }, null, 2),
-  );
+  const stagedRuntime = join(dataRoot, `.runtime-${process.pid}.json`);
+  await writeFile(stagedRuntime, JSON.stringify({ origin, pid: process.pid, dataRoot }, null, 2));
+  await rename(stagedRuntime, join(dataRoot, 'runtime.json'));
   console.log(
     `Codex UX · ${origin}\n${app.apps.map((hosted) => `${hosted.name} · ${origin}/apps/${hosted.id}/`).join('\n')}\nLocal data · ${dataRoot}`,
   );

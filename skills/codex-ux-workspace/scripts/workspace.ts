@@ -7,6 +7,7 @@ import { createRequire } from 'node:module';
 import { promisify } from 'node:util';
 import { parseArgs } from 'node:util';
 import { prepareApp } from './artifacts.ts';
+import { DiscoveryError, locateService } from './discovery.ts';
 
 const execute = promisify(execFile);
 const { positionals, values } = parseArgs({
@@ -64,23 +65,7 @@ async function api(origin: string, path: string, body?: unknown): Promise<Record
   return result;
 }
 async function service() {
-  const saved = JSON.parse(await readFile(join(root, 'runtime.json'), 'utf8')) as {
-    origin: string;
-  };
-  const url = new URL(saved.origin);
-  if (url.hostname !== '127.0.0.1' || url.protocol !== 'http:')
-    throw new Error('Invalid local service origin.');
-  const health = await api(saved.origin, '/health');
-  if (
-    health.service !== 'codex-ux' ||
-    health.version !== 3 ||
-    health.dataRoot !== root ||
-    health.runtimeBuild !== bundle.build
-  )
-    throw new Error(
-      'A different runtime is running. Finish active work and restart with this skill version. Workspace data is preserved.',
-    );
-  return saved.origin;
+  return (await locateService(root, bundle.build)).origin;
 }
 async function prepare() {
   if (await exists(join(runtime, '.ready'))) return;
@@ -206,7 +191,11 @@ async function start() {
       const pid = Number(await readFile(join(root, 'service.lock'), 'utf8'));
       try {
         process.kill(pid, 0);
-        throw error;
+        throw new DiscoveryError(
+          'service_restart_required',
+          `A live service (PID ${pid}) cannot be used by this launcher. Finish active work and stop that specific service normally before restarting.`,
+          { cause: error, pid },
+        );
       } catch (probe) {
         if (!(probe instanceof Error && 'code' in probe && probe.code === 'ESRCH')) throw probe;
       }
@@ -265,7 +254,9 @@ async function start() {
   if (app) await api(origin, '/apps', app);
   await saveRegistry();
   output({
+    state: 'ready',
     origin,
+    apiBase: `${origin}/api`,
     dataRoot: root,
     url: app ? `${origin}/apps/${app.id}/` : origin,
     runtimeBuild: bundle.build,
@@ -315,6 +306,9 @@ try {
     case 'start':
       await startExclusive();
       break;
+    case 'locate':
+      output(await locateService(root, bundle.build));
+      break;
     case 'workspaces':
       output(await api(await service(), '/workspaces'));
       break;
@@ -361,10 +355,36 @@ try {
       break;
     default:
       throw new Error(
-        'Commands: start [--app app.json], workspaces, create --name NAME, connect --workspace ID [--session ID] | --code CODE, status --code CODE, doctor.',
+        'Commands: start [--app app.json], locate, workspaces, create --name NAME, connect --workspace ID [--session ID] | --code CODE, status --code CODE, doctor.',
       );
   }
 } catch (error) {
-  console.error(error instanceof Error ? error.message : error);
+  if (error instanceof DiscoveryError) {
+    const restart = error.code === 'runtime_mismatch' || error.code === 'service_restart_required';
+    console.error(
+      JSON.stringify(
+        {
+          state: 'unavailable',
+          dataRoot: root,
+          error: {
+            code: error.code,
+            message: error.message,
+            ...(error.pid ? { pid: error.pid } : {}),
+          },
+          recovery: {
+            action: restart ? 'review_running_service' : 'start',
+            instructions: restart
+              ? 'Check service.log and align installed skill versions. Finish active work before stopping the identified service, then run start again. Do not kill unrelated processes or delete Workspace data.'
+              : 'Run start once for this same data directory; add --app with the intended app.json when registering an app. If the same failure persists, report it instead of guessing ports or changing data directories.',
+            command: process.execPath,
+            args: [join(skill, 'scripts/workspace.ts'), 'start', '--data-dir', root],
+            logPath: join(root, 'service.log'),
+          },
+        },
+        null,
+        2,
+      ),
+    );
+  } else console.error(error instanceof Error ? error.message : error);
   process.exitCode = 1;
 }

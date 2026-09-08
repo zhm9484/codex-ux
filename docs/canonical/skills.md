@@ -55,6 +55,17 @@ mismatches do not kill a live service or reset data: finish active work and stop
 normally before starting the updated skills. No automatic cache or Workspace garbage collection is
 supplied.
 
+`start` is the agent's idempotent startup entry point and returns `state: "ready"`, `origin`,
+`apiBase`, and the app `url`. `locate` is read-only discovery with the same verified address fields.
+It checks loopback origin, service identity, data root, API version and runtime fingerprint. If the
+record changes during a failed health check, it retries discovery once at the new origin; it never
+replays an app operation. Discovery failures emit structured JSON on stderr (nonzero exit), with an
+error code, data root and recovery instructions/argv. Missing, invalid, stale or unreachable records
+direct the agent to start once for the same root. Version mismatches or an unusable live PID require
+review before restart. Agents must not guess ports, change roots to hide a failure or blindly retry
+mutations. The service publishes `runtime.json` through an atomic rename so readers cannot observe a
+partially written record.
+
 ## Connecting and creating video
 
 Workspace owns service discovery, Workspace selection, app-page pairing, and recovery. Video Editor

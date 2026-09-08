@@ -144,8 +144,8 @@ workspace data in place.
 
 The service uses a PID lock and health check to reuse the service for a data directory. All apps and
 workspaces share its HTTP port. By default, the OS assigns an available loopback port. The actual
-origin is saved in `<dataRoot>/runtime.json`; restarts prefer that port and fall back to OS
-assignment if it is occupied. This keeps browser storage at the same origin when possible. An
+origin is atomically saved in `<dataRoot>/runtime.json`; restarts prefer that port and fall back to
+OS assignment if it is occupied. This keeps browser storage at the same origin when possible. An
 explicit nonzero port is strict: occupation causes an error instead of silently changing it. Vite
 HMR, thumbnail capture, agent context URLs and host/origin checks all use the bound port. Chromium
 and FFmpeg subprocesses are still needed for rendering.

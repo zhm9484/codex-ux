@@ -43,6 +43,31 @@ The default data root is `~/.codex-ux/`; runtime dependencies are cached separat
 user content out of skill installation directories. Never edit app-private databases, blobs, or
 prepared previews. Get actual working paths through `GET /api/workspaces/:id` and app APIs.
 
+## Get a usable service address
+
+Use `start --app "$APP_SKILL/app.json"` as the normal entry point. It is idempotent: it starts a
+service if needed or reuses a matching live one, then returns verified `origin`, `apiBase`, and
+`url`. Do not ask the user for a port or read/edit `runtime.json` manually.
+
+To recover the address later without starting anything:
+
+```sh
+node "$WORKSPACE_SKILL/scripts/workspace.ts" locate
+```
+
+Keep the same `--data-dir` or `CODEX_UX_DATA_DIR` across calls. Success is JSON on stdout with
+`state: "ready"`; discovery failures exit nonzero and emit JSON on stderr with `error.code`, the
+exact data root, and recovery instructions/command arguments. For `service_not_started`,
+`service_unreachable`, `service_record_invalid`, or `service_mismatch`, run `start` once for that
+same root (include the intended app manifest), then use the newly returned address. If the same
+failure persists, report the code and log path; do not guess ports, scan directories, or silently
+switch to another data root. For `runtime_mismatch` or `service_restart_required`, review the live
+service and matching skill versions before restarting; do not automatically kill it.
+
+If an HTTP operation fails after a restart, run `locate` and refresh the address. Retry a read with
+the new origin; for a mutation, check its recorded result before retrying to avoid duplicates. Never
+reuse an old pairing code after a service restart; request a fresh one.
+
 ## Connect this conversation
 
 First run `doctor` to inspect Codex delivery support without sending a message:
