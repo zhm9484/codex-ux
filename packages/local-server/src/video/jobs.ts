@@ -92,13 +92,20 @@ export class RenderJobs {
         const { selectComposition, renderMedia } = await import('@remotion/renderer');
         const browserExecutable = browser.executablePath;
         const serveUrl = join(prepared, 'render');
-        const composition = await selectComposition({ serveUrl, id: 'Video', browserExecutable });
+        const binariesDirectory = environments.remotionBinariesDirectory ?? null;
+        const composition = await selectComposition({
+          serveUrl,
+          id: 'Video',
+          browserExecutable,
+          binariesDirectory,
+        });
         await renderMedia({
           serveUrl,
           composition,
           codec: 'h264',
           outputLocation: output,
           browserExecutable,
+          binariesDirectory,
           concurrency: 1,
         });
       } else {

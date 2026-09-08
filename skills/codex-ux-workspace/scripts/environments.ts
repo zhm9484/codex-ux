@@ -61,6 +61,11 @@ export class Environments {
       ? join(this.runtime, 'bin', `${name}${process.platform === 'win32' ? '.exe' : ''}`)
       : undefined;
   }
+  get remotionBinariesDirectory() {
+    return this.runtime && process.platform === 'win32'
+      ? join(this.runtime, 'bin', 'remotion')
+      : undefined;
+  }
   list() {
     return capabilities.map(
       (id) =>
@@ -151,6 +156,24 @@ export class Environments {
               transformSync(text: string, options: { loader: string }): unknown;
             }
           ).transformSync('const x: number = 1', { loader: 'ts' });
+        if (id === 'remotion-export' && this.remotionBinariesDirectory) {
+          const rendererRequire = createRequire(require.resolve('@remotion/renderer'));
+          const source = (rendererRequire('@remotion/compositor-win32-x64-msvc') as { dir: string })
+            .dir;
+          await mkdir(join(runtime, 'bin'), { recursive: true });
+          try {
+            await symlink(source, this.remotionBinariesDirectory, 'junction');
+          } catch (error) {
+            if (!(error instanceof Error && 'code' in error && error.code === 'EEXIST'))
+              throw error;
+          }
+          await access(join(this.remotionBinariesDirectory, 'remotion.exe'));
+          await promisify(execFile)(
+            join(this.remotionBinariesDirectory, 'ffmpeg.exe'),
+            ['-version'],
+            { timeout: 10000, windowsHide: true },
+          );
+        }
         for (const name of ['ffmpeg-static', '@ffprobe-installer/ffprobe']) {
           if (!artifact.packages.includes(name)) continue;
           const binary =
