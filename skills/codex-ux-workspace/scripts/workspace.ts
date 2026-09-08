@@ -8,6 +8,7 @@ import { promisify } from 'node:util';
 import { parseArgs } from 'node:util';
 import { prepareApp } from './artifacts.ts';
 import { DiscoveryError, locateService } from './discovery.ts';
+import { installDependencies } from './install.ts';
 
 const execute = promisify(execFile);
 const { positionals, values } = parseArgs({
@@ -81,28 +82,12 @@ async function prepare() {
     console.error('Preparing pinned runtime dependencies…');
     const npmPrefix = join(cache, 'npm-prefix');
     await mkdir(join(npmPrefix, 'lib'), { recursive: true });
-    await execute(
-      process.platform === 'win32' ? 'npx.cmd' : 'npx',
-      [
-        '--yes',
-        'pnpm@10.34.5',
-        'install',
-        '--prod',
-        '--frozen-lockfile',
-        '--config.manage-package-manager-versions=false',
-      ],
-      {
-        cwd: stage,
-        timeout: 600_000,
-        maxBuffer: 8 * 1024 * 1024,
-        env: {
-          ...process.env,
-          PATH: `${dirname(process.execPath)}${process.platform === 'win32' ? ';' : ':'}${process.env.PATH ?? ''}`,
-          CI: 'true',
-          npm_config_prefix: npmPrefix,
-        },
-      },
-    );
+    await installDependencies(stage, {
+      ...process.env,
+      PATH: `${dirname(process.execPath)}${process.platform === 'win32' ? ';' : ':'}${process.env.PATH ?? ''}`,
+      CI: 'true',
+      npm_config_prefix: npmPrefix,
+    });
     await writeFile(join(stage, '.ready'), bundle.build);
     try {
       await rename(stage, runtime);
@@ -213,6 +198,7 @@ async function start() {
     const child = spawn(process.execPath, [join(runtime, 'packages/local-server/src/main.ts')], {
       cwd: runtime,
       detached: true,
+      windowsHide: true,
       stdio: ['ignore', log.fd, log.fd],
       env: {
         ...process.env,

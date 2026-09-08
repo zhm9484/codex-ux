@@ -15,6 +15,17 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  windows-launcher:
+    name: Windows launcher
+    runs-on: windows-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .node-version
+      - run: node --test tests/launcher-install.test.ts
+
   check:
     name: Check
     runs-on: ubuntu-latest
