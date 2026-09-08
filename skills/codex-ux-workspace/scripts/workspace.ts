@@ -2,13 +2,12 @@ import { createHash, randomUUID } from 'node:crypto';
 import { spawn, execFile } from 'node:child_process';
 import { access, mkdir, open, readFile, rename, rm, writeFile } from 'node:fs/promises';
 import { homedir } from 'node:os';
-import { dirname, isAbsolute, join, resolve } from 'node:path';
-import { createRequire } from 'node:module';
+import { dirname, join, resolve } from 'node:path';
 import { promisify } from 'node:util';
 import { parseArgs } from 'node:util';
 import { prepareApp } from './artifacts.ts';
 import { DiscoveryError, locateService } from './discovery.ts';
-import { installDependencies } from './install.ts';
+import { browserRuntime, prepareRuntime } from './runtime.ts';
 
 const execute = promisify(execFile);
 const { positionals, values } = parseArgs({
@@ -69,34 +68,14 @@ async function service() {
   return (await locateService(root, bundle.build)).origin;
 }
 async function prepare() {
-  if (await exists(join(runtime, '.ready'))) return;
-  const stage = `${runtime}-${randomUUID()}`;
-  await mkdir(stage, { recursive: true });
-  try {
-    for (const [path, content] of Object.entries(bundle.files)) {
-      if (isAbsolute(path) || path.split(/[\\/]/).some((part) => part === '..' || !part))
-        throw new Error('Invalid runtime resource path.');
-      await mkdir(dirname(join(stage, path)), { recursive: true });
-      await writeFile(join(stage, path), content);
-    }
-    console.error('Preparing pinned runtime dependencies…');
-    const npmPrefix = join(cache, 'npm-prefix');
-    await mkdir(join(npmPrefix, 'lib'), { recursive: true });
-    await installDependencies(stage, {
-      ...process.env,
-      PATH: `${dirname(process.execPath)}${process.platform === 'win32' ? ';' : ':'}${process.env.PATH ?? ''}`,
-      CI: 'true',
-      npm_config_prefix: npmPrefix,
-    });
-    await writeFile(join(stage, '.ready'), bundle.build);
-    try {
-      await rename(stage, runtime);
-    } catch (error) {
-      if (!(await exists(join(runtime, '.ready')))) throw error;
-    }
-  } finally {
-    await rm(stage, { recursive: true, force: true });
-  }
+  const npmPrefix = join(cache, 'npm-prefix');
+  await mkdir(join(npmPrefix, 'lib'), { recursive: true });
+  await prepareRuntime(runtime, bundle, {
+    ...process.env,
+    PATH: `${dirname(process.execPath)}${process.platform === 'win32' ? ';' : ':'}${process.env.PATH ?? ''}`,
+    CI: 'true',
+    npm_config_prefix: npmPrefix,
+  });
 }
 async function browser() {
   const configured = process.env.CODEX_UX_CHROME;
@@ -106,18 +85,14 @@ async function browser() {
   }
   const chrome = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
   if (process.platform === 'darwin' && (await exists(chrome))) return chrome;
-  const require = createRequire(join(runtime, 'packages/local-server/package.json'));
-  const playwright = (await import(require.resolve('playwright-core'))) as {
-    chromium: { executablePath(): string };
-  };
+  const { playwright, cli } = browserRuntime(runtime);
   const path = playwright.chromium.executablePath();
   if (!(await exists(path))) {
     console.error('Preparing Chromium for preview and rendering…');
-    await execute(
-      process.execPath,
-      [require.resolve('playwright-core/cli'), 'install', 'chromium'],
-      { timeout: 600_000, maxBuffer: 4 * 1024 * 1024 },
-    );
+    await execute(process.execPath, [cli, 'install', 'chromium'], {
+      timeout: 600_000,
+      maxBuffer: 4 * 1024 * 1024,
+    });
   }
   return path;
 }

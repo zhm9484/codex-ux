@@ -42,10 +42,20 @@ bundle into a disposable versioned cache, installs production dependencies with 
 10.34.5 lockfile, and locates or downloads Chromium. Trusted runtime dependency builds follow the
 workspace allowlist; user source dependency installs still disable lifecycle scripts.
 
+Dependencies install at the final runtime path: moving an installed tree breaks Windows pnpm
+junctions. A per-runtime lock also serializes preparation across different data roots sharing a
+cache; contention fails with the lock path (inspect its PID before removing a stale lock). A cache
+is marked ready only after Playwright loads. Ready caches that fail this check are reinstalled in
+place with `--force`; failed or interrupted preparation retains files but no valid ready marker and
+is retryable.
+
 On Windows, dependency preparation invokes the `npx.cmd` shim through `cmd.exe /d /s /c` with fixed
 install arguments. Cache paths and environment values are passed as process options, not
 interpolated into shell commands. Preparation and the detached service hide console windows. Node.js
-24 and a working npm/npx installation are still required.
+24 and a working npm/npx installation are still required. Browser preparation loads Playwright
+through the runtime's `createRequire`, avoiding Windows drive-letter paths in dynamic imports and
+preserving its CommonJS exports. Chromium installation uses the pinned package's `cli.js` binary
+beside its exported `package.json`; `playwright-core/cli` is not an exported module.
 
 By default, runtime caches use `~/.cache/codex-ux/`, independently of `~/.codex-ux/` Workspace data.
 `CODEX_UX_CACHE_DIR` overrides the cache. `installed-apps.json` under the data root remembers hosted

@@ -24,7 +24,7 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version-file: .node-version
-      - run: node --test tests/launcher-install.test.ts
+      - run: node --test tests/launcher-install.test.ts tests/launcher-runtime.test.ts
 
   check:
     name: Check
