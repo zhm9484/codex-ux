@@ -4,6 +4,12 @@ import { randomUUID } from 'node:crypto';
 import { createVideo } from './browser-helpers.ts';
 import type { VideoProject } from '../packages/video-domain/src/schema.ts';
 
+test.beforeEach(async ({ context }) => {
+  await context.route('**/api/agents/codex', (route) =>
+    route.fulfill({ json: { deliveryAvailable: true } }),
+  );
+});
+
 test('draft delivery stays separate from queued notes, preserves retries, and exposes sent history', async ({
   page,
   request,

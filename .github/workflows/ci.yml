@@ -15,16 +15,22 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  windows-launcher:
-    name: Windows launcher
-    runs-on: windows-latest
+  launcher:
+    name: Launcher (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
         with:
           node-version-file: .node-version
-      - run: node --test tests/launcher-install.test.ts tests/launcher-runtime.test.ts
+      - run:
+          node --test tests/launcher-install.test.ts tests/launcher-runtime.test.ts
+          tests/codex-discovery.test.ts
 
   check:
     name: Check

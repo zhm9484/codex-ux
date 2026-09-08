@@ -9,6 +9,7 @@ import type {
   SceneSnapshot,
 } from '@codex-ux/scene-domain';
 import { deliver } from '../agents.ts';
+import { DeliveryUnavailableError } from '@codex-ux/adapter-codex';
 import { HttpError } from '../errors.ts';
 import { capture, hash, materialize } from './files.ts';
 import { prepare } from './build.ts';
@@ -159,13 +160,17 @@ export class SceneCollaboration {
       } catch (error) {
         this.projects.store
           .database(id)
-          .prepare(
-            "UPDATE requests SET state='delivery-unknown',error=? WHERE id=? AND state='sending'",
-          )
-          .run(error instanceof Error ? error.message : 'Delivery not confirmed.', requestId);
+          .prepare("UPDATE requests SET state=?,error=? WHERE id=? AND state='sending'")
+          .run(
+            error instanceof DeliveryUnavailableError ? 'failed' : 'delivery-unknown',
+            error instanceof Error ? error.message : 'Delivery not confirmed.',
+            requestId,
+          );
         throw new HttpError(
           502,
-          'Delivery could not be confirmed. Check the connected task before sending again.',
+          error instanceof DeliveryUnavailableError
+            ? error.message
+            : 'Delivery could not be confirmed. Check the connected task before sending again.',
         );
       }
     }

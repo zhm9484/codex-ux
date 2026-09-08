@@ -202,17 +202,21 @@ Preserve stable IDs for source-backed text references. Hyperframes timelines fol
 conventions; Remotion candidates use the component manifest above.
 
 The adapter invokes `codex queue --thread <sessionId> --message <instructions>` using an argument
-array, without a shell. It resolves `CODEX_UX_CODEX_BIN`, the bundled macOS executable, or `codex`
-on PATH. An existing task and an executable supporting `queue` are required. The agent receives an
-HTTP context URL, exact candidate directory, preview URL and publication/error endpoints. Context
-returns `workspaceId`, `appId`, `target`, `baseRevision`, `currentRevision`, notes, document and
-request state.
+array, without a shell. An explicit `CODEX_UX_CODEX_BIN` is authoritative. Otherwise it probes queue
+support in the bundled macOS executable or PATH; Windows also checks versioned desktop installations
+under `%LOCALAPPDATA%/OpenAI/Codex/bin/`, newest executable first after PATH and the unversioned
+bin. An existing task and an executable supporting `queue` are required. The agent receives an HTTP
+context URL, exact candidate directory, preview URL and publication/error endpoints. Context returns
+`workspaceId`, `appId`, `target`, `baseRevision`, `currentRevision`, notes, document and request
+state.
 
 The request is durable before invoking the external queue. Successful queue acceptance is `sent`,
 not agent completion. Preparation failures are `failed` and release the selected notes. Unconfirmed
-CLI delivery is `delivery-unknown`; notes stay reserved and there is no automatic retry. Inspect the
-external session before resubmitting. The CLI timeout is 15 seconds. The app does not create or
-terminate sessions, schedule agents or resume interrupted delivery.
+CLI delivery is `delivery-unknown`; notes stay reserved and there is no automatic retry. Missing or
+unstartable executables (`ENOENT`/`EACCES`) and failed automatic executable discovery are definitely
+unsent: requests are `failed` and video notes are released for retry. Inspect the external session
+before resubmitting. The CLI timeout is 15 seconds. The app does not create or terminate sessions,
+schedule agents or resume interrupted delivery.
 
 Publication reads the full candidate, validates resources, prepares required bundles, checks its
 base and working source, then records one agent-authored revision. Repeated publication does not

@@ -145,9 +145,11 @@ See [local API](local-api.md) for the publication contract.
 The header’s Agent connection dialog offers **Connect current agent** to create a code for this
 page. Agents can also open an invitation URL in a new page through the Workspace skill. Pairing
 confirms the actual page/session; it never sends notes automatically. Manual task-ID/link entry
-remains available and is labeled as a saved session, without implying verified delivery. An existing
-other-session connection requires explicit takeover; opening a new page preserves it. Connection
-receipt errors do not delete the saved binding or user notes.
+remains available. The dialog distinguishes saved task bindings from checking, available, and
+unavailable local message delivery. Continue sending is disabled until capability is available; a
+local delivery failure directs repair to the agent rather than asking users to copy another code. An
+existing other-session connection requires explicit takeover; opening a new page preserves it.
+Connection receipt errors do not delete the saved binding or user notes.
 
 ## Assets and output
 

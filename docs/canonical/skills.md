@@ -94,9 +94,11 @@ and export. A user can enter through Video Editor without orchestrating the two 
 
 The launcher uses the current Codex task ID from `CODEX_THREAD_ID` or an explicit `--session` task
 ID/link. Skills require authoritative current identity and warn against inherited parent IDs or
-guessing recent tasks. `doctor` checks local queue capability without sending messages. Only Codex
-feedback delivery is implemented; other agents can edit source/use HTTP but cannot claim a complete
-app-to-agent delivery loop.
+guessing recent tasks. `doctor` checks local queue capability without sending messages; `connect`
+returns this capability alongside its invitation/receipt so agents can verify both independently.
+Windows discovery also checks the desktop app's versioned installation directory without relying on
+the shell's PATH. Only Codex feedback delivery is implemented; other agents can edit source/use HTTP
+but cannot claim a complete app-to-agent delivery loop.
 
 The default skill flow prepares the service and document, creates an invitation, opens its URL
 straight into a visible connected page, verifies the receipt, and retains the page for the user.

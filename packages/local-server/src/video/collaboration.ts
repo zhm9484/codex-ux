@@ -1,6 +1,7 @@
 import type { LibraryStore } from '../storage/library.ts';
 import type { VideoProjects } from '../sources/projects.ts';
 import { randomUUID } from 'node:crypto';
+import { DeliveryUnavailableError } from '@codex-ux/adapter-codex';
 import { deliver, collaborationTarget } from '../agents.ts';
 import type { CollaborationTarget } from '@codex-ux/protocol';
 import { join } from 'node:path';
@@ -110,6 +111,7 @@ export class VideoCollaboration {
       await deliver(target.session, message);
       db.prepare("UPDATE requests SET state='sent' WHERE id=? AND state='sending'").run(requestId);
     } catch (error) {
+      if (error instanceof DeliveryUnavailableError) deliveryStarted = false;
       const state = deliveryStarted ? 'delivery-unknown' : 'failed';
       db.prepare(
         "UPDATE requests SET state=?,error=? WHERE id=? AND state IN ('preparing','sending')",

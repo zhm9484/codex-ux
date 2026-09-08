@@ -9,6 +9,42 @@ import { WorkspaceStore } from '../packages/local-server/src/storage/workspaces.
 import { VideoProjects } from '../packages/local-server/src/sources/projects.ts';
 import { VideoCollaboration } from '../packages/local-server/src/video/collaboration.ts';
 
+void test('a missing Codex executable releases notes instead of leaving delivery unknown', async (t) => {
+  const root = await mkdtemp(join(tmpdir(), 'ux-unsent-'));
+  const workspaces = new WorkspaceStore(root);
+  const store = new VideoStore(workspaces);
+  const previous = process.env.CODEX_UX_CODEX_BIN;
+  t.after(async () => {
+    if (previous === undefined) delete process.env.CODEX_UX_CODEX_BIN;
+    else process.env.CODEX_UX_CODEX_BIN = previous;
+    store.close();
+    await rm(root, { recursive: true, force: true });
+  });
+  process.env.CODEX_UX_CODEX_BIN = join(root, 'missing.exe');
+  const projects = new VideoProjects(root, store);
+  const collaboration = new VideoCollaboration(store, root, 'http://127.0.0.1:5173', projects);
+  const workspace = await projects.open(workspaces.create('Unsent feedback').id);
+  const db = store.database(workspace.workspaceId);
+  const note = randomUUID();
+  db.prepare('INSERT INTO notes VALUES(?,?,?,?,?,?)').run(
+    note,
+    'Keep this draft',
+    JSON.stringify({ revisionId: workspace.revisionId, start: 0 }),
+    JSON.stringify({ kind: 'change' }),
+    new Date().toISOString(),
+    null,
+  );
+  await assert.rejects(
+    collaboration.submit(workspace.workspaceId, [note], {
+      instanceId: randomUUID(),
+      session: { provider: 'codex', sessionId: randomUUID() },
+    }),
+    /No message was sent/,
+  );
+  assert.equal(store.get(workspace.workspaceId).notes[0]?.requestId, null);
+  assert.equal(db.prepare('SELECT state FROM requests').get()?.state, 'failed');
+});
+
 void test('a queued request publishes source edits once and refuses a stale candidate', async () => {
   const root = await mkdtemp(join(tmpdir(), 'codex-ux-agent-'));
   const workspaces = new WorkspaceStore(root);

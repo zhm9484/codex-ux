@@ -4,6 +4,39 @@ import { expect, test } from '@playwright/test';
 import type { Connection } from '../packages/protocol/src/index.ts';
 import { createVideo } from './browser-helpers.ts';
 
+test('automatic invitation needs no manual input and delivery status is independent of binding', async ({
+  page,
+  request,
+}) => {
+  let available = false;
+  await page.route('**/api/agents/codex', (route) =>
+    route.fulfill({ json: { deliveryAvailable: available } }),
+  );
+  const video = await createVideo(request, 'Automatic agent connection');
+  const session = { provider: 'codex', sessionId: randomUUID() };
+  const invitation = (await (
+    await request.post('/api/connections', {
+      data: { appId: 'video-editor', workspaceId: video.workspaceId, session },
+    })
+  ).json()) as Connection;
+  await page.goto(`/apps/video-editor/w/${video.workspaceId}#connect=${invitation.code}`);
+  await expect
+    .poll(
+      async () =>
+        ((await (await request.get(`/api/connections/${invitation.code}`)).json()) as Connection)
+          .state,
+    )
+    .toBe('connected');
+  await page.getByRole('button', { name: 'Agent connection', exact: true }).click();
+  await expect(page.getByText('Task saved · delivery unavailable', { exact: true })).toBeVisible();
+  await expect(page.getByText(/copying a connection code will not fix delivery/)).toBeVisible();
+  await page.getByRole('button', { name: 'Close agent connection' }).click();
+  available = true;
+  await page.getByRole('button', { name: 'Agent connection', exact: true }).click();
+  await expect(page.getByText('Task saved · delivery available', { exact: true })).toBeVisible();
+  await expect(page.getByText(session.sessionId, { exact: true })).toBeVisible();
+});
+
 test('agent invitation binds only the opened page and confirms the actual instance', async ({
   page,
   context,
@@ -87,7 +120,7 @@ test('page code supports deliberate takeover and workspace changes cancel the re
   await expect(
     page.getByText('This page confirmed the connection.', { exact: false }),
   ).toBeVisible();
-  await page.getByRole('button', { name: 'Connect current agent' }).click();
+  await page.getByRole('button', { name: 'Confirm this page with the agent' }).click();
   const next = await page.getByLabel('Give this connection code to your agent').inputValue();
   const replacement = { provider: 'codex', sessionId: randomUUID() };
   expect(
