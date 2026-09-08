@@ -10,7 +10,7 @@ const colors: Record<string, string> = {
   document: '#e52e45',
   file: '#606773',
 };
-/** Original 24px glyphs, with crisp folded sheets and saturated type colors. */
+/** Original 24px glyphs, with gently rounded folded sheets and saturated type colors. */
 export function FileIcon({
   name = '',
   mime = '',
@@ -34,18 +34,26 @@ export function FileIcon({
         fill="none"
         stroke="currentColor"
         strokeWidth="1.35"
-        strokeLinecap="square"
-        strokeLinejoin="miter"
+        strokeLinecap="round"
+        strokeLinejoin="round"
       >
         {type === 'folder' ? (
           <>
-            <path d="M3 8V4h6l2 2h10v3" />
-            <path d="M2 8.5h20L20 20H4Z" fill="currentColor" fillOpacity="1" />
+            <path d="M3 8V5.5A1.5 1.5 0 0 1 4.5 4h3.9a1.5 1.5 0 0 1 1.1.45L11 6h8.5A1.5 1.5 0 0 1 21 7.5V9" />
+            <path
+              d="M3.5 8.5h17a1 1 0 0 1 1 1.2l-1.6 8.8a1.8 1.8 0 0 1-1.8 1.5H5.9a1.8 1.8 0 0 1-1.8-1.5L2.5 9.7a1 1 0 0 1 1-1.2Z"
+              fill="currentColor"
+              fillOpacity="1"
+            />
           </>
         ) : (
           <>
-            <path d="M14 2H4v20h16V8Z" fill="currentColor" fillOpacity="1" />
-            <path d="M14 2v6h6" stroke="white" strokeOpacity=".65" />
+            <path
+              d="M13.4 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8.6a1.5 1.5 0 0 0-.44-1.06l-5.1-5.1A1.5 1.5 0 0 0 13.4 2Z"
+              fill="currentColor"
+              fillOpacity="1"
+            />
+            <path d="M14 2.5V6.7A1.3 1.3 0 0 0 15.3 8h4.2" stroke="white" strokeOpacity=".65" />
             <g stroke="white">
               {type === 'image' ? (
                 <>
@@ -53,7 +61,11 @@ export function FileIcon({
                   <path d="m7 18 3.5-4 2.5 2 2.5-3 2 5Z" fill="white" fillOpacity=".3" />
                 </>
               ) : type === 'video' ? (
-                <path d="m10 11 6 3.5-6 3.5Z" fill="white" stroke="none" />
+                <path
+                  d="M10 11.8q0-1 .85-.5l4.6 2.7q.85.5 0 1l-4.6 2.7q-.85.5-.85-.5Z"
+                  fill="white"
+                  stroke="none"
+                />
               ) : type === 'audio' ? (
                 <>
                   <path d="M12 17v-6l5-1v5" />
@@ -89,8 +101,8 @@ export function LibraryIcon({ size = 18 }: { size?: number }) {
       fill="none"
       stroke="currentColor"
       strokeWidth="1.5"
-      strokeLinecap="square"
-      strokeLinejoin="miter"
+      strokeLinecap="round"
+      strokeLinejoin="round"
       aria-hidden="true"
     >
       <path d="M5 7V5a2 2 0 0 1 2-2h4l2 2h6a2 2 0 0 1 2 2v10" />

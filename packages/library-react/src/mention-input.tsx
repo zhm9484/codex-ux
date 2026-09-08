@@ -119,7 +119,9 @@ export function MentionInput({
     const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
     path.setAttribute(
       'd',
-      ref.kind === 'directory' ? 'M2 4h4l2 2h6v7H2Z' : 'M4 2h5l3 3v9H4ZM9 2v4h3',
+      ref.kind === 'directory'
+        ? 'M3 4h3l2 2h5q1 0 1 1v5q0 1-1 1H3q-1 0-1-1V5q0-1 1-1Z'
+        : 'M5 2h4l3 3v8q0 1-1 1H5q-1 0-1-1V3q0-1 1-1ZM9 2v3q0 1 1 1h2',
     );
     icon.append(path);
     span.append(icon, document.createTextNode(`@${ref.name}`));
