@@ -34,6 +34,11 @@ test('Library locations, @ references, paste, undo and note attachment edits sha
     await page.getByRole('button', { name: 'Close library' }).click();
     await page.getByRole('button', { name: 'Chat', exact: true }).click();
     const input = page.getByRole('textbox', { name: 'Chat message' });
+    await input.fill('Use @');
+    await expect(page.getByRole('option', { name: /hero.png/ })).toBeVisible();
+    await page
+      .locator('.ux-mention-menu')
+      .screenshot({ path: '/tmp/mention-menu-library.png', animations: 'disabled' });
     await input.fill('Use @hero');
     const result = page.getByRole('option', { name: /hero.png/ });
     await expect(result).toBeVisible();

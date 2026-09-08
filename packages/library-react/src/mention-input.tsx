@@ -2,7 +2,7 @@ import { useEffect, useEffectEvent, useLayoutEffect, useRef, useState, useId } f
 import { createPortal } from 'react-dom';
 import type { LibraryEntry, LibraryReference } from '@codex-ux/protocol';
 import type { WorkspaceLibrary } from '@codex-ux/sdk';
-import { FileIcon } from './file-icon';
+import { FileIcon, LibraryIcon } from './file-icon';
 import { fileKind } from './file-kind';
 import { AttachmentList } from './attachments';
 
@@ -165,7 +165,7 @@ export function MentionInput({
         const rect = caret.current.getBoundingClientRect();
         if (!rect.height) return current;
         const height = popup.current.offsetHeight;
-        const left = Math.max(10, Math.min(window.innerWidth - 350, rect.left));
+        const left = Math.max(10, Math.min(window.innerWidth - 370, rect.left));
         const top =
           rect.bottom + height + 18 <= window.innerHeight
             ? rect.bottom + 8
@@ -228,7 +228,7 @@ export function MentionInput({
     setMenu({
       query,
       manual,
-      left: Math.max(10, Math.min(window.innerWidth - 350, left)),
+      left: Math.max(10, Math.min(window.innerWidth - 370, left)),
       top: Math.max(10, Math.min(window.innerHeight - 370, bottom + 8)),
     });
   }
@@ -504,8 +504,10 @@ export function MentionInput({
             onPointerDown={(event) => event.stopPropagation()}
           >
             <header>
-              <span>REFERENCE A FILE</span>
-              <kbd>@</kbd>
+              <span className="ux-mention-heading">
+                <span className="ux-mention-sigil">@</span> Add reference
+              </span>
+              <kbd>esc</kbd>
             </header>
             {menu.manual && (
               <input
@@ -520,6 +522,10 @@ export function MentionInput({
                 onKeyDown={key}
               />
             )}
+            <div className="ux-mention-section">
+              <span>{menu.query ? 'Matching files' : 'Your library'}</span>
+              <span>{loading ? 'Searching' : `${results.length} shown`}</span>
+            </div>
             <div
               role="listbox"
               id={listId}
@@ -536,22 +542,33 @@ export function MentionInput({
                     role="option"
                     aria-selected={i === selected}
                     id={`${listId}-${i}`}
-                    className="ux-result"
+                    className="ux-result ux-mention-option"
                     key={`${entry.sourceId}/${entry.relativePath}`}
                     onPointerDown={(event) => event.preventDefault()}
                     onMouseEnter={() => setSelected(i)}
                     onClick={() => void choose(entry)}
                   >
-                    <FileIcon name={entry.name} mime={entry.mime} kind={entry.kind} />
+                    <FileIcon name={entry.name} mime={entry.mime} kind={entry.kind} size={26} />
                     <span>
                       <strong>{entry.name}</strong>
-                      <small>
-                        {entry.sourceId === 'attachments'
-                          ? 'Workspace attachments'
-                          : entry.relativePath || 'Local file'}
-                      </small>
+                      {entry.relativePath.includes('/') && entry.sourceId !== 'attachments' && (
+                        <small>
+                          {entry.relativePath
+                            .slice(0, entry.relativePath.lastIndexOf('/'))
+                            .replaceAll('/', ' / ')}
+                        </small>
+                      )}
                     </span>
-                    <kbd>↵</kbd>
+                    <span className="ux-mention-type">
+                      {entry.kind === 'directory'
+                        ? 'Folder'
+                        : entry.name.includes('.')
+                          ? entry.name.split('.').pop()?.toUpperCase()
+                          : 'File'}
+                    </span>
+                    <kbd className="ux-mention-return" aria-hidden="true">
+                      ↵
+                    </kbd>
                   </button>
                 ))
               ) : (
@@ -567,7 +584,16 @@ export function MentionInput({
             </div>
             <footer>
               <button type="button" onClick={() => upload.current?.click()}>
-                Attach files
+                <svg
+                  viewBox="0 0 16 16"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.2"
+                  aria-hidden="true"
+                >
+                  <path d="M8 11V2m-3 3 3-3 3 3M3 10v4h10v-4" />
+                </svg>
+                Upload files
               </button>
               <button
                 type="button"
@@ -577,7 +603,7 @@ export function MentionInput({
                   onManage();
                 }}
               >
-                Manage library ↗
+                <LibraryIcon size={14} /> Library <span aria-hidden="true">↗</span>
               </button>
             </footer>
           </div>,

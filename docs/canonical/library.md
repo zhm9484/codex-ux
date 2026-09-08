@@ -21,11 +21,12 @@ and link escapes; content serving validates the reference and sandboxes download
 
 The shared React input opens a search popover on `@` or its `+` button. Results use original SVG
 icons for folders, images, video, audio, fonts, documents and code. Surfaces use neutral grays;
-saturated file colors and angular folded-sheet glyphs distinguish material types. Arrow keys select
-results, Enter attaches, and Escape dismisses without closing the composer. Chinese input
-composition does not trigger selection. Inline references are atomic editable tokens with
-filename/path metadata; input-local undo/redo restores text and references together. Clicking a
-token previews the attachment.
+saturated file colors and angular folded-sheet glyphs distinguish material types. The reference menu
+prioritizes filenames, shows parent paths only for nested entries, and reserves the return-key hint
+for the selected row. Arrow keys select results, Enter attaches, and Escape dismisses without
+closing the composer. Chinese input composition does not trigger selection. Inline references are
+atomic editable tokens with filename/path metadata; input-local undo/redo restores text and
+references together. Clicking a token previews the attachment.
 
 A user-initiated paste containing image/file data or an ordinary browser file selection transfers
 bytes to the local service. Each file is saved under `files/attachments/` with a generated unique
