@@ -59,3 +59,5 @@ Thumbs.db
 # Installable skills include the shipped application, not a build prerequisite.
 !skills/codex-ux-video-editor/dist/
 !skills/codex-ux-video-editor/dist/**
+!skills/codex-ux-scene-3d/dist/
+!skills/codex-ux-scene-3d/dist/**

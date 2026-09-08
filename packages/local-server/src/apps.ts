@@ -31,6 +31,11 @@ export function readApps(): HostedApp[] {
             name: 'Video Editor',
             distDirectory: resolve(repositoryRoot, 'skills/codex-ux-video-editor/dist'),
           },
+          {
+            id: 'scene-3d',
+            name: 'Scene',
+            distDirectory: resolve(repositoryRoot, 'skills/codex-ux-scene-3d/dist'),
+          },
         ],
   );
 }

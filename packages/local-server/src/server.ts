@@ -19,6 +19,10 @@ import { HttpError } from './errors.ts';
 import { VideoProjects } from './sources/projects.ts';
 import { repositoryRoot } from './config.ts';
 import { Connections } from './connections.ts';
+import { SceneStore } from './scene/store.ts';
+import { SceneProjects } from './scene/projects.ts';
+import { SceneCollaboration } from './scene/collaboration.ts';
+import { sceneMedia } from './scene/media.ts';
 
 export async function startServer(
   root: string,
@@ -32,7 +36,10 @@ export async function startServer(
   const store = new VideoStore(workspaces);
   const library = new LibraryStore(workspaces);
   const projects = new VideoProjects(root, store);
+  const sceneStore = new SceneStore(workspaces);
+  const sceneProjects = new SceneProjects(sceneStore);
   let vite: ViteDevServer | undefined;
+  let sceneVite: ViteDevServer | undefined;
   const server = createServer((req, res) => {
     void (async () => {
       if (!ready) throw new HttpError(503, 'Service is starting.');
@@ -62,6 +69,7 @@ export async function startServer(
       if (req.method !== 'GET' && req.method !== 'HEAD')
         throw new HttpError(405, 'Method not allowed.');
       if (await mediaRoutes(req, res, url, services.video, thumbnails)) return;
+      if (await sceneMedia(req, res, url, services.scene)) return;
       if (path === '/') {
         const escape = (text: string) =>
           text.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('"', '&quot;');
@@ -71,8 +79,13 @@ export async function startServer(
         );
         return;
       }
-      if (vite && (path.startsWith('/apps/video-editor/') || path.startsWith('/@'))) {
-        vite.middlewares(req, res, () => {
+      const devServer = path.startsWith('/apps/scene-3d/')
+        ? sceneVite
+        : path.startsWith('/apps/video-editor/') || path.startsWith('/@')
+          ? vite
+          : undefined;
+      if (devServer) {
+        devServer.middlewares(req, res, () => {
           json(res, { error: 'Not found' }, 404);
         });
         return;
@@ -133,6 +146,10 @@ export async function startServer(
     connections: new Connections(),
     workspaces,
     apps,
+    scene: {
+      projects: sceneProjects,
+      collaboration: new SceneCollaboration(sceneProjects, origin),
+    },
     video: {
       library,
       projects,
@@ -144,18 +161,36 @@ export async function startServer(
   };
   const thumbnails = new Thumbnails(root, origin);
   try {
-    if (dev)
+    if (dev) {
       vite = await createViteServer({
         root: join(repositoryRoot, 'apps/video-editor'),
         configFile: join(repositoryRoot, 'apps/video-editor/vite.config.ts'),
-        server: { port, middlewareMode: true, ws: { server, clientPort: port } },
+        server: {
+          port,
+          middlewareMode: true,
+          ws: { server, clientPort: port },
+        },
         appType: 'spa',
       });
+      sceneVite = await createViteServer({
+        root: join(repositoryRoot, 'apps/scene-3d'),
+        configFile: join(repositoryRoot, 'apps/scene-3d/vite.config.ts'),
+        server: {
+          port,
+          middlewareMode: true,
+          ws: { server, clientPort: port, path: '/apps/scene-3d/hmr' },
+        },
+        appType: 'spa',
+      });
+    }
     ready = true;
   } catch (error) {
+    await sceneVite?.close();
+    await vite?.close();
     await new Promise<void>((resolve) => server.close(() => resolve()));
     library.close();
     store.close();
+    sceneStore.close();
     throw error;
   }
   return {
@@ -167,11 +202,13 @@ export async function startServer(
     close: async () => {
       await thumbnails.close();
       await vite?.close();
+      await sceneVite?.close();
       await new Promise<void>((resolve, reject) =>
         server.close((e) => (e ? reject(e) : resolve())),
       );
       library.close();
       store.close();
+      sceneStore.close();
     },
   };
 }

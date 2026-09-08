@@ -261,3 +261,35 @@ Exports pin a saved revision. Hyperframes and Remotion produce H.264 MP4 from it
 media export copies original bytes. Jobs report `rendering`, `complete` or `failed`, retain results,
 and reject concurrent exports. Interrupted jobs are failed on restart. Source snapshots and caches
 are retained without automatic garbage collection.
+
+## Scene API
+
+The following paths are relative to `/workspaces/:id/apps/scene-3d`. Scene uses the shared Workspace
+and page connection endpoints above. See [Scene](scene-3d.md) for source and runtime semantics.
+
+| Method/path                                     | Body or result                                                                                                                |
+| ----------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| `POST /` or `GET /context`                      | Initializes/observes source; returns `SceneProject` with document, revision, history, undo/redo flags and source paths/status |
+| `POST /operations`                              | `{baseRevision, requestId, label, operation}`; transform/add/remove/annotate/remove-annotation from `scene-domain`            |
+| `POST /undo`, `POST /redo`                      | `{baseRevision, requestId}`                                                                                                   |
+| `POST /restore`                                 | `{baseRevision, requestId, revisionId}`; creates a new revision from a historical snapshot                                    |
+| `POST /imports/:importId/files?path=<relative>` | Raw bytes; unique path preserving the model's companion layout                                                                |
+| `POST /imports/:importId/finish`                | `{baseRevision, requestId, position: [x,y,z]}`; adds supported models from staged files                                       |
+| `GET /requests`                                 | Recent request status summaries                                                                                               |
+| `POST /requests`                                | `{baseRevision, requestId, target, feedback, screenshot?}`; PNG data URL optional                                             |
+| `GET /requests/:requestId`                      | Captured target, document, feedback, source directory, screenshot path, preview/publish URLs and state                        |
+| `GET /requests/:requestId/preview`              | Prepares current candidate source as a `SceneProject` without publishing                                                      |
+| `POST /requests/:requestId/publish`             | `{label}`; checks current head/source and publishes once                                                                      |
+| `POST /requests/:requestId/error`               | `{message}`; marks an unpublished request failed                                                                              |
+
+Base revision and request IDs are UUIDs. Operations and imports return the resulting project.
+`feedback` contains text, nullable surface anchor, camera, visible registered object transforms and
+bounds, and annotation IDs. An anchor has object ID or null, local/world `point`, camera and
+revision. Stale source/head conflicts return 409. The schema is exported by `packages/scene-domain`.
+
+Outside `/api`, `/media/scene-3d/source/:workspaceId/:revisionId/<path>` and
+`/media/scene-3d/prepared/:workspaceId/:snapshotHash/<path>` serve only captured snapshot resources.
+`/media/scene-3d/bundle/:workspaceId/:codeHash/module.js` serves compiled code. The shared runtime
+is served from `/media/scene-3d/engine/build/` and `/media/scene-3d/engine/addons/`; Vite
+development also accepts the `/apps/scene-3d` prefixed engine alias. Resources use their original
+MIME type.

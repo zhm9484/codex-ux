@@ -7,10 +7,10 @@ The public skills live in `skills/`, separate from repository-development skills
 npx skills add zhm9484/codex-ux --skill codex-ux-workspace codex-ux-video-editor
 ```
 
-The installer can select agents and project/global scope. Both skills must come from the same
-repository/ref. Local or branch installs use that source for both. Video Editor explicitly requires
-the Workspace skill; a missing companion must be installed before startup. No installer-specific
-automatic dependency resolution is assumed.
+The installer can select agents and project/global scope. App and Workspace skills must come from
+the same repository/ref. Local or branch installs use that source for both. Each app explicitly
+requires the Workspace skill; a missing companion must be installed before startup. No
+installer-specific automatic dependency resolution is assumed.
 
 ## Shipped artifacts
 
@@ -22,7 +22,12 @@ automatic dependency resolution is assumed.
   notices, `app.json`, and source/collaboration guidance. Users do not build the frontend after
   installing.
 
-`pnpm build` builds the frontend and runs `scripts/build-skills.ts` to regenerate these artifacts.
+Scene installs with `--skill codex-ux-workspace codex-ux-scene-3d`. Its skill similarly ships
+`dist/`, license notices and `app.json`, plus Three.js source and spatial collaboration guidance.
+Both apps can be registered with the same Workspace runtime; their fingerprints are generated
+together.
+
+`pnpm build` builds both frontends and runs `scripts/build-skills.ts` to regenerate these artifacts.
 `pnpm build:skills` is the same complete build. The generated runtime and web files are committed
 because skill installation copies repository content. CI rebuilds and rejects differences in the
 shipped artifacts. Author code in the normal packages/apps, never edit generated artifacts directly.
