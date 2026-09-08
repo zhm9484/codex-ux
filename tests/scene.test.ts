@@ -265,7 +265,7 @@ void test('scene HTTP imports keep companion files, enforce conflicts and serve 
   const server = await startServer(root, 0);
   try {
     const workspace = server.workspaces.create('Imports');
-    const base = `${server.origin}/api/workspaces/${workspace.id}/apps/scene-3d`;
+    const base = `${server.origin}/api/workspaces/${workspace.id}/apps/3d-space`;
     const post = async (path: string, data: unknown) =>
       fetch(base + path, {
         method: 'POST',
@@ -334,14 +334,14 @@ void test('scene HTTP imports keep companion files, enforce conflicts and serve 
       server.origin + imported.source.baseUrl + 'node_modules/package.json',
     );
     assert.equal(missing.status, 404);
-    const engine = await fetch(`${server.origin}/media/scene-3d/engine/build/three.module.js`);
+    const engine = await fetch(`${server.origin}/media/3d-space/engine/build/three.module.js`);
     assert.equal(engine.headers.get('content-type'), 'text/javascript');
     assert.equal(engine.status, 200);
     const other = server.workspaces.create('Other workspace');
     assert.equal(
       (
         await fetch(
-          `${server.origin}/media/scene-3d/source/${other.id}/${imported.revisionId}/scene.json`,
+          `${server.origin}/media/3d-space/source/${other.id}/${imported.revisionId}/scene.json`,
         )
       ).status,
       404,
@@ -355,6 +355,48 @@ void test('scene HTTP imports keep companion files, enforce conflicts and serve 
     );
   } finally {
     await server.close();
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+void test('3D Space opens legacy app state without losing history or creating a second database', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'codex-ux-space-upgrade-'));
+  const workspaces = new WorkspaceStore(root);
+  const workspace = workspaces.create('Existing space');
+  const legacy = workspaces.appDirectory(workspace.id, 'scene-3d');
+  await mkdir(legacy, { recursive: true });
+  const store = new SceneStore(workspaces);
+  const projects = new SceneProjects(store);
+  try {
+    const initial = await projects.get(workspace.id);
+    const moved = await projects.operate(
+      workspace.id,
+      initial.revisionId,
+      randomUUID(),
+      'Moved object',
+      {
+        type: 'transform',
+        objectId: 'sphere',
+        placement: { ...identityPlacement(), position: [4, 0, 1] },
+      },
+    );
+    assert.equal(store.directory(workspace.id), legacy);
+    assert.match(moved.source.baseUrl, /\/media\/3d-space\/source\//);
+    store.close();
+    const reopened = new SceneStore(workspaces);
+    try {
+      const restored = await new SceneProjects(reopened).get(workspace.id);
+      assert.equal(restored.revisionId, moved.revisionId);
+      assert.deepEqual(restored.document.placements.sphere?.position, [4, 0, 1]);
+      assert.equal(restored.history.length, 2);
+      await assert.rejects(stat(workspaces.appDirectory(workspace.id, '3d-space')), {
+        code: 'ENOENT',
+      });
+    } finally {
+      reopened.close();
+    }
+  } finally {
+    store.close();
     await rm(root, { recursive: true, force: true });
   }
 });

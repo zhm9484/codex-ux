@@ -65,7 +65,7 @@ export class SceneProjects {
     const revisionId = this.store.head(id);
     const revision = this.store.revision(id, revisionId);
     const status = this.statuses.get(id);
-    const media = `/media/scene-3d`;
+    const media = `/media/3d-space`;
     return {
       workspaceId: id,
       revisionId,

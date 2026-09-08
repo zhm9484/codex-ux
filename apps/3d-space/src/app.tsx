@@ -6,7 +6,7 @@ import { api, errorMessage } from './api';
 import { Editor } from './editor';
 
 const selectedWorkspace = () =>
-  /^\/apps\/scene-3d\/w\/([\w-]+)$/.exec(location.pathname)?.[1] ?? null;
+  /^\/apps\/3d-space\/w\/([\w-]+)$/.exec(location.pathname)?.[1] ?? null;
 export function App({ instance }: { instance: BrowserAppInstance }) {
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
   const [active, setActive] = useState<string | null>(selectedWorkspace);
@@ -40,7 +40,7 @@ export function App({ instance }: { instance: BrowserAppInstance }) {
   }, [instance]);
   function select(id: string | null) {
     instance.select(id);
-    history.pushState(null, '', `/apps/scene-3d/${id ? `w/${id}` : ''}`);
+    history.pushState(null, '', `/apps/3d-space/${id ? `w/${id}` : ''}`);
     setActive(id);
   }
   async function create() {
@@ -71,7 +71,7 @@ export function App({ instance }: { instance: BrowserAppInstance }) {
     <main className="workspace-page">
       <div className="workspace-wordmark">
         <Box size={21} strokeWidth={1.5} />
-        Scene<span>by Codex UX</span>
+        3D Space<span>by Codex UX</span>
       </div>
       <div className="workspace-art" aria-hidden="true">
         <div className="art-orbit" />

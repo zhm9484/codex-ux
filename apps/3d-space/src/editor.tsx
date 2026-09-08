@@ -132,8 +132,8 @@ export function Editor({
         : s.displayed && s.displayed === s.project?.revisionId
           ? 'Saved locally'
           : s.project && s.displayed
-            ? 'Showing previous scene'
-            : 'Opening scene');
+            ? 'Showing previous space'
+            : 'Opening space');
   const objects = s.objects.filter((object) =>
     object.label.toLowerCase().includes(query.toLowerCase()),
   );
@@ -181,7 +181,7 @@ export function Editor({
       <header className="scene-header">
         <div className="scene-brand">
           <Box size={19} strokeWidth={1.65} />
-          <span>Scene</span>
+          <span>3D Space</span>
           <span className="brand-divider" />
           <button
             className="workspace-trigger"
@@ -243,8 +243,8 @@ export function Editor({
         </div>
       </header>
       {candidate && (
-        <a className="candidate-banner glass" href={`/apps/scene-3d/w/${id}`}>
-          <ArrowLeft size={14} /> Read-only agent preview <span>Return to saved scene</span>
+        <a className="candidate-banner glass" href={`/apps/3d-space/w/${id}`}>
+          <ArrowLeft size={14} /> Read-only agent preview <span>Return to saved space</span>
         </a>
       )}
       {!s.displayed && !s.error && (
@@ -259,7 +259,7 @@ export function Editor({
           <small>Drag to look · scroll to zoom · WASD to travel</small>
         </div>
       )}
-      <nav className="view-tools glass" aria-label="Scene navigation">
+      <nav className="view-tools glass" aria-label="Space navigation">
         <ToolButton label="Zoom in" onClick={() => viewport.current?.zoom('in')}>
           <Plus size={17} />
         </ToolButton>
@@ -267,7 +267,7 @@ export function Editor({
           <Minus size={17} />
         </ToolButton>
         <span className="tool-divider" />
-        <ToolButton label="Show whole scene" onClick={() => viewport.current?.focus(null)}>
+        <ToolButton label="Show whole space" onClick={() => viewport.current?.focus(null)}>
           <Focus size={17} />
         </ToolButton>
         <ToolButton
@@ -369,7 +369,7 @@ export function Editor({
           )}
           {s.annotating && (
             <div className="annotation-hint glass">
-              <Pin size={14} /> Click a place in the scene to leave a note.
+              <Pin size={14} /> Click a place in the space to leave a note.
               <button aria-label="Cancel annotation" onClick={() => s.setAnnotating(false)}>
                 <X size={14} />
               </button>
@@ -431,8 +431,8 @@ export function Editor({
                 <button
                   type="button"
                   className={`icon-button${panel === 'add' ? ' active' : ''}`}
-                  aria-label="Add to scene"
-                  title="Add to scene"
+                  aria-label="Add to space"
+                  title="Add to space"
                   disabled={!s.editable}
                   onClick={() => toggle('add')}
                 >
@@ -520,7 +520,7 @@ export function Editor({
               <>
                 <strong>
                   {s.project?.source.error
-                    ? 'Your last saved scene is still here.'
+                    ? 'Your last saved space is still here.'
                     : 'Something needs attention.'}
                 </strong>
                 <p>{s.error || s.project?.source.error}</p>
@@ -557,11 +557,11 @@ export function Editor({
                 : panel === 'search'
                   ? 'Find an object'
                   : panel === 'add'
-                    ? 'Add to scene'
+                    ? 'Add to space'
                     : panel === 'history'
                       ? 'Version history'
                       : panel === 'notes'
-                        ? 'Scene notes'
+                        ? 'Space notes'
                         : panel === 'workspaces'
                           ? 'Workspaces'
                           : 'How to explore'
@@ -576,7 +576,7 @@ export function Editor({
                     : panel === 'add'
                       ? 'Add something'
                       : panel === 'history'
-                        ? 'Your scene, over time'
+                        ? 'Your space, over time'
                         : panel === 'notes'
                           ? 'Notes in this space'
                           : panel === 'workspaces'
@@ -641,7 +641,7 @@ export function Editor({
                   ))}
                 </div>
                 <p className="panel-caption">
-                  You can also drop model files anywhere in the scene.
+                  You can also drop model files anywhere in the space.
                 </p>
               </>
             )}
@@ -651,7 +651,7 @@ export function Editor({
                   <Search size={16} />
                   <input
                     autoFocus
-                    placeholder="Search your scene…"
+                    placeholder="Search your space…"
                     value={query}
                     onChange={(event) => setQuery(event.target.value)}
                   />
@@ -699,7 +699,7 @@ export function Editor({
                 ) : (
                   <>
                     <p className="panel-copy">
-                      Paste this into your Codex task. The agent can then work with the scene you’re
+                      Paste this into your Codex task. The agent can then work with the space you’re
                       looking at.
                     </p>
                     {s.pairing?.state === 'waiting-agent' ? (
@@ -708,7 +708,7 @@ export function Editor({
                         onClick={() => {
                           void navigator.clipboard
                             .writeText(
-                              `Connect to my Scene app using connection code ${s.pairing!.code}. The local service is at ${location.origin}.`,
+                              `Connect to my 3D Space app using connection code ${s.pairing!.code}. The local service is at ${location.origin}.`,
                             )
                             .then(() =>
                               s.setNotice(
@@ -898,7 +898,7 @@ export function Editor({
                   </p>
                 </div>
                 <p className="panel-caption">
-                  In Explore, click the scene and use WASD to travel, Q / E to move down or up.
+                  In Explore, click the space and use WASD to travel, Q / E to move down or up.
                   Press Escape to cancel a drag.
                 </p>
                 <button
@@ -909,7 +909,7 @@ export function Editor({
                       if (image) {
                         const link = document.createElement('a');
                         link.href = image;
-                        link.download = 'scene.png';
+                        link.download = '3d-space.png';
                         link.click();
                       }
                     } catch (error) {

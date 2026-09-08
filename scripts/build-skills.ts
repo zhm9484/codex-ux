@@ -38,7 +38,7 @@ await writeFile(join(workspace, 'assets/runtime.json'), JSON.stringify({ build, 
 console.log(`Skills runtime ${build.slice(0, 12)}; app web files are in their skill dist/.`);
 for (const [appId, appName] of [
   ['video-editor', 'Video Editor'],
-  ['scene-3d', 'Scene'],
+  ['3d-space', '3D Space'],
 ] as const) {
   const video = join(root, `skills/codex-ux-${appId}`);
   const appRequire = createRequire(join(root, `apps/${appId}/package.json`));

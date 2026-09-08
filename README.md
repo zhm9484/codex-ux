@@ -12,9 +12,9 @@ The first preset is a local video collaboration container for Hyperframes source
 and MP4/WebM files. It provides playback, source updates, supported HTML text edits, assets,
 anchored change/transition notes, saved history, export and existing-task Codex delivery. The
 minimal collaboration contract and browser instance helpers are implemented. Apps share file-based
-workspaces; agent bindings are independent per page and workspace. Scene adds an immersive Three.js
-viewport, direct object manipulation, model imports and spatial feedback. Agents can build complete
-worlds with ordinary source code. Automatic custom app builds remain reserved.
+workspaces; agent bindings are independent per page and workspace. 3D Space adds an immersive
+Three.js viewport, direct object manipulation, model imports and spatial feedback. Agents can build
+complete worlds with ordinary source code. Automatic custom app builds remain reserved.
 
 ## Install and use
 
@@ -24,9 +24,9 @@ With Node.js 24 and npm available, install both skills for your agent:
 npx skills add zhm9484/codex-ux --skill codex-ux-workspace codex-ux-video-editor
 ```
 
-For 3D work, replace `codex-ux-video-editor` with `codex-ux-scene-3d`.
+For 3D work, replace `codex-ux-video-editor` with `codex-ux-3d-space`.
 
-Ask your agent to use Video Editor or Scene. Its skill includes the built web app; the Workspace
+Ask your agent to use Video Editor or 3D Space. Its skill includes the built web app; the Workspace
 skill prepares and starts the matching local service and connects the page to the current Codex
 task. First-time dependency/browser preparation needs network access. Other agents can use source
 and HTTP workflows; feedback delivery currently supports Codex only. See
@@ -50,10 +50,10 @@ format files.
 ```text
 apps/
   video-editor/     React + Vite video editor
-  scene-3d/         React + Three.js scene collaboration
+  3d-space/         React + Three.js scene collaboration
 packages/
   protocol/         Shared collaboration contract
-  scene-domain/     Scene manifests, placements and spatial feedback
+  scene-domain/     3D Space manifests, placements and spatial feedback
   video-domain/     Source documents, feedback intents and timeline operations
   video-runtime/    Hyperframes, Remotion and media playback adapters
   sdk/              Browser app instance and session-binding helpers

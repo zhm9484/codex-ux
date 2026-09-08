@@ -80,7 +80,7 @@ export async function api(req: IncomingMessage, res: ServerResponse, path: strin
       return;
     }
     const app = /^\/apps\/([a-z0-9-]+)(.*)$/.exec(rest);
-    if (app && app[1] === 'scene-3d' && s.apps.some((entry) => entry.id === app[1])) {
+    if (app && app[1] === '3d-space' && s.apps.some((entry) => entry.id === app[1])) {
       await sceneApi(req, res, id, app[2]!, s.scene);
       return;
     }

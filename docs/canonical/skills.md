@@ -22,7 +22,7 @@ installer-specific automatic dependency resolution is assumed.
   notices, `app.json`, and source/collaboration guidance. Users do not build the frontend after
   installing.
 
-Scene installs with `--skill codex-ux-workspace codex-ux-scene-3d`. Its skill similarly ships
+3D Space installs with `--skill codex-ux-workspace codex-ux-3d-space`. Its skill similarly ships
 `dist/`, license notices and `app.json`, plus Three.js source and spatial collaboration guidance.
 Both apps can be registered with the same Workspace runtime; their fingerprints are generated
 together.

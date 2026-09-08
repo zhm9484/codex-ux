@@ -4,9 +4,9 @@ import { defineConfig } from 'vite';
 // Native modules give the editor and arbitrary agent modules the same Three.js instance.
 const runtimeImport = (id: string) =>
   id === 'three'
-    ? '/media/scene-3d/engine/build/three.module.js'
+    ? '/media/3d-space/engine/build/three.module.js'
     : id.startsWith('three/addons/')
-      ? id.replace('three/addons/', '/media/scene-3d/engine/addons/')
+      ? id.replace('three/addons/', '/media/3d-space/engine/addons/')
       : null;
 export default defineConfig({
   plugins: [
@@ -20,7 +20,7 @@ export default defineConfig({
           // Vite prefixes external root paths with the app base in development.
           // Match that URL in the import map so user code shares exactly the same module.
           return context.server
-            ? html.replaceAll('"/media/scene-3d/engine/', '"/apps/scene-3d/media/scene-3d/engine/')
+            ? html.replaceAll('"/media/3d-space/engine/', '"/apps/3d-space/media/3d-space/engine/')
             : html;
         },
       },
@@ -30,8 +30,8 @@ export default defineConfig({
       },
     },
   ],
-  base: '/apps/scene-3d/',
+  base: '/apps/3d-space/',
   optimizeDeps: { exclude: ['three'] },
   server: { preTransformRequests: false },
-  build: { outDir: '../../skills/codex-ux-scene-3d/dist', emptyOutDir: true },
+  build: { outDir: '../../skills/codex-ux-3d-space/dist', emptyOutDir: true },
 });

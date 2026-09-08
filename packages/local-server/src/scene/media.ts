@@ -12,9 +12,9 @@ export async function sceneMedia(
   url: URL,
   s: SceneServices,
 ) {
-  const path = url.pathname.replace(/^\/apps\/scene-3d(?=\/media\/scene-3d\/engine\/)/, '');
-  if (!path.startsWith('/media/scene-3d/')) return false;
-  const engine = /^\/media\/scene-3d\/engine\/(build|addons)\/(.+)$/.exec(path);
+  const path = url.pathname.replace(/^\/apps\/3d-space(?=\/media\/3d-space\/engine\/)/, '');
+  if (!path.startsWith('/media/3d-space/')) return false;
+  const engine = /^\/media\/3d-space\/engine\/(build|addons)\/(.+)$/.exec(path);
   if (engine) {
     const relative = decodeURIComponent(engine[2]!);
     if (!/\.(?:js|wasm)$/.test(relative)) throw new HttpError(404, 'Runtime resource not found.');
@@ -22,7 +22,7 @@ export async function sceneMedia(
     await serveFile(req, res, await safeFile(root, relative));
     return true;
   }
-  const bundle = /^\/media\/scene-3d\/bundle\/([a-f0-9-]{36})\/([a-f0-9]{64})\/module\.js$/.exec(
+  const bundle = /^\/media\/3d-space\/bundle\/([a-f0-9-]{36})\/([a-f0-9]{64})\/module\.js$/.exec(
     path,
   );
   if (bundle) {
@@ -34,7 +34,7 @@ export async function sceneMedia(
     );
     return true;
   }
-  const source = /^\/media\/scene-3d\/(source|prepared)\/([a-f0-9-]{36})\/([a-f0-9-]+)\/(.+)$/.exec(
+  const source = /^\/media\/3d-space\/(source|prepared)\/([a-f0-9-]{36})\/([a-f0-9-]+)\/(.+)$/.exec(
     path,
   );
   if (source) {

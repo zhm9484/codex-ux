@@ -262,10 +262,11 @@ media export copies original bytes. Jobs report `rendering`, `complete` or `fail
 and reject concurrent exports. Interrupted jobs are failed on restart. Source snapshots and caches
 are retained without automatic garbage collection.
 
-## Scene API
+## 3D Space API
 
-The following paths are relative to `/workspaces/:id/apps/scene-3d`. Scene uses the shared Workspace
-and page connection endpoints above. See [Scene](scene-3d.md) for source and runtime semantics.
+The following paths are relative to `/workspaces/:id/apps/3d-space`. 3D Space uses the shared
+Workspace and page connection endpoints above. See [3D Space](3d-space.md) for source and runtime
+semantics.
 
 | Method/path                                     | Body or result                                                                                                                |
 | ----------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
@@ -287,9 +288,9 @@ Base revision and request IDs are UUIDs. Operations and imports return the resul
 bounds, and annotation IDs. An anchor has object ID or null, local/world `point`, camera and
 revision. Stale source/head conflicts return 409. The schema is exported by `packages/scene-domain`.
 
-Outside `/api`, `/media/scene-3d/source/:workspaceId/:revisionId/<path>` and
-`/media/scene-3d/prepared/:workspaceId/:snapshotHash/<path>` serve only captured snapshot resources.
-`/media/scene-3d/bundle/:workspaceId/:codeHash/module.js` serves compiled code. The shared runtime
-is served from `/media/scene-3d/engine/build/` and `/media/scene-3d/engine/addons/`; Vite
-development also accepts the `/apps/scene-3d` prefixed engine alias. Resources use their original
+Outside `/api`, `/media/3d-space/source/:workspaceId/:revisionId/<path>` and
+`/media/3d-space/prepared/:workspaceId/:snapshotHash/<path>` serve only captured snapshot resources.
+`/media/3d-space/bundle/:workspaceId/:codeHash/module.js` serves compiled code. The shared runtime
+is served from `/media/3d-space/engine/build/` and `/media/3d-space/engine/addons/`; Vite
+development also accepts the `/apps/3d-space` prefixed engine alias. Resources use their original
 MIME type.

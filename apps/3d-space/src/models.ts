@@ -26,10 +26,10 @@ export async function loadModel(url: string, renderer: THREE.WebGLRenderer): Pro
     warnings.push(`Missing resource: ${decodeURIComponent(resource.split('/').pop() ?? resource)}`);
   manager.itemStart('scene-model');
   const draco = new DRACOLoader(manager)
-    .setDecoderPath('/media/scene-3d/engine/addons/libs/draco/gltf/')
+    .setDecoderPath('/media/3d-space/engine/addons/libs/draco/gltf/')
     .setWorkerLimit(2);
   const ktx = new KTX2Loader(manager)
-    .setTranscoderPath('/media/scene-3d/engine/addons/libs/basis/')
+    .setTranscoderPath('/media/3d-space/engine/addons/libs/basis/')
     .setWorkerLimit(2)
     .detectSupport(renderer);
   let object: THREE.Object3D;

@@ -16,7 +16,7 @@ import type { SceneProjects } from './projects.ts';
 interface RequestContext {
   requestId: string;
   workspaceId: string;
-  appId: 'scene-3d';
+  appId: '3d-space';
   baseRevision: string;
   target: CollaborationTarget;
   feedback: SceneFeedback;
@@ -50,12 +50,13 @@ export class SceneCollaboration {
     const row = this.row(id, requestId);
     return {
       ...(JSON.parse(row.context) as RequestContext),
+      appId: '3d-space' as const,
       state: row.state,
       error: row.error,
       publishedRevision: row.revision_id,
       currentRevision: this.projects.store.head(id),
-      previewUrl: `${this.origin}/apps/scene-3d/w/${id}?candidate=${requestId}`,
-      publishUrl: `${this.origin}/api/workspaces/${id}/apps/scene-3d/requests/${requestId}/publish`,
+      previewUrl: `${this.origin}/apps/3d-space/w/${id}?candidate=${requestId}`,
+      publishUrl: `${this.origin}/api/workspaces/${id}/apps/3d-space/requests/${requestId}/publish`,
     };
   }
   list(id: string) {
@@ -103,7 +104,7 @@ export class SceneCollaboration {
       const context: RequestContext = {
         requestId,
         workspaceId: id,
-        appId: 'scene-3d',
+        appId: '3d-space',
         baseRevision: base,
         target,
         feedback,
@@ -137,11 +138,11 @@ export class SceneCollaboration {
       return true;
     });
     if (created) {
-      const endpoint = `${this.origin}/api/workspaces/${id}/apps/scene-3d/requests/${requestId}`;
+      const endpoint = `${this.origin}/api/workspaces/${id}/apps/3d-space/requests/${requestId}`;
       try {
         await deliver(
           target.session,
-          `Scene feedback request ${requestId}, explicitly sent by the user. GET ${endpoint} for the captured camera, selected point/object, visible object IDs and transforms, annotations, screenshot path, and isolated candidate directory. Edit only that candidate for this request. scene.json stores imported objects, user placements and annotations; preserve them unless the request changes them. The entry (normally scene.ts) exports a default function createScene(ctx), optionally async. Use ordinary Three.js imports; ctx.scene, ctx.root, ctx.register(id, object, label), ctx.assetUrl(path), ctx.loadModel(path), ctx.onFrame(callback), ctx.onClick(object, callback), ctx.onDispose(callback), and ctx.invalidate() are available. Keep registered IDs stable. Three.js is pinned to 0.185.1; extra packages require package.json and a pnpm-lock.yaml (install scripts are disabled). The registered root's placement belongs to the editor; animate children. Inspect the preview URL from the context before publishing. POST {"label":"A concise description"} to ${endpoint}/publish once; publication checks the base and creates an undoable version. If blocked POST {"message":"..."} to ${endpoint}/error. Do not edit app-private blobs/builds/database or queue another agent session.`,
+          `3D Space feedback request ${requestId}, explicitly sent by the user. GET ${endpoint} for the captured camera, selected point/object, visible object IDs and transforms, annotations, screenshot path, and isolated candidate directory. Edit only that candidate for this request. scene.json stores imported objects, user placements and annotations; preserve them unless the request changes them. The entry (normally scene.ts) exports a default function createScene(ctx), optionally async. Use ordinary Three.js imports; ctx.scene, ctx.root, ctx.register(id, object, label), ctx.assetUrl(path), ctx.loadModel(path), ctx.onFrame(callback), ctx.onClick(object, callback), ctx.onDispose(callback), and ctx.invalidate() are available. Keep registered IDs stable. Three.js is pinned to 0.185.1; extra packages require package.json and a pnpm-lock.yaml (install scripts are disabled). The registered root's placement belongs to the editor; animate children. Inspect the preview URL from the context before publishing. POST {"label":"A concise description"} to ${endpoint}/publish once; publication checks the base and creates an undoable version. If blocked POST {"message":"..."} to ${endpoint}/error. Do not edit app-private blobs/builds/database or queue another agent session.`,
         );
         this.projects.store
           .database(id)
@@ -182,9 +183,9 @@ export class SceneCollaboration {
           directory: request.candidateDirectory,
           codeHash: snapshot.codeHash,
           bundleUrl: snapshot.document.entry
-            ? `/media/scene-3d/bundle/${id}/${snapshot.codeHash}/module.js`
+            ? `/media/3d-space/bundle/${id}/${snapshot.codeHash}/module.js`
             : null,
-          baseUrl: `/media/scene-3d/prepared/${id}/${key}/`,
+          baseUrl: `/media/3d-space/prepared/${id}/${key}/`,
           error: null,
           pending: false,
         },

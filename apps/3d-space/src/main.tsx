@@ -6,7 +6,7 @@ import './styles.css';
 
 const root = document.getElementById('root');
 if (!root) throw new Error('The application root is missing.');
-const instance = await openAppInstance('scene-3d');
+const instance = await openAppInstance('3d-space');
 instance.enableConnections();
 createRoot(root).render(
   <StrictMode>

@@ -1,5 +1,5 @@
 import { DatabaseSync } from 'node:sqlite';
-import { mkdirSync } from 'node:fs';
+import { existsSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import type { SceneRevision, SceneSnapshot } from '@codex-ux/scene-domain';
@@ -21,7 +21,10 @@ export class SceneStore {
     this.workspaces = workspaces;
   }
   directory(id: string) {
-    return this.workspaces.appDirectory(id, 'scene-3d');
+    const directory = this.workspaces.appDirectory(id, '3d-space');
+    const legacy = this.workspaces.appDirectory(id, 'scene-3d');
+    // Keep existing candidate paths and immutable source references valid after the app rename.
+    return !existsSync(directory) && existsSync(legacy) ? legacy : directory;
   }
   database(id: string) {
     let db = this.databases.get(id);
@@ -44,7 +47,7 @@ export class SceneStore {
   }
   head(id: string) {
     const row = this.row(id);
-    if (!row) throw new HttpError(404, 'Open this workspace in Scene first.');
+    if (!row) throw new HttpError(404, 'Open this workspace in 3D Space first.');
     return row.head;
   }
   revision(id: string, revisionId: string): SceneRevision {

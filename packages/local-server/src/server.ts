@@ -79,7 +79,7 @@ export async function startServer(
         );
         return;
       }
-      const devServer = path.startsWith('/apps/scene-3d/')
+      const devServer = path.startsWith('/apps/3d-space/')
         ? sceneVite
         : path.startsWith('/apps/video-editor/') || path.startsWith('/@')
           ? vite
@@ -173,12 +173,12 @@ export async function startServer(
         appType: 'spa',
       });
       sceneVite = await createViteServer({
-        root: join(repositoryRoot, 'apps/scene-3d'),
-        configFile: join(repositoryRoot, 'apps/scene-3d/vite.config.ts'),
+        root: join(repositoryRoot, 'apps/3d-space'),
+        configFile: join(repositoryRoot, 'apps/3d-space/vite.config.ts'),
         server: {
           port,
           middlewareMode: true,
-          ws: { server, clientPort: port, path: '/apps/scene-3d/hmr' },
+          ws: { server, clientPort: port, path: '/apps/3d-space/hmr' },
         },
         appType: 'spa',
       });
