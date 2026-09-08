@@ -1,6 +1,7 @@
 import { readFile } from 'node:fs/promises';
 import { hyperframesPreview } from './sources/hyperframes-preview.ts';
-import { standaloneRuntime } from './sources/remotion.ts';
+import { standaloneRuntime } from './sources/standalone.ts';
+import { environments } from './environment.ts';
 import { createRequire } from 'node:module';
 import { dirname, join } from 'node:path';
 import type { IncomingMessage, ServerResponse } from 'node:http';
@@ -49,6 +50,7 @@ export async function mediaRoutes(
   if (!url.pathname.startsWith('/media/video-editor/')) return false;
   const path = decodeURIComponent(url.pathname.slice('/media/video-editor'.length));
   if (path === '/engine/runtime.js') {
+    await environments.ensure('hyperframes');
     await serveFile(
       req,
       res,
@@ -62,7 +64,9 @@ export async function mediaRoutes(
   }
   if (path === '/engine/preview.js') {
     res.setHeader('Content-Type', 'text/javascript');
-    res.end(await standaloneRuntime());
+    res.end(
+      await standaloneRuntime(url.searchParams.get('kind') === 'media' ? 'media' : 'hyperframes'),
+    );
     return true;
   }
   const capture = /^\/capture\/([\w-]+)\/([\w-]+)$/.exec(path);

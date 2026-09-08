@@ -55,3 +55,27 @@ jobs:
           git diff --exit-code -- skills/codex-ux-workspace/assets/runtime.json
           skills/codex-ux-video-editor/app.json skills/codex-ux-video-editor/dist
           skills/codex-ux-3d-space/app.json skills/codex-ux-3d-space/dist
+
+  installed-skills:
+    name: Installed skills (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec playwright install --with-deps chromium
+      - name: Select test browser
+        shell: bash
+        run:
+          node -e 'require("node:fs").appendFileSync(process.env.GITHUB_ENV, "CODEX_UX_CHROME=" +
+          require("@playwright/test").chromium.executablePath() + "\n")'
+      - run: pnpm test:skills

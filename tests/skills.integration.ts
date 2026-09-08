@@ -6,6 +6,7 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
+import { createRequire } from 'node:module';
 import { randomUUID } from 'node:crypto';
 import { chromium } from '@playwright/test';
 import type { Connection } from '../packages/protocol/src/index.ts';
@@ -125,6 +126,34 @@ void test(
             .opacity === '1',
         project.revisionId,
       );
+      // Exercise the separate Hyperframes exporter and encoding environment in the installed runtime.
+      const hyperframes = join(directory, 'hyperframes');
+      await mkdir(hyperframes);
+      await cp(
+        createRequire(new URL('../packages/local-server/package.json', import.meta.url)).resolve(
+          'gsap/dist/gsap.min.js',
+        ),
+        join(hyperframes, 'gsap.js'),
+      );
+      await writeFile(
+        join(hyperframes, 'index.html'),
+        '<!doctype html><html><body style="margin:0"><main data-composition-id="test" data-width="320" data-height="180" data-duration="0.5" style="width:320px;height:180px;background:#16352b;color:white">Installed export</main><script src="gsap.js"></script><script>window.__timelines = {test: gsap.timeline({paused:true}).to({}, {duration:0.5})};</script></body></html>',
+      );
+      const hyperframeProject = (await post(base + '/source', {
+        baseRevision: project.revisionId,
+        path: hyperframes,
+      })) as unknown as VideoProject;
+      let hyperframeExport = await post(base + '/exports', {
+        revisionId: hyperframeProject.revisionId,
+      });
+      for (let i = 0; i < 600 && hyperframeExport.state === 'rendering'; i++) {
+        await new Promise((done) => setTimeout(done, 500));
+        hyperframeExport = (await (
+          await fetch(base + '/exports/' + String(hyperframeExport.id))
+        ).json()) as Record<string, unknown>;
+      }
+      assert.equal(hyperframeExport.state, 'complete', JSON.stringify(hyperframeExport));
+
       // Import and compile from the installed runtime, with no repository node_modules in its source tree.
       const source = join(directory, 'remotion');
       await mkdir(source);
@@ -144,7 +173,7 @@ void test(
         'import React from "react"; export default function Video(){return <div style={{background:"#16352b",color:"white",width:320,height:180}}>Installed Remotion</div>}',
       );
       const imported = (await post(base + '/source', {
-        baseRevision: project.revisionId,
+        baseRevision: hyperframeProject.revisionId,
         path: source,
       })) as unknown as VideoProject;
       await page.waitForFunction(
@@ -155,8 +184,20 @@ void test(
         { timeout: 30000 },
       );
       const exported = await post(base + '/exports', { revisionId: imported.revisionId });
+      const ownership = JSON.parse(await readFile(join(data, 'runtime.json'), 'utf8')) as {
+        control: string;
+      };
+      const stopWhileExporting = await fetch(origin + '/api/service/stop', {
+        method: 'POST',
+        headers: { 'x-codex-ux-control': ownership.control },
+      });
+      assert.equal(
+        stopWhileExporting.status,
+        409,
+        'active export must not be interrupted by restart',
+      );
       let job = exported;
-      for (let i = 0; i < 120 && job.state === 'rendering'; i++) {
+      for (let i = 0; i < 600 && job.state === 'rendering'; i++) {
         await new Promise((done) => setTimeout(done, 500));
         job = (await (await fetch(base + '/exports/' + String(exported.id))).json()) as Record<
           string,

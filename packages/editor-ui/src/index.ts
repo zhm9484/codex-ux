@@ -14,3 +14,5 @@ export {
 } from './use-floating-position';
 export { useFullscreen } from './use-fullscreen';
 export { AgentConnection } from './agent-connection';
+
+export { RuntimeGate } from './runtime-gate';

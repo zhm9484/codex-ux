@@ -1,3 +1,4 @@
+import { RuntimeGate } from '@codex-ux/editor-ui';
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { openAppInstance } from '@codex-ux/sdk';
@@ -15,6 +16,8 @@ instance.enableConnections();
 
 createRoot(root).render(
   <StrictMode>
-    <App instance={instance} />
+    <RuntimeGate app="video">
+      <App instance={instance} />
+    </RuntimeGate>
   </StrictMode>,
 );

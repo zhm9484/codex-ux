@@ -105,7 +105,7 @@ export function ExportDialog({
           {job?.state === 'rendering' ? (
             <>
               <span className="loading-dot" />
-              Rendering your video…
+              {job.stage ? `${job.stage}…` : 'Rendering your video…'}
             </>
           ) : busy ? (
             'Starting…'

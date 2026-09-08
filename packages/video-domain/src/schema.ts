@@ -141,6 +141,8 @@ export interface ExportJob {
   revisionId: string;
   state: 'rendering' | 'complete' | 'failed';
   progress: number;
+  stage?: string;
+  browserVersion?: string;
   error?: string;
   url?: string;
 }

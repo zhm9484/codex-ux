@@ -1,3 +1,4 @@
+import { environmentApi } from './environment-routes.ts';
 import { libraryApi } from './library-routes.ts';
 import type { LibraryStore } from './storage/library.ts';
 import { listWorkspaceFiles } from './storage/files.ts';
@@ -5,24 +6,25 @@ import type { IncomingMessage, ServerResponse } from 'node:http';
 import { z } from 'zod';
 import type { WorkspaceStore } from './storage/workspaces.ts';
 import type { HostedApp } from './apps.ts';
-import { videoApi, type VideoServices } from './video/routes.ts';
+import type { VideoServices } from './video/routes.ts';
 import { json, readJson } from './http.ts';
 import { HttpError } from './errors.ts';
 import type { Connections } from './connections.ts';
 import { connectionApi } from './connection-routes.ts';
 import { validateApps } from './apps.ts';
 import { codexCapability } from '@codex-ux/adapter-codex';
-import { sceneApi, type SceneServices } from './scene/routes.ts';
+import type { SceneServices } from './scene/routes.ts';
 
 export interface Services {
   library: LibraryStore;
   workspaces: WorkspaceStore;
   apps: HostedApp[];
-  video: VideoServices;
+  video: () => Promise<VideoServices>;
   connections: Connections;
-  scene: SceneServices;
+  scene: () => Promise<SceneServices>;
 }
 export async function api(req: IncomingMessage, res: ServerResponse, path: string, s: Services) {
+  if (environmentApi(req, res, path)) return;
   if (path === '/api/agents/codex' && req.method === 'GET') {
     json(res, await codexCapability());
     return;
@@ -81,11 +83,13 @@ export async function api(req: IncomingMessage, res: ServerResponse, path: strin
     }
     const app = /^\/apps\/([a-z0-9-]+)(.*)$/.exec(rest);
     if (app && app[1] === '3d-space' && s.apps.some((entry) => entry.id === app[1])) {
-      await sceneApi(req, res, id, app[2]!, s.scene);
+      const scene = await s.scene();
+      await (await import('./scene/routes.ts')).sceneApi(req, res, id, app[2]!, scene);
       return;
     }
     if (app && s.apps.some((entry) => entry.id === app[1]) && app[1] === 'video-editor') {
-      await videoApi(req, res, id, app[2]!, s.video);
+      const video = await s.video();
+      await (await import('./video/routes.ts')).videoApi(req, res, id, app[2]!, video);
       return;
     }
   }

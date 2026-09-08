@@ -66,3 +66,42 @@ button {
     scroll-behavior: auto !important;
   }
 }
+
+.ux-runtime-opening {
+  display: grid;
+  place-content: center;
+  min-height: 100vh;
+  font: 15px system-ui;
+  color: #292929;
+  background: #faf9f6;
+  text-align: center;
+}
+.ux-runtime-status {
+  position: fixed;
+  right: 18px;
+  bottom: 18px;
+  z-index: 1000;
+  max-width: min(360px, calc(100vw - 36px));
+  max-height: 45vh;
+  overflow: auto;
+  padding: 14px;
+  border: 1px solid #d8d5ce;
+  border-radius: 12px;
+  background: #faf9f6;
+  color: #292929;
+  box-shadow: 0 4px 24px #0002;
+  font: 13px/1.5 system-ui;
+}
+.ux-runtime-status p {
+  margin: 6px 0;
+  overflow-wrap: anywhere;
+}
+.ux-runtime-status button {
+  padding: 6px 10px;
+  margin: 6px 0;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  background: white;
+  color: #292929;
+  cursor: pointer;
+}

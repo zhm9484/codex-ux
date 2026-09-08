@@ -1,6 +1,7 @@
 import { execFile } from 'node:child_process';
 import { createRequire } from 'node:module';
 import { promisify } from 'node:util';
+import { environments } from '../environment.ts';
 import { HttpError } from '../errors.ts';
 const execute = promisify(execFile);
 const require = createRequire(import.meta.url);
@@ -10,9 +11,24 @@ export function mediaBinaries() {
     ffprobe: process.env.CODEX_UX_FFPROBE ?? (require('ffprobe-static') as { path: string }).path,
   };
 }
+async function probeBinary() {
+  if (process.env.CODEX_UX_FFPROBE) return process.env.CODEX_UX_FFPROBE;
+  await environments.ensure('probe');
+  return (require('ffprobe-static') as { path: string }).path;
+}
 async function probe(file: string) {
+  let binary: string;
+  try {
+    binary = await probeBinary();
+  } catch (error) {
+    throw new HttpError(
+      503,
+      `Media information tool could not be prepared: ${error instanceof Error ? error.message : String(error)}`,
+      'environment_failed',
+    );
+  }
   const { stdout } = await execute(
-    mediaBinaries().ffprobe,
+    binary,
     ['-v', 'error', '-show_format', '-show_streams', '-of', 'json', file],
     { timeout: 10000, maxBuffer: 1024 * 1024 },
   );
@@ -37,7 +53,14 @@ function validDuration(value: unknown) {
 export async function mediaDuration(file: string) {
   try {
     return validDuration((await probe(file)).format?.duration);
-  } catch {
+  } catch (error) {
+    if (error instanceof HttpError && error.code === 'environment_failed') throw error;
+    if (error instanceof Error && 'code' in error && error.code === 'ENOENT')
+      throw new HttpError(
+        503,
+        'FFprobe is unavailable. Check the configured media information tool.',
+        'environment_failed',
+      );
     throw new HttpError(
       422,
       'Could not read this media file. Use a playable file between 0.1 seconds and one hour.',
@@ -60,7 +83,14 @@ export async function probeVideo(file: string) {
       height: swap ? video.width : video.height,
       duration: validDuration(metadata.format?.duration),
     };
-  } catch {
+  } catch (error) {
+    if (error instanceof HttpError && error.code === 'environment_failed') throw error;
+    if (error instanceof Error && 'code' in error && error.code === 'ENOENT')
+      throw new HttpError(
+        503,
+        'FFprobe is unavailable. Check the configured media information tool.',
+        'environment_failed',
+      );
     throw new HttpError(
       422,
       'Use a playable H.264 MP4 or VP8/VP9/AV1 WebM video between 0.1 seconds and one hour.',

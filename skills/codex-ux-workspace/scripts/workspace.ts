@@ -1,15 +1,15 @@
 import { createHash, randomUUID } from 'node:crypto';
-import { spawn, execFile } from 'node:child_process';
-import { access, mkdir, open, readFile, rename, rm, writeFile } from 'node:fs/promises';
+import { spawn } from 'node:child_process';
+import { access, mkdir, open, readFile, rename, writeFile } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
-import { promisify } from 'node:util';
 import { parseArgs } from 'node:util';
 import { prepareApp } from './artifacts.ts';
 import { DiscoveryError, locateService } from './discovery.ts';
-import { browserRuntime, prepareRuntime } from './runtime.ts';
+import { prepareRuntime } from './runtime.ts';
+import { acquireLock } from './lock.ts';
+import { runtimeEnvironment } from './install.ts';
 
-const execute = promisify(execFile);
 const { positionals, values } = parseArgs({
   allowPositionals: true,
   options: {
@@ -21,6 +21,8 @@ const { positionals, values } = parseArgs({
     'replace-session': { type: 'string' },
     'data-dir': { type: 'string' },
     port: { type: 'string' },
+    capability: { type: 'string' },
+    help: { type: 'boolean' },
   },
 });
 const root = resolve(
@@ -71,32 +73,20 @@ async function prepare() {
   const npmPrefix = join(cache, 'npm-prefix');
   await mkdir(join(npmPrefix, 'lib'), { recursive: true });
   await prepareRuntime(runtime, bundle, {
-    ...process.env,
+    ...runtimeEnvironment(),
     PATH: `${dirname(process.execPath)}${process.platform === 'win32' ? ';' : ':'}${process.env.PATH ?? ''}`,
     CI: 'true',
+    CODEX_UX_CACHE_DIR: cache,
     npm_config_prefix: npmPrefix,
   });
 }
-async function browser() {
-  const configured = process.env.CODEX_UX_CHROME;
-  if (configured) {
-    await access(configured);
-    return configured;
-  }
-  const chrome = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
-  if (process.platform === 'darwin' && (await exists(chrome))) return chrome;
-  const { playwright, cli } = browserRuntime(runtime);
-  const path = playwright.chromium.executablePath();
-  if (!(await exists(path))) {
-    console.error('Preparing Chromium for preview and rendering…');
-    await execute(process.execPath, [cli, 'install', 'chromium'], {
-      timeout: 600_000,
-      maxBuffer: 4 * 1024 * 1024,
-    });
-  }
-  return path;
-}
 async function start() {
+  const requestedPort = Number(values.port ?? process.env.CODEX_UX_PORT ?? 0);
+  if (
+    !Number.isInteger(requestedPort) ||
+    (requestedPort !== 0 && (requestedPort < 1024 || requestedPort > 65535))
+  )
+    throw new Error('Port must be 0 (automatic) or between 1024 and 65535.');
   if (Number(process.versions.node.split('.')[0]) !== 24)
     throw new Error('Run this launcher with Node.js 24.');
   await mkdir(root, { recursive: true });
@@ -161,7 +151,6 @@ async function start() {
       }
     }
     await prepare();
-    const chrome = await browser();
     const selectedPort = Number(values.port ?? process.env.CODEX_UX_PORT ?? 0);
     if (
       !Number.isInteger(selectedPort) ||
@@ -176,13 +165,13 @@ async function start() {
       windowsHide: true,
       stdio: ['ignore', log.fd, log.fd],
       env: {
-        ...process.env,
+        ...runtimeEnvironment(),
         CODEX_UX_DATA_DIR: root,
         CODEX_UX_PORT: String(selectedPort),
         CODEX_UX_APPS_FILE: registryPath,
         CODEX_UX_RUNTIME_BUILD: bundle.build,
-        CODEX_UX_CHROME: chrome,
-        PRODUCER_HEADLESS_SHELL_PATH: chrome,
+        CODEX_UX_RUNTIME_DIR: runtime,
+        CODEX_UX_CACHE_DIR: cache,
       },
     });
     let startupError: Error | undefined;
@@ -224,46 +213,135 @@ async function start() {
   });
 }
 
-async function startExclusive() {
+async function startExclusive(work = start) {
   await mkdir(root, { recursive: true });
-  const path = join(root, 'launcher.lock');
-  for (let attempt = 0; attempt < 30; attempt++) {
-    let lock;
-    try {
-      lock = await open(path, 'wx');
-    } catch (error) {
-      if (!(error instanceof Error && 'code' in error && error.code === 'EEXIST')) throw error;
-      const owner = Number(await readFile(path, 'utf8').catch(() => ''));
-      if (Number.isInteger(owner) && owner > 0) {
-        try {
-          process.kill(owner, 0);
-        } catch (probe) {
-          if (probe instanceof Error && 'code' in probe && probe.code === 'ESRCH') {
-            await rm(path, { force: true });
-            continue;
-          }
-          throw probe;
-        }
-      }
-      await delay(1000);
-      continue;
-    }
-    try {
-      await lock.writeFile(String(process.pid));
-      await start();
-      return;
-    } finally {
-      await lock.close();
-      await rm(path, { force: true });
-    }
+  const release = await acquireLock(join(root, 'launcher.lock'));
+  try {
+    await work();
+  } finally {
+    await release();
   }
-  throw new Error(
-    'Another launcher is preparing this data directory. Wait for it to finish and retry.',
-  );
 }
 
+async function inspect() {
+  const saved = JSON.parse(await readFile(join(root, 'runtime.json'), 'utf8')) as {
+    origin: string;
+    pid: number;
+    control?: string;
+  };
+  const url = new URL(saved.origin);
+  if (
+    url.protocol !== 'http:' ||
+    url.hostname !== '127.0.0.1' ||
+    url.origin !== saved.origin ||
+    !url.port
+  )
+    throw new Error('Invalid service address.');
+  const health = await api(saved.origin, '/health');
+  if (health.service !== 'codex-ux' || health.dataRoot !== root || health.pid !== saved.pid)
+    throw new Error('Service ownership could not be verified.');
+  return { saved, health };
+}
+async function stop() {
+  let current: Awaited<ReturnType<typeof inspect>>;
+  try {
+    current = await inspect();
+  } catch (error) {
+    const pid = Number(await readFile(join(root, 'service.lock'), 'utf8').catch(() => ''));
+    if (!pid) return;
+    try {
+      process.kill(pid, 0);
+    } catch (probe) {
+      if (probe instanceof Error && 'code' in probe && probe.code === 'ESRCH') return;
+    }
+    throw error;
+  }
+  if (!current.saved.control)
+    throw new Error(
+      'This older service has no verified stop endpoint. Stop it from its owning terminal once before updating.',
+    );
+  const response = await fetch(current.saved.origin + '/api/service/stop', {
+    method: 'POST',
+    headers: { 'x-codex-ux-control': current.saved.control },
+    signal: AbortSignal.timeout(5000),
+  });
+  const result = (await response.json()) as { error?: string };
+  if (!response.ok) throw new Error(result.error ?? 'The service could not stop.');
+  for (let i = 0; i < 100; i++) {
+    if (!(await exists(join(root, 'service.lock')))) return;
+    await delay(100);
+  }
+  throw new Error('The service is still stopping. Inspect its status before retrying.');
+}
 try {
   switch (positionals[0]) {
+    case 'inspect': {
+      const current = await inspect();
+      output({
+        ...current.health,
+        origin: current.saved.origin,
+        expectedRuntimeBuild: bundle.build,
+      });
+      break;
+    }
+    case 'stop':
+      await startExclusive(stop);
+      output({ state: 'stopped', dataRoot: root });
+      break;
+    case 'restart':
+      await startExclusive(async () => {
+        if (values.app) {
+          const path = resolve(values.app);
+          const manifest = JSON.parse(await readFile(path, 'utf8')) as {
+            runtimeBuild: string;
+            apiVersion: number;
+            dist: string;
+            webBuild: string;
+          };
+          if (manifest.runtimeBuild !== bundle.build || manifest.apiVersion !== 3)
+            throw new Error('Install matching Workspace and app skill versions together.');
+          await prepareApp(resolve(dirname(path), manifest.dist), manifest.webBuild, cache);
+        }
+        if (
+          values.port &&
+          (!Number.isInteger(Number(values.port)) ||
+            (Number(values.port) !== 0 &&
+              (Number(values.port) < 1024 || Number(values.port) > 65535)))
+        )
+          throw new Error('Invalid port.');
+        await prepare();
+        await stop();
+        await start();
+      });
+      break;
+    case 'prepare': {
+      const { capabilities } = await import('./environments.ts');
+      if (!capabilities.includes(values.capability as (typeof capabilities)[number]))
+        throw new Error('Provide a known --capability.');
+      const origin = await service();
+      await api(origin, `/environment/${values.capability}`, {});
+      const deadline = Date.now() + 650_000;
+      for (;;) {
+        if (Date.now() > deadline)
+          throw new Error('Preparation timed out. Inspect /api/environment before retrying.');
+        const response = await fetch(origin + '/api/environment');
+        const states = (await response.json()) as {
+          id: string;
+          state: string;
+          stage: string;
+          error?: string;
+        }[];
+        const state = states.find((item) => item.id === values.capability)!;
+        if (state.state === 'ready') {
+          output(state);
+          break;
+        }
+        if (state.state === 'failed') throw new Error(state.error);
+        console.error(state.stage);
+        await delay(1000);
+      }
+      break;
+    }
     case 'start':
       await startExclusive();
       break;
@@ -346,6 +424,18 @@ try {
         2,
       ),
     );
-  } else console.error(error instanceof Error ? error.message : error);
+  } else
+    console.error(
+      JSON.stringify({
+        state: 'unavailable',
+        dataRoot: root,
+        error: {
+          code: 'launcher_failed',
+          stage: positionals[0],
+          message: error instanceof Error ? error.message : String(error),
+        },
+        logPath: join(root, 'service.log'),
+      }),
+    );
   process.exitCode = 1;
 }

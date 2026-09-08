@@ -5,7 +5,13 @@ import type { ExportJob, Revision } from '@codex-ux/video-domain';
 import { HttpError } from '../errors.ts';
 import { prepareVideo, videoDirectory } from './files.ts';
 
+import { environments, type Capability } from '../environment.ts';
+import { prepareBrowser } from '../browser.ts';
 import { mediaBinaries } from './probe.ts';
+async function prepareExportCapability(id: Capability) {
+  environments.start(id);
+  await environments.ensure(id);
+}
 export function configureRenderer() {
   const binaries = mediaBinaries();
   process.env.HYPERFRAMES_FFMPEG_PATH ??= binaries.ffmpeg;
@@ -71,12 +77,20 @@ export class RenderJobs {
       if (source.kind === 'media') {
         await copyFile(join(prepared, 'source', source.entry), output);
       } else if (source.kind === 'remotion') {
+        job.stage = 'Preparing export tools';
+        await this.writeJob(dir, job);
+        await prepareExportCapability('remotion-export');
+        await (
+          await import('../sources/remotion.ts')
+        ).buildRemotionExport(this.root, workspaceId, revision.document, prepared);
+        job.stage = 'Preparing background browser';
+        await this.writeJob(dir, job);
+        const browser = await prepareBrowser();
+        job.browserVersion = browser.version;
+        job.stage = 'Rendering';
+        await this.writeJob(dir, job);
         const { selectComposition, renderMedia } = await import('@remotion/renderer');
-        const browserExecutable =
-          process.env.CODEX_UX_CHROME ??
-          (process.platform === 'darwin'
-            ? '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
-            : null);
+        const browserExecutable = browser.executablePath;
         const serveUrl = join(prepared, 'render');
         const composition = await selectComposition({ serveUrl, id: 'Video', browserExecutable });
         await renderMedia({
@@ -88,6 +102,18 @@ export class RenderJobs {
           concurrency: 1,
         });
       } else {
+        job.stage = 'Preparing export tools';
+        await this.writeJob(dir, job);
+        await prepareExportCapability('hyperframes-export');
+        if (!process.env.CODEX_UX_FFMPEG) await prepareExportCapability('encoder');
+        if (!process.env.CODEX_UX_FFPROBE) await prepareExportCapability('probe');
+        job.stage = 'Preparing background browser';
+        await this.writeJob(dir, job);
+        const browser = await prepareBrowser();
+        process.env.PRODUCER_HEADLESS_SHELL_PATH = browser.executablePath;
+        job.browserVersion = browser.version;
+        job.stage = 'Rendering';
+        await this.writeJob(dir, job);
         configureRenderer();
         await access(process.env.HYPERFRAMES_FFMPEG_PATH!);
         await access(process.env.HYPERFRAMES_FFPROBE_PATH!);

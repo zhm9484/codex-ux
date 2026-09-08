@@ -1,8 +1,7 @@
 import { build } from 'esbuild';
-import { bundle } from '@remotion/bundler';
 import { createRequire } from 'node:module';
 import { dirname, join } from 'node:path';
-import { mkdir, writeFile } from 'node:fs/promises';
+import { mkdir, writeFile, access } from 'node:fs/promises';
 import type { VideoDocument } from '@codex-ux/video-domain';
 import { dependencyDirectory, linkDependencies, runtimeAliases } from './dependencies.ts';
 const require = createRequire(import.meta.url);
@@ -55,6 +54,29 @@ export async function buildRemotion(
     define: { 'process.env.NODE_ENV': '"production"' },
     logLevel: 'silent',
   });
+}
+
+export async function buildRemotionExport(
+  root: string,
+  id: string,
+  doc: VideoDocument,
+  directory: string,
+) {
+  if (doc.source.kind !== 'remotion') throw new Error('Expected Remotion source.');
+  if (
+    await access(join(directory, 'render/.ready')).then(
+      () => true,
+      () => false,
+    )
+  )
+    return;
+  const { bundle } = await import('@remotion/bundler');
+  const source = doc.source;
+  const sourceDir = join(directory, 'source');
+  await linkDependencies(sourceDir, await dependencyDirectory(root, id, doc));
+  const generated = join(sourceDir, '.video-editor');
+  await mkdir(generated, { recursive: true });
+  const input = `import {${source.exportName} as Video} from ${JSON.stringify('../' + source.entry)};\n`;
   const renderEntry = join(generated, 'render.tsx');
   await writeFile(
     renderEntry,
@@ -71,22 +93,5 @@ export async function buildRemotion(
       resolve: { ...config.resolve, alias: { ...config.resolve?.alias, ...runtimeAliases } },
     }),
   });
-}
-let standalone: Promise<string> | undefined;
-export function standaloneRuntime() {
-  standalone ??= build({
-    entryPoints: [join(runtimeDirectory, 'standalone.ts')],
-    bundle: true,
-    format: 'esm',
-    platform: 'browser',
-    write: false,
-    define: { 'process.env.NODE_ENV': '"production"' },
-    logLevel: 'silent',
-  })
-    .then((result) => result.outputFiles[0]!.text)
-    .catch((error: unknown) => {
-      standalone = undefined;
-      throw error;
-    });
-  return standalone;
+  await writeFile(join(directory, 'render/.ready'), 'ready');
 }

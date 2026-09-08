@@ -2,6 +2,10 @@
 
 3D Space (`3d-space`) is a local Three.js scene editor for people and agents. Its full-window
 viewport, small contextual toolbar and feedback composer avoid a permanent object tree or inspector.
+3D prepares its own backend/compiler dependencies when first used; it does not install video
+engines, FFmpeg, Playwright or Chromium. The app shows preparation progress with cancel/retry
+controls, and video preparation failures do not disable it.
+
 Open `/apps/3d-space/` to create or select a shared Workspace. It uses the same page-owned
 connection and workspace switching rules as Video Editor; the apps keep independent domain state.
 

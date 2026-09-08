@@ -3,7 +3,7 @@ import { join } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import type { Revision, VideoDocument } from '@codex-ux/video-domain';
 import { writeProject, snapshot, digest } from '../sources/files.ts';
-import { buildRemotion } from '../sources/remotion.ts';
+import { environments } from '../environment.ts';
 import { videoDirectory } from './paths.ts';
 export { videoDirectory } from './paths.ts';
 
@@ -17,7 +17,7 @@ export async function prepareVideo(root: string, id: string, doc: VideoDocument)
   );
   const key = digest(
     JSON.stringify({
-      adapter: 1,
+      adapter: 2,
       hyperframes: '0.8.30',
       remotion: '4.0.522',
       source: doc.source,
@@ -38,7 +38,10 @@ export async function prepareVideo(root: string, id: string, doc: VideoDocument)
     try {
       await mkdir(join(stage, 'source'), { recursive: true });
       await writeProject(root, id, doc.files, join(stage, 'source'));
-      if (doc.source.kind === 'remotion') await buildRemotion(root, id, doc, stage);
+      if (doc.source.kind === 'remotion') {
+        await environments.ensure('remotion');
+        await (await import('../sources/remotion.ts')).buildRemotion(root, id, doc, stage);
+      }
       await writeFile(join(stage, 'document.json'), JSON.stringify(doc));
       await writeFile(join(stage, '.ready'), 'ready');
       await rename(stage, directory);

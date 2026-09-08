@@ -299,3 +299,19 @@ Outside `/api`, `/media/3d-space/source/:workspaceId/:revisionId/<path>` and
 is served from `/media/3d-space/engine/build/` and `/media/3d-space/engine/addons/`; Vite
 development also accepts the `/apps/3d-space` prefixed engine alias. Resources use their original
 MIME type.
+
+## Progressive environment and lifecycle
+
+`GET /api/environment` returns capability records with `id`, `state` (`absent`, `preparing`,
+`ready`, `failed`), `stage`, and optional `startedAt`, `error`, `logPath`. Capability IDs are
+`core`, `scene`, `video`, `hyperframes`, `remotion`, `remotion-export`, `hyperframes-export`,
+`browser`, `probe`, and `encoder`. `POST /api/environment/:id` starts/retries preparation and
+returns 202 immediately; concurrent requests share one job. `DELETE` requests cancellation.
+GET/polling never triggers retries or downloads. Browser readiness includes executable validation,
+not merely package installation. These endpoints do not change project revisions or send feedback.
+
+`GET /api/health` additionally reports `pid`, `mode` and `busy`. `POST /api/service/stop` requires
+`x-codex-ux-control` matching the local runtime record's control nonce. It refuses active work with
+409, acknowledges stopping with 202, then performs normal shutdown. Use launcher `inspect`, `stop`
+and `restart` rather than exposing the nonce to frontend code. Legacy records lacking the nonce
+cannot use this endpoint. This is local process ownership, not a hosted authentication system.

@@ -1,92 +1,78 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { mkdtemp, mkdir, readFile, writeFile, rm, symlink } from 'node:fs/promises';
+import { mkdtemp, mkdir, readFile, writeFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { execFile } from 'node:child_process';
-import { promisify } from 'node:util';
-import { browserRuntime, prepareRuntime } from '../skills/codex-ux-workspace/scripts/runtime.ts';
+import { createHash } from 'node:crypto';
+import { Environments } from '../skills/codex-ux-workspace/scripts/environments.ts';
+import { prepareRuntime } from '../skills/codex-ux-workspace/scripts/runtime.ts';
+import { acquireLock } from '../skills/codex-ux-workspace/scripts/lock.ts';
 
-const bundle = { build: 'test-build', files: { 'packages/local-server/package.json': '{}' } };
-
-async function installFixture(runtime: string) {
-  const pkg = join(runtime, 'node_modules/store/playwright-core');
-  await mkdir(pkg, { recursive: true });
-  await writeFile(
-    join(pkg, 'package.json'),
-    JSON.stringify({
-      name: 'playwright-core',
-      exports: { '.': './index.cjs', './package.json': './package.json' },
-      bin: { 'playwright-core': 'cli.js' },
-    }),
-  );
-  await writeFile(
-    join(pkg, 'index.cjs'),
-    'module.exports = {chromium: {executablePath: () => "test-chrome"}};',
-  );
-  await writeFile(join(pkg, 'cli.js'), 'console.log(process.argv.slice(2).join(" "));');
-  const modules = join(runtime, 'packages/local-server/node_modules');
-  await mkdir(modules, { recursive: true });
-  await symlink(pkg, join(modules, 'playwright-core'), 'junction');
-}
-
-void test('runtime keeps absolute dependency links valid and reuses verified caches', async (t) => {
+void test('capability cache is shared across source builds, independent of video, and retries explicitly', async (t) => {
   const root = await mkdtemp(join(tmpdir(), 'ux runtime & '));
   t.after(() => rm(root, { recursive: true, force: true }));
-  const runtime = join(root, 'cache');
-  let calls = 0;
-  const install = async (cwd: string) => {
+  const manifest = '{"dependencies":{"fixture":"1.0.0"}}',
+    lock = 'frozen',
+    workspace = 'packages: []';
+  const artifact = {
+    manifest,
+    lock,
+    workspace,
+    packages: ['fixture'],
+    build: createHash('sha256')
+      .update(manifest + lock + workspace)
+      .digest('hex'),
+  };
+  for (const name of ['source-a', 'source-b']) {
+    await mkdir(join(root, name));
+    await writeFile(join(root, name, 'environments.json'), JSON.stringify({ scene: artifact }));
+  }
+  let calls = 0,
+    fail = true;
+  const install = async (directory: string) => {
     calls++;
-    assert.equal(cwd, runtime);
-    await assert.rejects(readFile(join(runtime, '.ready')));
-    await installFixture(cwd);
+    if (fail) throw new Error('network unavailable');
+    await mkdir(join(directory, 'node_modules/fixture'), { recursive: true });
+    await writeFile(join(directory, 'node_modules/fixture/package.json'), '{"main":"index.cjs"}');
+    await writeFile(join(directory, 'node_modules/fixture/index.cjs'), 'module.exports = {};');
     return { stdout: '', stderr: '' };
   };
-  await prepareRuntime(runtime, bundle, {}, install);
-  assert.equal(await readFile(join(runtime, '.ready'), 'utf8'), bundle.build);
-  const { playwright, cli } = browserRuntime(runtime);
-  assert.equal(playwright.chromium.executablePath(), 'test-chrome');
-  const result = await promisify(execFile)(process.execPath, [cli, 'install', 'chromium']);
-  assert.equal(result.stdout.trim(), 'install chromium');
-  await prepareRuntime(runtime, bundle, {}, install);
-  assert.equal(calls, 1);
+  const first = new Environments(join(root, 'source-a'), root, install);
+  await assert.rejects(first.ensure('scene'), /network unavailable/);
+  await assert.rejects(first.ensure('scene'), /network unavailable/);
+  assert.equal(calls, 1, 'failed preparation must not repeat on polling');
+  fail = false;
+  first.start('scene');
+  await first.ensure('scene');
+  const second = new Environments(join(root, 'source-b'), root, install);
+  await second.ensure('scene');
+  assert.equal(calls, 2, 'source-only change must reuse installed dependencies');
+  assert.equal(second.list().find((s) => s.id === 'video')?.state, 'absent');
+  assert.equal(
+    await readFile(join(root, 'source-b/node_modules/fixture/index.cjs'), 'utf8'),
+    'module.exports = {};',
+  );
 });
 
-void test('broken ready caches are repaired and failed installation remains retryable', async (t) => {
-  const root = await mkdtemp(join(tmpdir(), 'ux runtime repair '));
+void test('preparation serializes contenders and releases after cancellation', async (t) => {
+  const root = await mkdtemp(join(tmpdir(), 'ux lock '));
   t.after(() => rm(root, { recursive: true, force: true }));
-  const runtime = join(root, 'cache');
-  await mkdir(join(runtime, 'node_modules'), { recursive: true });
-  await writeFile(join(runtime, '.ready'), bundle.build);
-  await assert.rejects(
-    prepareRuntime(runtime, bundle, {}, async (_cwd, _env, repair) => {
-      assert.equal(repair, true);
-      await assert.rejects(readFile(join(runtime, '.ready')));
-      throw new Error('install failed');
-    }),
-    /install failed/,
-  );
-  await assert.rejects(readFile(join(runtime, '.ready')));
-  await assert.rejects(readFile(`${runtime}.lock`));
-  await prepareRuntime(runtime, bundle, {}, async (cwd, _env, repair) => {
-    assert.equal(repair, true);
-    await installFixture(cwd);
-    return { stdout: '', stderr: '' };
-  });
-  assert.equal(browserRuntime(runtime).playwright.chromium.executablePath(), 'test-chrome');
+  const path = join(root, 'runtime.lock');
+  const release = await acquireLock(path);
+  const controller = new AbortController();
+  const contender = acquireLock(path, controller.signal);
+  controller.abort();
+  await assert.rejects(contender);
+  await release();
+  const next = await acquireLock(path);
+  await next();
 });
 
-void test('runtime rejects concurrent preparation and invalid installs without ready markers', async (t) => {
-  const root = await mkdtemp(join(tmpdir(), 'ux runtime lock '));
+void test('runtime rejects unsafe resource paths before installing dependencies', async (t) => {
+  const root = await mkdtemp(join(tmpdir(), 'ux resources '));
   t.after(() => rm(root, { recursive: true, force: true }));
-  const runtime = join(root, 'cache');
   await assert.rejects(
-    prepareRuntime(runtime, bundle, {}, async () => {
-      await assert.rejects(prepareRuntime(runtime, bundle, {}), /already locked/);
-      return { stdout: '', stderr: '' };
-    }),
-    /playwright-core/,
+    prepareRuntime(join(root, 'runtime'), { build: 'bad', files: { '../escape': 'bad' } }, {}),
+    /Invalid runtime resource path/,
   );
-  await assert.rejects(readFile(join(runtime, '.ready')));
-  await assert.rejects(readFile(`${runtime}.lock`));
 });

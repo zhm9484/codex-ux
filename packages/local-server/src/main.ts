@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { mkdir, open, readFile, rename, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { dataRoot, port } from './config.ts';
@@ -57,6 +58,7 @@ const handle = await open(lock, 'wx');
 await handle.writeFile(String(process.pid));
 await handle.close();
 try {
+  process.env.CODEX_UX_CONTROL = randomUUID();
   const dev = process.argv.includes('--dev');
   const app = await startServer(dataRoot, port || savedPort, dev).catch((error: unknown) => {
     if (
@@ -71,7 +73,14 @@ try {
   });
   const { origin } = app;
   const stagedRuntime = join(dataRoot, `.runtime-${process.pid}.json`);
-  await writeFile(stagedRuntime, JSON.stringify({ origin, pid: process.pid, dataRoot }, null, 2));
+  await writeFile(
+    stagedRuntime,
+    JSON.stringify(
+      { origin, pid: process.pid, dataRoot, control: process.env.CODEX_UX_CONTROL },
+      null,
+      2,
+    ),
+  );
   await rename(stagedRuntime, join(dataRoot, 'runtime.json'));
   console.log(
     `Codex UX · ${origin}\n${app.apps.map((hosted) => `${hosted.name} · ${origin}/apps/${hosted.id}/`).join('\n')}\nLocal data · ${dataRoot}`,

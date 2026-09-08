@@ -1,4 +1,6 @@
-import { chromium, type Browser } from 'playwright-core';
+import { createRequire } from 'node:module';
+import type { chromium as Chromium, Browser } from 'playwright-core';
+import { backgroundBrowser } from '../browser.ts';
 import { access, mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { clampTime, type Revision } from '@codex-ux/video-domain';
@@ -31,15 +33,11 @@ export class Thumbnails {
     const existing = this.pending.get(file);
     if (existing) return existing;
     const operation = this.tail.then(async () => {
-      const executablePath =
-        process.env.CODEX_UX_CHROME ??
-        (process.platform === 'darwin'
-          ? '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
-          : null);
-      this.browser ??= await chromium.launch({
-        headless: true,
-        ...(executablePath ? { executablePath } : {}),
-      });
+      const { executablePath } = await backgroundBrowser();
+      const { chromium } = createRequire(import.meta.url)('playwright-core') as {
+        chromium: typeof Chromium;
+      };
+      this.browser ??= await chromium.launch({ executablePath, headless: true });
       const page = await this.browser.newPage({
         viewport: {
           width: 640,

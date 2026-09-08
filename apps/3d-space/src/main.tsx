@@ -1,3 +1,4 @@
+import { RuntimeGate } from '@codex-ux/editor-ui';
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { openAppInstance } from '@codex-ux/sdk';
@@ -10,6 +11,8 @@ const instance = await openAppInstance('3d-space');
 instance.enableConnections();
 createRoot(root).render(
   <StrictMode>
-    <App instance={instance} />
+    <RuntimeGate app="scene">
+      <App instance={instance} />
+    </RuntimeGate>
   </StrictMode>,
 );
