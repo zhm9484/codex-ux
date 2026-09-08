@@ -1,0 +1,58 @@
+.workspace-picker {
+  width: min(480px, calc(100% - 40px));
+  margin: 10vh auto;
+}
+.workspace-wordmark {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 40px;
+  font-size: 16px;
+  font-weight: 600;
+}
+.workspace-wordmark small {
+  margin-left: auto;
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--muted);
+}
+.workspace-picker h1 {
+  font-size: 30px;
+  letter-spacing: -0.8px;
+}
+.workspace-intro {
+  margin: 12px 0 24px;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--muted);
+}
+.workspace-list {
+  display: grid;
+  gap: 8px;
+  margin: 24px 0;
+  max-height: 40svh;
+  overflow: auto;
+}
+.workspace-list button {
+  width: 100%;
+  text-align: left;
+}
+.workspace-list button span {
+  flex: 1;
+  overflow-wrap: anywhere;
+}
+.workspace-picker form {
+  display: grid;
+  gap: 12px;
+}
+.workspace-panel {
+  padding-bottom: 12px;
+}
+.workspace-panel .workspace-option {
+  width: calc(100% - 24px);
+  margin-inline: 12px;
+}
+.workspace-panel a {
+  margin-top: 8px;
+  border-top: 1px solid var(--line);
+}

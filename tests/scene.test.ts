@@ -1,3 +1,4 @@
+import { LibraryStore } from '../packages/local-server/src/storage/library.ts';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { mkdtemp, mkdir, readFile, writeFile, rm, stat, symlink } from 'node:fs/promises';
@@ -23,17 +24,20 @@ async function fixture() {
   const root = await mkdtemp(join(tmpdir(), 'codex-ux-scene-'));
   const workspaces = new WorkspaceStore(root);
   const store = new SceneStore(workspaces);
+  const library = new LibraryStore(workspaces);
   const projects = new SceneProjects(store);
   const workspace = workspaces.create('A shared scene');
   const initial = await projects.get(workspace.id);
   return {
     root,
+    library,
     store,
     projects,
     workspaces,
     initial,
     id: workspace.id,
     close: async () => {
+      library.close();
       store.close();
       await rm(root, { recursive: true, force: true });
     },
@@ -202,7 +206,7 @@ void test('scene feedback snapshots its target and candidate, publishes once, an
       { mode: 0o755 },
     );
     process.env.CODEX_UX_CODEX_BIN = cli;
-    const collaboration = new SceneCollaboration(f.projects, 'http://127.0.0.1:1234');
+    const collaboration = new SceneCollaboration(f.projects, 'http://127.0.0.1:1234', f.library);
     const requestId = randomUUID();
     const target = {
       instanceId: randomUUID(),
@@ -398,5 +402,87 @@ void test('3D Space opens legacy app state without losing history or creating a 
   } finally {
     store.close();
     await rm(root, { recursive: true, force: true });
+  }
+});
+
+void test('scene requests validate workspace attachments, freeze paths and never redeliver a repeated request', async () => {
+  const f = await fixture();
+  const previous = process.env.CODEX_UX_CODEX_BIN;
+  try {
+    const count = join(f.root, 'deliveries');
+    const fake = join(f.root, 'fake-codex');
+    await writeFile(
+      fake,
+      `#!/usr/bin/env node\nrequire('node:fs').appendFileSync(${JSON.stringify(count)}, 'sent\\n');`,
+      { mode: 0o755 },
+    );
+    process.env.CODEX_UX_CODEX_BIN = fake;
+    const collaboration = new SceneCollaboration(f.projects, 'http://127.0.0.1:1234', f.library);
+    const ref = await f.library.upload(f.id, 'palette.txt', Buffer.from('Warm colors'));
+    const target = {
+      instanceId: randomUUID(),
+      session: { provider: 'codex', sessionId: randomUUID() },
+    };
+    const feedback = {
+      text: 'Use the attached palette',
+      anchor: null,
+      camera: {
+        position: [8, 6, 11] as [number, number, number],
+        target: [0, 1, 0] as [number, number, number],
+      },
+      objects: [],
+      annotationIds: [],
+      attachmentIds: [ref.id],
+    };
+    const requestId = randomUUID();
+    const result = await collaboration.submit(
+      f.id,
+      f.initial.revisionId,
+      requestId,
+      target,
+      feedback,
+      undefined,
+    );
+    assert.deepEqual(result.attachments, [ref]);
+    assert.equal(
+      f.store.head(f.id),
+      f.initial.revisionId,
+      'attaching materials does not edit the scene',
+    );
+    await writeFile(ref.path, 'Changed palette');
+    await collaboration.submit(f.id, f.initial.revisionId, requestId, target, feedback, undefined);
+    assert.equal(await readFile(count, 'utf8'), 'sent\n');
+    assert.equal(collaboration.context(f.id, requestId).attachments[0]!.size, ref.size);
+    await assert.rejects(
+      collaboration.submit(f.id, f.initial.revisionId, randomUUID(), target, feedback, undefined),
+      /changed/,
+    );
+    const other = f.workspaces.create('Other workspace');
+    const foreign = await f.library.upload(other.id, 'private.txt', Buffer.from('Other workspace'));
+    await assert.rejects(
+      collaboration.submit(
+        f.id,
+        f.initial.revisionId,
+        randomUUID(),
+        target,
+        { ...feedback, attachmentIds: [foreign.id] },
+        undefined,
+      ),
+      /not found/,
+    );
+    await rm(ref.path);
+    await assert.rejects(
+      collaboration.submit(f.id, f.initial.revisionId, randomUUID(), target, feedback, undefined),
+      /unavailable/,
+    );
+    assert.equal(
+      await readFile(count, 'utf8'),
+      'sent\n',
+      'invalid references fail before delivery',
+    );
+  } finally {
+    if (previous === undefined) delete process.env.CODEX_UX_CODEX_BIN;
+    else process.env.CODEX_UX_CODEX_BIN = previous;
+    await f.close();
   }
 });

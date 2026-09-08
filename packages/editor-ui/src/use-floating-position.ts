@@ -46,3 +46,19 @@ export function useFloatingPosition(open: boolean, anchor: FloatingAnchor | null
   }, [open, anchor]);
   return ref;
 }
+
+export function anchorBeside(element: HTMLElement): FloatingAnchor {
+  const rect = element.getBoundingClientRect();
+  return {
+    left: rect.left,
+    right: rect.right,
+    top: rect.top,
+    bottom: rect.bottom,
+    placement: 'beside',
+  };
+}
+
+export function anchorBelow(element: HTMLElement): FloatingAnchor {
+  const rect = element.getBoundingClientRect();
+  return { left: rect.right - 360, top: rect.top, bottom: rect.bottom };
+}

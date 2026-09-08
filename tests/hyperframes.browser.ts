@@ -113,7 +113,7 @@ test('native projects preserve runtime dependencies, UI edits and drafts through
     await expect
       .poll(async () => (await read()).revision.document.files['index.html']!.text)
       .not.toContain('Edited natively');
-    await page.getByRole('button', { name: 'Undo (⌘Z)', exact: true }).click();
+    await page.getByRole('button', { name: 'Undo', exact: true }).click();
     await expect
       .poll(async () => (await read()).revision.document.files['index.html']!.text)
       .toContain('Edited natively');

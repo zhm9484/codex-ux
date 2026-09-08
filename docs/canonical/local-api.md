@@ -278,15 +278,20 @@ semantics.
 | `POST /imports/:importId/finish`                | `{baseRevision, requestId, position: [x,y,z]}`; adds supported models from staged files                                       |
 | `GET /requests`                                 | Recent request status summaries                                                                                               |
 | `POST /requests`                                | `{baseRevision, requestId, target, feedback, screenshot?}`; PNG data URL optional                                             |
-| `GET /requests/:requestId`                      | Captured target, document, feedback, source directory, screenshot path, preview/publish URLs and state                        |
+| `GET /requests/:requestId`                      | Captured target, document, feedback, attachment references, source directory, screenshot path, preview/publish URLs and state |
 | `GET /requests/:requestId/preview`              | Prepares current candidate source as a `SceneProject` without publishing                                                      |
 | `POST /requests/:requestId/publish`             | `{label}`; checks current head/source and publishes once                                                                      |
 | `POST /requests/:requestId/error`               | `{message}`; marks an unpublished request failed                                                                              |
 
 Base revision and request IDs are UUIDs. Operations and imports return the resulting project.
 `feedback` contains text, nullable surface anchor, camera, visible registered object transforms and
-bounds, and annotation IDs. An anchor has object ID or null, local/world `point`, camera and
-revision. Stale source/head conflicts return 409. The schema is exported by `packages/scene-domain`.
+bounds, annotation IDs, and optional `attachmentIds` (up to 20 Workspace reference UUIDs).
+References are validated before request creation/delivery; changed files return 409, and missing or
+foreign references are rejected. Request context includes an `attachments` array with captured
+metadata and absolute paths. Attachments do not change scene source or the revision. Replaying a
+request ID returns that request without another agent delivery, even if attachments later change. An
+anchor has object ID or null, local/world `point`, camera and revision. Stale source/head conflicts
+return 409. The schema is exported by `packages/scene-domain`.
 
 Outside `/api`, `/media/3d-space/source/:workspaceId/:revisionId/<path>` and
 `/media/3d-space/prepared/:workspaceId/:snapshotHash/<path>` serve only captured snapshot resources.

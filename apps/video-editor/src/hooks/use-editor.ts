@@ -2,7 +2,7 @@ import { WorkspaceLibrary } from '@codex-ux/sdk';
 import { useEffect, useEffectEvent, useRef, useState, useMemo } from 'react';
 import { durationOf, clampTime, type TextElement, type Revision } from '@codex-ux/video-domain';
 import type { FeedbackAnchor, Region } from '@codex-ux/protocol';
-import type { FloatingAnchor } from './use-floating-position';
+import type { FloatingAnchor } from '@codex-ux/editor-ui';
 import { createPlaybackClock } from '../lib/playback-clock';
 import { editSourceText, type CanvasText } from '../canvas/text-model';
 import { deleteElement } from '../editor/element-edits';
@@ -179,6 +179,7 @@ export function useEditor(id: string) {
     control.current?.setMuted(!muted);
   }
   const keyHandler = useEffectEvent((event: KeyboardEvent) => {
+    if (event.defaultPrevented) return;
     if (event.target instanceof Element && event.target.closest('dialog')) return;
     if (event.key === 'Escape') {
       setPanel(null);

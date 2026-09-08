@@ -1,6 +1,6 @@
 import { useLayoutEffect, useRef } from 'react';
 type Point = { x: number; y: number };
-export function useIslandPosition(key = 'video-editor:tool-position', right = false) {
+export function useIslandPosition(key: string, right = false) {
   const ref = useRef<HTMLDivElement>(null);
   const position = useRef<Point>({ x: 16, y: 180 });
   const drag = useRef<{ point: Point; pointer: Point; id: number } | null>(null);

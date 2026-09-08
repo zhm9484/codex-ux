@@ -42,40 +42,9 @@
   bottom: -9px;
   cursor: nwse-resize;
 }
-.selection-action {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  padding: 9px 12px;
-  border: 1px solid #e6e6e6;
-  border-radius: 10px;
-  background: #fff;
-  color: #555;
-  font-size: 11px;
-  box-shadow: 0 5px 22px #00000014;
-  white-space: nowrap;
-}
-.selection-action:hover {
-  background: #f7f7f7;
-}
-.region-comment {
-  position: absolute;
-  left: 50%;
-  top: calc(100% + 10px);
-  transform: translateX(-50%);
-  pointer-events: auto;
-}
-.canvas-menu.action-popover {
-  position: fixed;
-  right: auto;
-  bottom: auto;
-  z-index: 50;
-  width: 200px;
-}
 .context-tools {
   bottom: auto;
 }
-
 .note-popover {
   position: fixed;
   z-index: 50;

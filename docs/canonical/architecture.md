@@ -43,19 +43,20 @@ bindings remain page-owned. They do not add a Workspace-global binding or automa
 
 ## Modules
 
-| Module                                     | Implemented responsibility                                                              |
-| ------------------------------------------ | --------------------------------------------------------------------------------------- |
-| `apps/video-editor/src/`                   | React editor, workspace selection, canvas, playback, notes and export UI                |
-| `packages/video-domain/`                   | Source manifests, video revisions, feedback intents, HTML operations and timing         |
-| `packages/protocol/`                       | Portable workspace, app, instance, session, revision and operation references           |
-| `packages/sdk/`                            | Framework-independent browser instance identity and workspace-specific session bindings |
-| `packages/adapter-codex/`                  | Delivery to an existing Codex task through `codex queue`                                |
-| `packages/local-server/src/storage/`       | Workspace metadata, directory creation and path boundaries                              |
-| `packages/local-server/src/connections.ts` | Shared ephemeral pairing, acknowledgements, expiry and takeover checks                  |
-| `packages/local-server/src/video/`         | Video databases, revision history, collaboration routes, assets and rendering           |
-| `packages/local-server/src/sources/`       | Source import, snapshots, polling, dependency preparation and Remotion builds           |
-| `packages/video-runtime/`                  | Common browser playback controller with Hyperframes, Remotion and media adapters        |
-| `packages/local-server/src/`               | HTTP hosting, app registration, workspace routes, agent dispatch and process lifecycle  |
+| Module                                     | Implemented responsibility                                                                     |
+| ------------------------------------------ | ---------------------------------------------------------------------------------------------- |
+| `apps/video-editor/src/`                   | React editor, workspace selection, canvas, playback, notes and export UI                       |
+| `packages/editor-ui/`                      | Shared React controls, header, workspace picker, dialogs, floating tools and composer surfaces |
+| `packages/video-domain/`                   | Source manifests, video revisions, feedback intents, HTML operations and timing                |
+| `packages/protocol/`                       | Portable workspace, app, instance, session, revision and operation references                  |
+| `packages/sdk/`                            | Framework-independent browser instance identity and workspace-specific session bindings        |
+| `packages/adapter-codex/`                  | Delivery to an existing Codex task through `codex queue`                                       |
+| `packages/local-server/src/storage/`       | Workspace metadata, directory creation and path boundaries                                     |
+| `packages/local-server/src/connections.ts` | Shared ephemeral pairing, acknowledgements, expiry and takeover checks                         |
+| `packages/local-server/src/video/`         | Video databases, revision history, collaboration routes, assets and rendering                  |
+| `packages/local-server/src/sources/`       | Source import, snapshots, polling, dependency preparation and Remotion builds                  |
+| `packages/video-runtime/`                  | Common browser playback controller with Hyperframes, Remotion and media adapters               |
+| `packages/local-server/src/`               | HTTP hosting, app registration, workspace routes, agent dispatch and process lifecycle         |
 
 The protocol imports no React, Node.js, Codex or video engine. The browser SDK imports only portable
 protocol types. The frontend cannot import local-server, adapter-codex or `node:*`; ESLint enforces
@@ -70,7 +71,19 @@ custom app build manager, multi-agent coordinator or generic domain editing SDK.
 
 The [shared local library](library.md) belongs to a Workspace. `packages/library-react/` provides
 reusable material browsing and mention input components; the SDK and local service provide the same
-reference and file APIs to every app. Video context remains app-owned.
+reference and file APIs to every app. `@codex-ux/editor-ui` composes that library UI with neutral
+visual tokens, buttons, workspace selection, the header, agent connection dialog, movable tool
+island, nonmodal floating panels and message composer. Its separately imported `styles.css` owns
+shared styles. Apps supply domain context, draft state and operation callbacks; neither the protocol
+nor SDK imports React. Browser import restrictions also cover both React packages.
+
+Video Editor keeps its centered, proportioned player and timeline; 3D Space keeps its full-window
+viewport and spatial tools. Both expose Chat, Notes and app Fullscreen in the same movable island,
+and History, Library and Agent in the header. Compact headers hide text labels and wrap into two
+rows below 600 px. Dialogs manage modal focus; nonmodal panels retain drafts when hidden, restore
+focus on close and clamp to the viewport. Tool positions persist under app-specific storage keys.
+Video notes are a feedback queue; scene annotations are versioned spatial content. Their persistence
+and submission lifecycles remain app-owned.
 
 ## Storage
 
@@ -139,11 +152,11 @@ ownership and release verification.
 
 `CODEX_UX_APPS_FILE` can point to a JSON array of `{ id, name, distDirectory }` records with unique
 app IDs and absolute build paths, including builds distributed inside installed skills. The
-configured array replaces the default Video Editor registration. All apps are served at
-`/apps/<appId>/` and must build for that base. Registration hosts static builds; only Video Editor
-currently has domain API handlers. `POST /api/apps` can register/update a trusted installed build in
-the running service; the skill launcher persists its registry for restart. A build update leaves
-workspace data in place.
+configured array replaces the default Video Editor and 3D Space registrations. All apps are served
+at `/apps/<appId>/` and must build for that base. Registration hosts static builds; Video Editor and
+3D Space have built-in domain API handlers. `POST /api/apps` can register/update a trusted installed
+build in the running service; the skill launcher persists its registry for restart. A build update
+leaves workspace data in place.
 
 The service uses a PID lock and health check to reuse the service for a data directory. All apps and
 workspaces share its HTTP port. By default, the OS assigns an available loopback port. The actual

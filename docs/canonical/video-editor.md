@@ -6,12 +6,14 @@ agent requests use the same interface for all three. An engine's authoring model
 ordinary files; the editor does not translate those files into a universal clip arrangement.
 
 The workspace selector switches this app instance without changing other pages. Workspace names are
-independent of video titles. Chat, Notes and app Fullscreen live in a movable vertical tool island.
-Agent connection and Library open centered dialogs from the header, alongside version history,
-undo/redo and Export. Library registers local material folders/files shared by this Workspace’s
-apps. Chat and Add note use `@`, file selection, drop and paste to attach references. Drag the tool
-grip or use arrow keys; its position is saved locally and clamped to the pane. Dialogs trap focus,
-restore it on close and support Escape. Reduced-motion settings suppress animations.
+independent of video titles. The header, workspace picker, dialogs, tool island and composer use
+`@codex-ux/editor-ui`, shared with 3D Space. Chat, Notes and app Fullscreen live in a movable
+vertical tool island. Agent connection and Library open centered dialogs from the header, alongside
+version history, undo/redo and Export. Library registers local material folders/files shared by this
+Workspace’s apps. Chat and Add note use `@`, file selection, drop and paste to attach references.
+Drag the tool grip or use arrow keys; its position is saved locally and clamped to the pane. Modal
+dialogs trap focus; floating panels stay nonmodal. Both restore focus on close and support Escape.
+Reduced-motion settings suppress animations.
 
 **Video fullscreen** expands just the video with playback, mute, seeking and an exit button. The
 same player stays mounted, retaining time and playback state; scrubbing preserves whether it was
@@ -97,14 +99,15 @@ and Add note open the same composer and preserve the same draft, with a 480 px d
 constrained to the viewport, 16 px body text, and a single attachment/action footer. Time/selection
 context and request kind sit above the writing area; transition duration appears only for transition
 requests. The floating composer measures its actual size to fit beside the tool island or around a
-selection and repositions when its content or the viewport changes. Both entry points offer **Send
-now** for the current draft only and **Add to notes** to save it locally. Pending notes appear in a
-draggable, collapsible board with a count, locate/edit/delete controls and **Send all**. Its
-position persists and stays within the viewport. A successful batch empties and hides the board;
-Notes can reopen it to access the centered **Notes history** dialog. History shows submitted notes,
-their original context and delivery state. Editing checks the previous text and rejects notes
-changed, removed or submitted in another page. Notes also retain attachment references; editing uses
-the shared mention input and checks previous text and attachments together.
+selection and repositions when its content or the viewport changes. Enter inserts a new line;
+Cmd/Ctrl+Enter sends the current draft. Both entry points offer **Send now** for the current draft
+only and **Add to notes** to save it locally. Pending notes appear in a draggable, collapsible board
+with a count, locate/edit/delete controls and **Send all**. Its position persists and stays within
+the viewport. A successful batch empties and hides the board; Notes can reopen it to access the
+centered **Notes history** dialog. History shows submitted notes, their original context and
+delivery state. Editing checks the previous text and rejects notes changed, removed or submitted in
+another page. Notes also retain attachment references; editing uses the shared mention input and
+checks previous text and attachments together.
 
 An unbound send opens Agent connection and preserves the draft; **Continue sending** resumes the
 chosen action after binding. Canceling preserves the draft without sending. Sending disables

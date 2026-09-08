@@ -6,6 +6,7 @@
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
   --surface: #fff;
+  --focus: #8581d5;
   --line: #e9e9e9;
   --muted: #737373;
   --accent: #272727;
@@ -45,7 +46,7 @@ select {
   outline-offset: 3px;
 }
 :focus-visible {
-  outline: 2px solid #8581d5;
+  outline: 2px solid var(--focus);
 }
 input,
 textarea,

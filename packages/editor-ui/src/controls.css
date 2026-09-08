@@ -1,0 +1,83 @@
+.icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  border-radius: 9px;
+  color: #777;
+  transition:
+    background 150ms,
+    color 150ms,
+    transform 150ms var(--motion);
+}
+.icon-button:hover:not(:disabled),
+.icon-button.active {
+  background: #ededed;
+  color: #222;
+}
+.icon-button:active:not(:disabled) {
+  transform: scale(0.92);
+}
+.text-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: none;
+  border: 0;
+  padding: 4px 0;
+  color: #727272;
+  font-size: 12px;
+  white-space: nowrap;
+}
+.text-button:hover:not(:disabled) {
+  color: #161616;
+}
+.primary-button,
+.secondary-button,
+.export-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border-radius: 9px;
+  min-height: 36px;
+  padding: 8px 14px;
+  font-size: 12px;
+  font-weight: 500;
+  border: 1px solid transparent;
+  transition:
+    background 150ms,
+    transform 150ms var(--motion);
+}
+.primary-button {
+  color: white;
+  background: #292929;
+}
+.primary-button:hover:not(:disabled) {
+  background: #444;
+}
+.primary-button:active:not(:disabled),
+.export-button:active {
+  transform: scale(0.97);
+}
+.secondary-button {
+  border-color: var(--line);
+  background: #fff;
+}
+.secondary-button:hover:not(:disabled) {
+  background: #f6f6f6;
+}
+.export-button {
+  color: #3d3d3d;
+  background: #f1f1f1;
+  margin-left: 5px;
+}
+.export-button:hover {
+  background: #e8e8e8;
+}

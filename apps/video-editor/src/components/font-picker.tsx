@@ -2,7 +2,7 @@ import { createPortal } from 'react-dom';
 import { useEffect, useId, useRef, useState } from 'react';
 import { Check, ChevronDown, Search } from 'lucide-react';
 import type { VideoDocument } from '@codex-ux/video-domain';
-import { useFloatingPosition, type FloatingAnchor } from '../hooks/use-floating-position';
+import { useFloatingPosition, type FloatingAnchor } from '@codex-ux/editor-ui';
 
 const families = {
   'Sans serif': [

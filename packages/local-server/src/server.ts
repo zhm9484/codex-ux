@@ -148,7 +148,7 @@ export async function startServer(
     apps,
     scene: {
       projects: sceneProjects,
-      collaboration: new SceneCollaboration(sceneProjects, origin),
+      collaboration: new SceneCollaboration(sceneProjects, origin, library),
     },
     video: {
       library,

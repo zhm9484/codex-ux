@@ -18,7 +18,8 @@
     "react-dom": "catalog:",
     "@codex-ux/sdk": "workspace:*",
     "@codex-ux/video-runtime": "workspace:*",
-    "@codex-ux/library-react": "workspace:*"
+    "@codex-ux/library-react": "workspace:*",
+    "@codex-ux/editor-ui": "workspace:*"
   },
   "devDependencies": {
     "@types/react": "catalog:",

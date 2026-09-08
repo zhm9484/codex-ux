@@ -77,7 +77,7 @@ test('draft delivery stays separate from queued notes, preserves retries, and ex
     page.getByRole('dialog', { name: 'Notes history' }).locator('.note-card'),
   ).toHaveCount(2);
   await page.keyboard.press('Escape');
-  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await expect(page.getByRole('dialog', { name: 'Notes history' })).toHaveCount(0);
 });
 
 test('notes board clamps and remembers its position, and header dialogs fit a narrow screen', async ({
@@ -170,7 +170,7 @@ test('Chat and Add note share a readable draft and preserve its anchor across en
   await page.goto(`/apps/video-editor/w/${video.workspaceId}`);
   await expect(page.locator('.preview-loading')).toHaveCount(0);
   await page.getByRole('button', { name: 'Chat', exact: true }).click();
-  const composer = page.getByRole('region', { name: 'Chat', exact: true });
+  const composer = page.getByRole('dialog', { name: 'Chat', exact: true });
   const input = page.getByLabel('Chat message');
   await input.fill('Give this moment a softer transition');
   await page.getByLabel('Request kind').selectOption('transition');

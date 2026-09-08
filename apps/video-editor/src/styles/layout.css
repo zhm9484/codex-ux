@@ -4,43 +4,6 @@
   display: flex;
   flex-direction: column;
 }
-.app-header {
-  height: 64px;
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 28px;
-  gap: 16px;
-}
-.header-identity,
-.header-actions {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  min-width: 0;
-}
-.save-indicator {
-  font-size: 11px;
-  color: var(--muted);
-  white-space: nowrap;
-  opacity: 0;
-  transition: opacity 180ms;
-}
-.header-identity:hover .save-indicator,
-.header-identity:focus-within .save-indicator {
-  opacity: 1;
-}
-.mobile-undo {
-  display: none;
-}
-.undo-controls {
-  display: flex;
-  align-items: center;
-}
-.undo-controls.empty {
-  visibility: hidden;
-}
 .viewing-space {
   flex: 1;
   min-height: 180px;
@@ -222,22 +185,6 @@
   margin: -6px;
   cursor: pointer;
 }
-.selected-name {
-  font-size: 12px;
-  padding: 0 7px;
-  max-width: 140px;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-  overflow: hidden;
-}
-.annotation-layer {
-  position: absolute;
-  inset: 0;
-  z-index: 10;
-  cursor: crosshair;
-  touch-action: none;
-  background: #ffffff03;
-}
 .region-box {
   position: absolute;
   border: 1px solid #8581d5;
@@ -331,16 +278,6 @@
   animation: arrive 200ms var(--motion);
 }
 
-.workspace-picker {
-  width: min(480px, calc(100% - 48px));
-  margin: 10vh auto;
-}
-.workspace-list {
-  display: grid;
-  gap: 8px;
-  margin: 24px 0;
-}
-.workspace-picker form {
-  display: grid;
-  gap: 12px;
+.is-focus-mode .app-header {
+  display: none;
 }

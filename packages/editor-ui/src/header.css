@@ -1,0 +1,130 @@
+.app-header {
+  height: 64px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 24px;
+  gap: 16px;
+  z-index: 20;
+}
+.overlay-header {
+  position: absolute;
+  inset: 0 0 auto;
+  pointer-events: none;
+}
+.overlay-header > * {
+  pointer-events: auto;
+}
+.header-identity,
+.header-actions,
+.undo-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.header-actions {
+  flex-shrink: 0;
+}
+.app-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.workspace-menu {
+  position: relative;
+  min-width: 0;
+}
+.workspace-switcher {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+  border: 0;
+  padding: 7px;
+  border-radius: var(--radius-control);
+  font-size: 13px;
+  max-width: 220px;
+}
+.workspace-switcher:hover {
+  background: var(--selected);
+}
+.workspace-switcher span {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.save-indicator {
+  color: var(--muted);
+  font-size: 11px;
+  white-space: nowrap;
+}
+.agent-button {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-control);
+  padding: 8px 10px;
+  font-size: 12px;
+  min-height: 36px;
+}
+.connection-dot {
+  display: inline-block;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #aaa;
+}
+.connection-dot.connected {
+  background: #4c8067;
+}
+@media (max-width: 1100px) {
+  .save-indicator {
+    display: none;
+  }
+}
+@media (max-width: 850px) {
+  .app-brand > span,
+  .agent-button > span {
+    display: none;
+  }
+  .app-header {
+    padding-inline: 16px;
+  }
+  .agent-button {
+    padding: 8px;
+  }
+}
+@media (max-width: 600px) {
+  .app-header {
+    height: auto;
+    min-height: 56px;
+    padding: 10px 12px;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .header-identity {
+    flex: 1 1 100%;
+  }
+  .header-actions {
+    margin-left: auto;
+    gap: 3px;
+  }
+  .workspace-switcher {
+    max-width: calc(100vw - 68px);
+  }
+  .header-actions .icon-button {
+    width: 32px;
+    height: 34px;
+  }
+  .export-button {
+    padding: 8px 10px;
+    margin-left: 0;
+  }
+}

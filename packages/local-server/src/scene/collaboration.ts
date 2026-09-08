@@ -1,6 +1,7 @@
+import type { LibraryStore } from '../storage/library.ts';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import type { CollaborationTarget } from '@codex-ux/protocol';
+import type { LibraryReference, CollaborationTarget } from '@codex-ux/protocol';
 import type {
   SceneDocument,
   SceneFeedback,
@@ -20,6 +21,7 @@ interface RequestContext {
   baseRevision: string;
   target: CollaborationTarget;
   feedback: SceneFeedback;
+  attachments: LibraryReference[];
   document: SceneDocument;
   candidateDirectory: string;
   screenshotPath: string | null;
@@ -34,9 +36,11 @@ interface RequestRow {
 export class SceneCollaboration {
   readonly projects: SceneProjects;
   readonly origin: string;
-  constructor(projects: SceneProjects, origin: string) {
+  readonly library: LibraryStore;
+  constructor(projects: SceneProjects, origin: string, library: LibraryStore) {
     this.projects = projects;
     this.origin = origin;
+    this.library = library;
   }
   row(id: string, requestId: string) {
     const row = this.projects.store
@@ -48,8 +52,10 @@ export class SceneCollaboration {
   }
   context(id: string, requestId: string) {
     const row = this.row(id, requestId);
+    const context = JSON.parse(row.context) as RequestContext;
     return {
-      ...(JSON.parse(row.context) as RequestContext),
+      ...context,
+      attachments: context.attachments ?? [],
       appId: '3d-space' as const,
       state: row.state,
       error: row.error,
@@ -100,6 +106,7 @@ export class SceneCollaboration {
         )
       )
         throw new HttpError(409, 'An annotation no longer exists. Refresh before sending.');
+      const attachments = await this.library.validate(id, feedback.attachmentIds ?? []);
       const directory = join(this.projects.store.directory(id), 'requests', requestId);
       const context: RequestContext = {
         requestId,
@@ -108,6 +115,7 @@ export class SceneCollaboration {
         baseRevision: base,
         target,
         feedback,
+        attachments,
         document: snapshot.document,
         candidateDirectory: join(directory, 'source'),
         screenshotPath: screenshot ? join(directory, 'view.png') : null,
@@ -142,7 +150,7 @@ export class SceneCollaboration {
       try {
         await deliver(
           target.session,
-          `3D Space feedback request ${requestId}, explicitly sent by the user. GET ${endpoint} for the captured camera, selected point/object, visible object IDs and transforms, annotations, screenshot path, and isolated candidate directory. Edit only that candidate for this request. scene.json stores imported objects, user placements and annotations; preserve them unless the request changes them. The entry (normally scene.ts) exports a default function createScene(ctx), optionally async. Use ordinary Three.js imports; ctx.scene, ctx.root, ctx.register(id, object, label), ctx.assetUrl(path), ctx.loadModel(path), ctx.onFrame(callback), ctx.onClick(object, callback), ctx.onDispose(callback), and ctx.invalidate() are available. Keep registered IDs stable. Three.js is pinned to 0.185.1; extra packages require package.json and a pnpm-lock.yaml (install scripts are disabled). The registered root's placement belongs to the editor; animate children. Inspect the preview URL from the context before publishing. POST {"label":"A concise description"} to ${endpoint}/publish once; publication checks the base and creates an undoable version. If blocked POST {"message":"..."} to ${endpoint}/error. Do not edit app-private blobs/builds/database or queue another agent session.`,
+          `3D Space feedback request ${requestId}, explicitly sent by the user. GET ${endpoint} for the captured camera, selected point/object, visible object IDs and transforms, annotations, attachment references with absolute paths, screenshot path, and isolated candidate directory. Read referenced materials from their original paths and copy only resources used in the scene into the candidate; leave originals untouched. Edit only that candidate for this request. scene.json stores imported objects, user placements and annotations; preserve them unless the request changes them. The entry (normally scene.ts) exports a default function createScene(ctx), optionally async. Use ordinary Three.js imports; ctx.scene, ctx.root, ctx.register(id, object, label), ctx.assetUrl(path), ctx.loadModel(path), ctx.onFrame(callback), ctx.onClick(object, callback), ctx.onDispose(callback), and ctx.invalidate() are available. Keep registered IDs stable. Three.js is pinned to 0.185.1; extra packages require package.json and a pnpm-lock.yaml (install scripts are disabled). The registered root's placement belongs to the editor; animate children. Inspect the preview URL from the context before publishing. POST {"label":"A concise description"} to ${endpoint}/publish once; publication checks the base and creates an undoable version. If blocked POST {"message":"..."} to ${endpoint}/error. Do not edit app-private blobs/builds/database or queue another agent session.`,
         );
         this.projects.store
           .database(id)

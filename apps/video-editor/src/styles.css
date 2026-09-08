@@ -1,5 +1,5 @@
 @import '@codex-ux/library-react/styles.css';
-@import './styles/base.css';
+@import '@codex-ux/editor-ui/styles.css';
 @import './styles/controls.css';
 @import './styles/layout.css';
 @import './styles/panels.css';
@@ -8,6 +8,5 @@
 @import './styles/canvas.css';
 @import './styles/fonts.css';
 @import './styles/responsive.css';
-@import './styles/island.css';
 @import './styles/video-fullscreen.css';
-@import './styles/polish.css';
+@import './styles/notes.css';

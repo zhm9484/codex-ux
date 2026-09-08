@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { ArrowDownToLine, Check, X, Film } from 'lucide-react';
 import { durationOf, formatTime, type ExportJob, type VideoProject } from '@codex-ux/video-domain';
 import { api, post } from '../lib/api';
-import { IconButton } from '../components/ui';
+import { IconButton } from '@codex-ux/editor-ui';
 
 export function ExportDialog({
   project: initialProject,

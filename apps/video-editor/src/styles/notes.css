@@ -1,0 +1,134 @@
+.export-dialog::backdrop {
+  background: #17181c35;
+  backdrop-filter: blur(5px);
+  animation: backdrop-enter 180ms ease;
+}
+.notes-board {
+  position: fixed;
+  z-index: 24;
+  width: min(340px, calc(100vw - 20px));
+  max-height: min(540px, calc(100svh - 24px));
+  display: flex;
+  flex-direction: column;
+  background: #fffffff5;
+  backdrop-filter: blur(24px);
+  border: 1px solid #e4e4e4;
+  border-radius: 14px;
+  box-shadow: var(--surface-shadow);
+  overflow: hidden;
+  animation: surface-enter 180ms var(--motion);
+}
+.notes-board.dragging {
+  cursor: grabbing;
+  user-select: none;
+  animation: none;
+}
+.board-heading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px;
+}
+.board-heading h2 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  font-size: 13px;
+  font-weight: 600;
+}
+.board-heading h2 span {
+  background: #efefed;
+  color: #777;
+  padding: 2px 6px;
+  border-radius: 5px;
+  font-size: 10px;
+  font-weight: 500;
+}
+.board-grip {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 28px;
+  background: transparent;
+  border: 0;
+  color: #a3a3a3;
+  cursor: grab;
+  touch-action: none;
+}
+.board-content {
+  min-height: 0;
+  overflow: auto;
+  padding: 0 12px 12px;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+}
+.notes-board .note-card,
+.notes-history-list .note-card {
+  padding: 13px;
+  margin: 0 0 8px;
+  background: #fff;
+  border: 1px solid #ececea;
+  border-radius: 11px;
+  box-shadow: 0 1px 3px #00000003;
+}
+.note-card p {
+  font-size: 12px;
+  line-height: 1.7;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.note-heading {
+  gap: 5px;
+  margin-bottom: 8px;
+}
+.note-heading .note-time {
+  margin-right: auto;
+}
+.note-context {
+  font-size: 10px;
+  color: #90908c;
+  margin-top: 10px;
+}
+.note-edit-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 8px;
+}
+.board-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border-top: 1px solid #ececea;
+  padding: 12px 16px;
+}
+.board-footer .primary-button {
+  font-size: 12px;
+  padding: 8px 12px;
+}
+.board-error {
+  padding: 8px 16px;
+}
+.history-status {
+  font-size: 11px;
+  color: var(--muted);
+  margin: 6px 0 20px 12px;
+  text-transform: capitalize;
+}
+.modal-empty {
+  text-align: center;
+  padding: 36px 12px;
+  color: var(--muted);
+}
+.modal-empty h3 {
+  color: #444;
+  font-size: 14px;
+  margin-bottom: 12px;
+}
+.modal-empty p {
+  font-size: 12px;
+  line-height: 1.7;
+}

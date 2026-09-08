@@ -1,7 +1,7 @@
 import { createPortal } from 'react-dom';
 import { useMemo } from 'react';
 import { MessageSquarePlus } from 'lucide-react';
-import { useFloatingPosition } from '../hooks/use-floating-position';
+import { useFloatingPosition } from '@codex-ux/editor-ui';
 export interface PointerPosition {
   x: number;
   y: number;

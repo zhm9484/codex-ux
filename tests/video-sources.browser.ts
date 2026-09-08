@@ -334,7 +334,7 @@ test('direct video replacement keeps seconds, audio, old notes, original export 
     expect(range.status()).toBe(206);
     expect((await range.body()).length).toBe(32);
     await page.keyboard.press('Escape');
-    await page.getByRole('button', { name: 'Undo (⌘Z)', exact: true }).click();
+    await page.getByRole('button', { name: 'Undo', exact: true }).click();
     await displayed(page, first);
     expect((await read(request, initial.workspaceId)).revisionId).toBe(first.revisionId);
     await expect(page.getByRole('slider', { name: 'Video position' })).toHaveAttribute(

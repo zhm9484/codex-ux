@@ -1,4 +1,4 @@
-import { MentionInput } from '@codex-ux/library-react';
+import { Composer } from '@codex-ux/editor-ui';
 import { useRef, useState } from 'react';
 import { ArrowUp } from 'lucide-react';
 import type { FeedbackAnchor, LibraryReference } from '@codex-ux/protocol';
@@ -106,144 +106,139 @@ export function FeedbackComposer({ state }: { state: EditorState }) {
     } else void persist(true);
   }
   return (
-    <form
-      className="feedback-composer"
-      onSubmit={(event) => {
-        event.preventDefault();
-        void persist(false);
-      }}
-    >
-      <div className="composer-context">
-        {anchored && (
-          <button
-            type="button"
-            className="composer-reference"
-            onClick={() => state.locate(anchor)}
-            aria-label="Locate referenced frame"
-          >
-            <span className="reference-icon">
-              <img
-                alt="Referenced frame"
-                src={`/media/video-editor/thumbnails/${state.project!.workspaceId}/${anchor.revisionId}?time=${anchor.start}`}
-              />
-            </span>
-            <span>
-              {formatTime(anchor.start, true)}
-              {anchor.end > anchor.start ? ` — ${formatTime(anchor.end, true)}` : ''}
-            </span>
-            <span className="reference-detail">
-              {anchor.objectId
-                ? 'Text selection'
-                : anchor.region
-                  ? 'Marked area'
-                  : anchor.end > anchor.start
-                    ? 'Selected range'
-                    : 'This moment'}
-            </span>
-          </button>
-        )}
-        <label className="composer-intent">
-          <select
-            aria-label="Request kind"
-            disabled={busy || attempted}
-            value={intent.kind}
-            onChange={(event) =>
-              setIntent(
-                event.target.value === 'transition' ? { kind: 'transition' } : { kind: 'change' },
-              )
-            }
-          >
-            <option value="change">Change</option>
-            <option value="transition">Transition</option>
-          </select>
-        </label>
-      </div>
-      {intent.kind === 'transition' && (
-        <label className="composer-intent">
-          Transition duration
-          <input
-            aria-label="Transition duration"
-            disabled={busy || attempted}
-            type="number"
-            min="0.01"
-            max="60"
-            step="0.01"
-            value={intent.duration ?? ''}
-            onChange={(event) =>
-              setIntent(
-                event.target.value
-                  ? { kind: 'transition', duration: Number(event.target.value) }
-                  : { kind: 'transition' },
-              )
-            }
-          />
-          <span>seconds · optional</span>
-        </label>
-      )}
-      <MentionInput
-        library={state.library}
-        value={text}
-        attachments={attachments}
-        label="Chat message"
-        placeholder="What would you like to change? Use @ to reference a file."
-        actions={
-          <div className="composer-actions">
-            <button
-              type="submit"
-              className="secondary-button"
-              aria-label="Add note to list"
-              disabled={
-                !text.trim() ||
-                state.saving ||
-                busy ||
-                attaching ||
-                state.sending ||
-                !state.displayedRevision
-              }
-            >
-              Add to notes
-            </button>
-            <button
-              type="button"
-              className="primary-button"
-              onClick={sendNow}
-              disabled={
-                !text.trim() ||
-                state.saving ||
-                busy ||
-                attaching ||
-                state.sending ||
-                !state.displayedRevision
-              }
-            >
-              <ArrowUp size={15} />
-              {busy ? 'Working…' : 'Send now'}
-            </button>
+    <Composer
+      context={
+        <>
+          <div className="composer-context">
+            {anchored && (
+              <button
+                type="button"
+                className="composer-reference"
+                onClick={() => state.locate(anchor)}
+                aria-label="Locate referenced frame"
+              >
+                <span className="reference-icon">
+                  <img
+                    alt="Referenced frame"
+                    src={`/media/video-editor/thumbnails/${state.project!.workspaceId}/${anchor.revisionId}?time=${anchor.start}`}
+                  />
+                </span>
+                <span>
+                  {formatTime(anchor.start, true)}
+                  {anchor.end > anchor.start ? ` — ${formatTime(anchor.end, true)}` : ''}
+                </span>
+                <span className="reference-detail">
+                  {anchor.objectId
+                    ? 'Text selection'
+                    : anchor.region
+                      ? 'Marked area'
+                      : anchor.end > anchor.start
+                        ? 'Selected range'
+                        : 'This moment'}
+                </span>
+              </button>
+            )}
+            <label className="composer-intent">
+              <select
+                aria-label="Request kind"
+                disabled={busy || attempted}
+                value={intent.kind}
+                onChange={(event) =>
+                  setIntent(
+                    event.target.value === 'transition'
+                      ? { kind: 'transition' }
+                      : { kind: 'change' },
+                  )
+                }
+              >
+                <option value="change">Change</option>
+                <option value="transition">Transition</option>
+              </select>
+            </label>
           </div>
-        }
-        active={state.chatOpen}
-        focusKey={state.feedbackFocus}
-        disabled={busy}
-        onBusy={setAttaching}
-        incomingFiles={state.droppedFiles}
-        onConsumed={() => state.setDroppedFiles(null)}
-        onChange={(value, refs) => {
-          setText(value);
-          setAttachments(refs);
-        }}
-        onFocus={() => {
-          state.control.current?.pause();
-          if (!reference || (!text && reference.focus !== state.feedbackFocus))
-            setReference({ anchor: state.anchor, focus: state.feedbackFocus });
-        }}
-        onManage={() => state.setModal('library')}
-        onSubmit={() => void persist(false)}
-      />
-      {(draftError || state.deliveryError) && (
-        <p role="alert" className="inline-error">
-          {draftError || state.deliveryError}
-        </p>
-      )}
-    </form>
+          {intent.kind === 'transition' && (
+            <label className="composer-intent">
+              Transition duration
+              <input
+                aria-label="Transition duration"
+                disabled={busy || attempted}
+                type="number"
+                min="0.01"
+                max="60"
+                step="0.01"
+                value={intent.duration ?? ''}
+                onChange={(event) =>
+                  setIntent(
+                    event.target.value
+                      ? { kind: 'transition', duration: Number(event.target.value) }
+                      : { kind: 'transition' },
+                  )
+                }
+              />
+              <span>seconds · optional</span>
+            </label>
+          )}
+        </>
+      }
+      library={state.library}
+      value={text}
+      attachments={attachments}
+      label="Chat message"
+      placeholder="What would you like to change? Use @ to reference a file."
+      secondaryAction={
+        <button
+          type="button"
+          onClick={() => void persist(false)}
+          className="secondary-button"
+          aria-label="Add note to list"
+          disabled={
+            !text.trim() ||
+            state.saving ||
+            busy ||
+            attaching ||
+            state.sending ||
+            !state.displayedRevision
+          }
+        >
+          Add to notes
+        </button>
+      }
+      primaryAction={
+        <button
+          type="button"
+          className="primary-button"
+          onClick={sendNow}
+          disabled={
+            !text.trim() ||
+            state.saving ||
+            busy ||
+            attaching ||
+            state.sending ||
+            !state.displayedRevision
+          }
+        >
+          <ArrowUp size={15} />
+          {busy ? 'Working…' : 'Send now'}
+        </button>
+      }
+      active={state.chatOpen}
+      focusKey={state.feedbackFocus}
+      disabled={busy}
+      onBusy={setAttaching}
+      incomingFiles={state.droppedFiles}
+      onConsumed={() => state.setDroppedFiles(null)}
+      onChange={(value, refs) => {
+        setText(value);
+        setAttachments(refs);
+      }}
+      onFocus={() => {
+        state.control.current?.pause();
+        if (!reference || (!text && reference.focus !== state.feedbackFocus))
+          setReference({ anchor: state.anchor, focus: state.feedbackFocus });
+      }}
+      onManage={() => state.setModal('library')}
+      onSubmit={sendNow}
+      error={draftError || state.deliveryError}
+    />
   );
 }

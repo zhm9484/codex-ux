@@ -1,19 +1,16 @@
 import { Clock3, Check, ArrowUpLeft, Columns2 } from 'lucide-react';
 import type { Revision, VideoProject } from '@codex-ux/video-domain';
-import { PanelHeader } from '../components/ui';
 import { api } from '../lib/api';
 import { useState } from 'react';
 
 export function HistoryPanel({
   project,
   disabled,
-  onClose,
   onCompare,
   onRestore,
 }: {
   project: VideoProject;
   disabled: boolean;
-  onClose: () => void;
   onCompare: (revision: Revision) => void;
   onRestore: (revision: Revision) => Promise<unknown>;
 }) {
@@ -31,7 +28,6 @@ export function HistoryPanel({
   };
   return (
     <>
-      <PanelHeader title="History" detail="Compare a version, or return to it." onClose={onClose} />
       <div className="history-content">
         {error && (
           <p role="alert" className="inline-error">

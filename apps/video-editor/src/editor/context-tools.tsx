@@ -1,6 +1,6 @@
 import { Type, MessageSquarePlus } from 'lucide-react';
 import type { EditorState } from '../hooks/use-editor';
-import { IconButton } from '../components/ui';
+import { IconButton } from '@codex-ux/editor-ui';
 import { FontPicker } from '../components/font-picker';
 
 export function ContextTools({ state }: { state: EditorState }) {
