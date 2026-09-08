@@ -4,6 +4,12 @@ import { randomUUID } from 'node:crypto';
 import { createVideo } from './browser-helpers.ts';
 import type { VideoProject } from '../packages/video-domain/src/schema.ts';
 
+test.beforeEach(async ({ context }) => {
+  await context.route('**/api/agents/codex', (route) =>
+    route.fulfill({ json: { deliveryAvailable: true } }),
+  );
+});
+
 test('draft delivery stays separate from queued notes, preserves retries, and exposes sent history', async ({
   page,
   request,
@@ -61,10 +67,25 @@ test('draft delivery stays separate from queued notes, preserves retries, and ex
   await expect(page.locator('.feedback-composer').getByRole('alert')).toContainText(
     'Temporary delivery failure',
   );
+  await page.route('**/api/agents/codex', (route) =>
+    route.fulfill({ json: { deliveryAvailable: false, detail: 'Local queue unavailable.' } }),
+  );
+  await page.getByRole('button', { name: 'Send now', exact: true }).click();
+  await expect(page.locator('.feedback-composer').getByRole('alert')).toContainText(
+    'have not been sent',
+  );
+  expect(captures).toHaveLength(1);
+  await expect(page.getByLabel('Chat message')).toHaveText('Send only this draft');
+  await page.unroute('**/api/agents/codex');
   await page.getByRole('button', { name: 'Send now', exact: true }).click();
   await expect.poll(() => captures.length).toBe(2);
   expect(captures[0]).toEqual(captures[1]);
   expect(captures[0]).toHaveLength(1);
+  await expect(page.getByRole('dialog', { name: 'Notes history' })).toBeVisible();
+  await expect(
+    page.getByText('Queued · waiting for agent receipt', { exact: false }),
+  ).toBeVisible();
+  await page.keyboard.press('Escape');
   await expect(board.locator('.note-card')).toHaveCount(1);
   const project = (await (await request.get(base)).json()) as VideoProject;
   expect(project.notes).toHaveLength(2);

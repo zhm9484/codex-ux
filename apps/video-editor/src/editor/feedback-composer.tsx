@@ -87,7 +87,10 @@ export function FeedbackComposer({ state }: { state: EditorState }) {
         draftPayload.current.attachmentIds = attachments.map((ref) => ref.id);
       }
       if (send) {
-        if (await state.sendNotes([note.id], destination)) reset();
+        if (await state.sendNotes([note.id], destination)) {
+          reset();
+          state.setModal('notes-history');
+        }
       } else {
         await state.refresh();
         state.setNotesOpen(true);

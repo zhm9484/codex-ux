@@ -144,6 +144,20 @@ source can be imported into a newly created workspace; existing user directories
 
 ## Runtime and app builds
 
+Platform behavior belongs at the system boundary. Workspace launcher scripts own runtime
+installation, cache paths, process startup and browser preparation. The Codex adapter owns
+executable discovery and message delivery. Domain packages and the protocol remain OS-independent;
+browser UI consumes capability results rather than selecting OS paths or executables. Add
+provider-specific discovery to its adapter instead of spreading platform checks into apps. Existing
+browser and media adapters own their engine-specific configuration; no general-purpose platform
+plugin framework is required.
+
+Page/session binding, local delivery capability and accepted message delivery are distinct states.
+Agents open invitation URLs for the authoritative current task and verify the receipt; users should
+not copy IDs in the normal agent-launched flow. Queue help probes do not send test messages. A known
+failure to start a process is unsent; timeout or uncertain process completion must not trigger blind
+resubmission. Capability checks do not prove that every OS or every renderer has been verified.
+
 Use Node.js 24 and pnpm 10.34.5. Run `pnpm install`, then `pnpm dev`, and open the Video Editor URL
 printed by the service (`http://127.0.0.1:<port>/apps/video-editor/`). The app offers workspace
 selection and creation. A selected workspace has URL `/apps/video-editor/w/<workspaceId>`; each page

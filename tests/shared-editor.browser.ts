@@ -1,6 +1,12 @@
 /// <reference lib="dom" />
 import { test, expect, type Page, type APIRequestContext } from '@playwright/test';
 import { randomUUID } from 'node:crypto';
+
+test.beforeEach(async ({ context }) => {
+  await context.route('**/api/agents/codex', (route) =>
+    route.fulfill({ json: { deliveryAvailable: true } }),
+  );
+});
 import type { Workspace } from '../packages/protocol/src/index.ts';
 import type {
   CameraView,

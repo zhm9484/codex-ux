@@ -86,7 +86,7 @@ function NotesHistory({ state }: { state: EditorState }) {
         <section key={note.id}>
           <NoteCard note={note} state={state} index={index} history />
           <p className="history-status">
-            {statuses[note.requestId!]?.state ?? 'Loading status…'} ·{' '}
+            {deliveryLabel(statuses[note.requestId!]?.state)} ·{' '}
             {formatTime(note.anchor.start, true)}
           </p>
           {statuses[note.requestId!]?.error && (
@@ -101,4 +101,25 @@ function NotesHistory({ state }: { state: EditorState }) {
       <p>Notes you send will appear here with their delivery status and original context.</p>
     </div>
   );
+}
+
+function deliveryLabel(state?: string) {
+  switch (state) {
+    case 'preparing':
+      return 'Preparing request';
+    case 'sending':
+      return 'Sending to queue';
+    case 'sent':
+      return 'Queued · waiting for agent receipt';
+    case 'received':
+      return 'Agent received · awaiting result';
+    case 'published':
+      return 'Completed · version published';
+    case 'failed':
+      return 'Failed · review error';
+    case 'delivery-unknown':
+      return 'Delivery uncertain · check the task before retrying';
+    default:
+      return state ?? 'Loading status…';
+  }
 }

@@ -4,6 +4,12 @@ import { randomUUID } from 'node:crypto';
 import { createVideo } from './browser-helpers.ts';
 import type { CollaborationTarget } from '../packages/protocol/src/index.ts';
 
+test.beforeEach(async ({ context }) => {
+  await context.route('**/api/agents/codex', (route) =>
+    route.fulfill({ json: { deliveryAvailable: true } }),
+  );
+});
+
 async function connection(page: Page) {
   if (!(await page.getByRole('dialog', { name: 'Agent connection' }).isVisible()))
     await page.getByRole('button', { name: 'Agent connection' }).click();
@@ -14,7 +20,7 @@ async function connection(page: Page) {
 async function bind(page: Page, sessionId: string) {
   await (await connection(page)).fill(sessionId);
   await page.getByRole('button', { name: 'Save connection' }).click();
-  await expect(page.getByText('Codex session saved', { exact: true })).toBeVisible();
+  await expect(page.getByText('Task saved · delivery available', { exact: true })).toBeVisible();
 }
 async function select(page: Page, name: string) {
   if (await page.getByRole('button', { name: 'Close agent connection' }).isVisible())

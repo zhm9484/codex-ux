@@ -286,6 +286,7 @@ try {
           'Current session is unavailable. Supply --session from the current task link; do not guess another task.',
         );
       const origin = await service();
+      const delivery = await api(origin, '/agents/codex');
       const connection = values.code
         ? await api(origin, `/connections/${values.code}/connect`, {
             session: session(id),
@@ -298,6 +299,7 @@ try {
           });
       output({
         ...connection,
+        delivery,
         ...(connection.instanceId
           ? {}
           : {

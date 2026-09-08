@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { AgentSessionRef } from '@codex-ux/protocol';
 
 export function AgentConnection({
@@ -23,15 +23,49 @@ export function AgentConnection({
   const [thread, setThread] = useState(session?.sessionId ?? '');
   const [busy, setBusy] = useState(false);
   const [inputError, setInputError] = useState('');
+  const [delivery, setDelivery] = useState<'checking' | 'available' | 'unavailable'>('checking');
+  useEffect(() => {
+    let active = true;
+    const controller = new AbortController();
+    void fetch('/api/agents/codex', { signal: controller.signal })
+      .then(async (response) => {
+        if (!response.ok) throw new Error('Connection check failed.');
+        const result = (await response.json()) as { deliveryAvailable?: boolean };
+        if (active) setDelivery(result.deliveryAvailable === true ? 'available' : 'unavailable');
+      })
+      .catch(() => {
+        if (active) setDelivery('unavailable');
+      });
+    return () => {
+      active = false;
+      controller.abort();
+    };
+  }, []);
   return (
     <div className="agent-settings">
       <div className="connection-status">
-        <span className={`connection-dot ${session ? 'connected' : ''}`} />
-        <strong>{session ? 'Codex session saved' : 'Connect your agent'}</strong>
+        <span
+          className={`connection-dot ${session && delivery === 'available' ? 'connected' : ''}`}
+        />
+        <strong>
+          {!session
+            ? 'Connect your agent'
+            : delivery === 'checking'
+              ? 'Checking message delivery…'
+              : delivery === 'available'
+                ? 'Task saved · delivery available'
+                : 'Task saved · delivery unavailable'}
+        </strong>
       </div>
       <p className="muted-copy">
         Connect this page to the Codex task you want to collaborate with.
       </p>
+      {delivery === 'unavailable' && (
+        <p role="alert" className="inline-error">
+          The agent needs to repair the local message connection. Your task and draft are saved;
+          copying a connection code will not fix delivery.
+        </p>
+      )}
       {session && <code className="session-id">{session.sessionId}</code>}
       <button
         className="secondary-button"
@@ -41,7 +75,7 @@ export function AgentConnection({
           void onPair().finally(() => setBusy(false));
         }}
       >
-        Connect current agent
+        {session ? 'Confirm this page with the agent' : 'Connect current agent'}
       </button>
       {pairing && (
         <div className="pairing-card">
@@ -95,7 +129,7 @@ export function AgentConnection({
           <p>Your draft is ready. Continue when the right task is connected.</p>
           <button
             className="primary-button"
-            disabled={!session || sending || busy}
+            disabled={!session || delivery !== 'available' || sending || busy}
             onClick={() => {
               onContinue?.();
             }}

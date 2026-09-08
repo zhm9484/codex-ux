@@ -1,13 +1,20 @@
 import { createRequire } from 'node:module';
+import { realpathSync } from 'node:fs';
 import { access, mkdir, open, readFile, rm, writeFile } from 'node:fs/promises';
-import { dirname, isAbsolute, join } from 'node:path';
+import { dirname, isAbsolute, join, relative } from 'node:path';
 import { installDependencies } from './install.ts';
 
 export function browserRuntime(runtime: string) {
   const require = createRequire(join(runtime, 'packages/local-server/package.json'));
+  const manifest = require.resolve('./node_modules/playwright-core/package.json');
+  const local = relative(realpathSync(runtime), manifest);
+  if (isAbsolute(local) || local === '..' || local.startsWith('../') || local.startsWith('..\\'))
+    throw new Error(
+      'playwright-core must be installed inside this runtime, not resolved from global module paths.',
+    );
   return {
     playwright: require('playwright-core') as { chromium: { executablePath(): string } },
-    cli: join(dirname(require.resolve('playwright-core/package.json')), 'cli.js'),
+    cli: join(dirname(manifest), 'cli.js'),
   };
 }
 

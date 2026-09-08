@@ -102,6 +102,13 @@ they can receive app-submitted feedback. A compatible Codex executable must supp
 `queue --thread --message`; `CODEX_UX_CODEX_BIN` can select one before service startup. Queue
 capability is separate from session identity and successful delivery.
 
+`connect` reports delivery capability alongside its invitation or receipt. Automatic Windows
+discovery checks `codex.exe` on PATH and desktop installations under
+`%LOCALAPPDATA%/OpenAI/Codex/bin/`. If delivery is unavailable, investigate it as the agent; do not
+ask the user to copy a task ID/code to repair an executable failure. A receipt with
+`delivery.deliveryAvailable: false` does not complete the default opening flow. Report binding and
+queue capability separately, and never claim successful delivery based on a saved session alone.
+
 Use the current task's authoritative ID from the agent environment. The launcher defaults to
 `CODEX_THREAD_ID`; pass `--session ID` when the current host explicitly supplies the ID or the user
 provides a task link. In nested agent processes, an inherited environment variable may refer to the

@@ -218,9 +218,14 @@ export async function videoApi(
     json(res, await s.collaboration.submit(id, noteIds, target));
     return;
   }
-  const request = /^\/requests\/([a-zA-Z0-9-]+)(\/publish|\/error)?$/.exec(rest);
+  const request = /^\/requests\/([a-zA-Z0-9-]+)(\/publish|\/error|\/received)?$/.exec(rest);
   if (request) {
     const requestId = request[1]!;
+    if (request[2] === '/received' && method === 'POST') {
+      z.strictObject({}).parse(await readJson(req));
+      json(res, s.collaboration.received(id, requestId));
+      return;
+    }
     if (!request[2] && method === 'GET') {
       json(res, s.collaboration.context(id, requestId));
       return;
@@ -237,7 +242,7 @@ export async function videoApi(
       s.collaboration.request(id, requestId);
       s.store
         .database(id)
-        .prepare("UPDATE requests SET state='failed',error=? WHERE id=?")
+        .prepare("UPDATE requests SET state='failed',error=? WHERE id=? AND state!='published'")
         .run(message, requestId);
       json(res, { saved: true });
       return;

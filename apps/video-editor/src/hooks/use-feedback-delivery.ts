@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 import type { CollaborationTarget } from '@codex-ux/protocol';
-import { post, videoPath } from '../lib/api';
+import { api, post, videoPath } from '../lib/api';
 
 export function useFeedbackDelivery(
   id: string,
@@ -17,6 +17,9 @@ export function useFeedbackDelivery(
     setDeliveryError('');
     try {
       const captured = destination ?? target();
+      const capability = await api<{ deliveryAvailable: boolean; detail: string }>('/agents/codex');
+      if (!capability.deliveryAvailable)
+        throw new Error(`${capability.detail} Your notes are saved and have not been sent.`);
       await post(`${videoPath(id)}/requests`, { noteIds, target: captured });
       return true;
     } catch (error) {
