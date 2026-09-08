@@ -20,6 +20,7 @@ void test(
     const data = join(directory, 'data');
     const workspaceSkill = join(directory, 'skills/codex-ux-workspace');
     const videoSkill = join(directory, 'skills/codex-ux-video-editor');
+    const sceneSkill = join(directory, 'skills/codex-ux-scene-3d');
     const task = randomUUID();
     let pid: number | undefined;
     const env = {
@@ -43,6 +44,7 @@ void test(
       return JSON.parse(result.stdout) as Record<string, unknown>;
     };
     const browser = await chromium.launch({
+      args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader'],
       ...(process.env.CODEX_UX_CHROME
         ? { executablePath: process.env.CODEX_UX_CHROME }
         : process.platform === 'darwin'
@@ -52,6 +54,7 @@ void test(
     try {
       await cp(resolve('skills/codex-ux-workspace'), workspaceSkill, { recursive: true });
       await cp(resolve('skills/codex-ux-video-editor'), videoSkill, { recursive: true });
+      await cp(resolve('skills/codex-ux-scene-3d'), sceneSkill, { recursive: true });
       const started = await run('start', '--app', join(videoSkill, 'app.json'));
       const origin = started.origin as string;
       const located = await run('locate');
@@ -78,6 +81,32 @@ void test(
         return response.json() as Promise<Record<string, unknown>>;
       };
       const project = (await post(base, {})) as unknown as VideoProject;
+      const sceneStarted = await run('start', '--app', join(sceneSkill, 'app.json'));
+      assert.equal(sceneStarted.origin, origin);
+      const scene = await post(`${origin}/api/workspaces/${String(created.id)}/apps/scene-3d`, {});
+      const sceneInvitation = await run(
+        'connect',
+        '--workspace',
+        String(created.id),
+        '--app',
+        'scene-3d',
+      );
+      const scenePage = await browser.newPage();
+      await scenePage.goto(sceneInvitation.url as string);
+      await scenePage.waitForFunction(
+        (id) =>
+          (
+            window as unknown as {
+              __sceneEditor?: { state: () => { revisionId: string; objects: unknown[] } };
+            }
+          ).__sceneEditor?.state().revisionId === id,
+        scene.revisionId,
+        { timeout: 30000 },
+      );
+      const sceneReceipt = await run('status', '--code', sceneInvitation.code as string);
+      assert.equal(sceneReceipt.state, 'connected');
+      assert.equal(sceneReceipt.appId, 'scene-3d');
+      await scenePage.close();
       const invitation = await run('connect', '--workspace', String(created.id));
       const page = await browser.newPage();
       await page.goto(invitation.url as string);

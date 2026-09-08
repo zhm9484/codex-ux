@@ -12,6 +12,7 @@ import type { Connections } from './connections.ts';
 import { connectionApi } from './connection-routes.ts';
 import { validateApps } from './apps.ts';
 import { codexCapability } from '@codex-ux/adapter-codex';
+import { sceneApi, type SceneServices } from './scene/routes.ts';
 
 export interface Services {
   library: LibraryStore;
@@ -19,6 +20,7 @@ export interface Services {
   apps: HostedApp[];
   video: VideoServices;
   connections: Connections;
+  scene: SceneServices;
 }
 export async function api(req: IncomingMessage, res: ServerResponse, path: string, s: Services) {
   if (path === '/api/agents/codex' && req.method === 'GET') {
@@ -78,6 +80,10 @@ export async function api(req: IncomingMessage, res: ServerResponse, path: strin
       return;
     }
     const app = /^\/apps\/([a-z0-9-]+)(.*)$/.exec(rest);
+    if (app && app[1] === 'scene-3d' && s.apps.some((entry) => entry.id === app[1])) {
+      await sceneApi(req, res, id, app[2]!, s.scene);
+      return;
+    }
     if (app && s.apps.some((entry) => entry.id === app[1]) && app[1] === 'video-editor') {
       await videoApi(req, res, id, app[2]!, s.video);
       return;

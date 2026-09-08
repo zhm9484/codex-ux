@@ -9,6 +9,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@codex-ux/scene-domain": "workspace:*",
+    "three": "0.185.1",
     "@codex-ux/adapter-codex": "workspace:*",
     "@codex-ux/protocol": "workspace:*",
     "@codex-ux/video-domain": "workspace:*",

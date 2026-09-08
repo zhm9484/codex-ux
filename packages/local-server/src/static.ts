@@ -35,6 +35,7 @@ export async function serveFile(
   res: ServerResponse,
   file: string,
   cache = false,
+  typePath = file,
 ) {
   let info;
   try {
@@ -43,7 +44,10 @@ export async function serveFile(
     throw new HttpError(404, 'File not found.');
   }
   if (!info.isFile()) throw new HttpError(404, 'File not found.');
-  res.setHeader('Content-Type', types[extname(file)] ?? 'application/octet-stream');
+  res.setHeader(
+    'Content-Type',
+    types[extname(typePath).toLowerCase()] ?? 'application/octet-stream',
+  );
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('Accept-Ranges', 'bytes');
   res.setHeader('Cache-Control', cache ? 'private, max-age=31536000, immutable' : 'no-cache');
