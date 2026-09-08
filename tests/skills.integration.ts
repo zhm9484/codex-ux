@@ -13,6 +13,18 @@ import type { Connection } from '../packages/protocol/src/index.ts';
 import type { VideoProject } from '../packages/video-domain/src/schema.ts';
 
 const execute = promisify(execFile);
+// Setup/export can leave pooled sockets idle while native tools load on slower CI hosts.
+// A fresh connection keeps transport reuse races out of this installed-runtime test.
+async function request(url: string, options: RequestInit = {}) {
+  try {
+    return await fetch(url, {
+      ...options,
+      headers: { ...options.headers, Connection: 'close' },
+    });
+  } catch (error) {
+    throw new Error(`${options.method ?? 'GET'} ${url} failed`, { cause: error });
+  }
+}
 void test(
   'installed skills run outside the repository, pair a real page and preserve workspace data',
   { timeout: 900_000 },
@@ -73,7 +85,7 @@ void test(
       const created = await run('create', '--name', 'Installed project');
       const base = `${origin}/api/workspaces/${String(created.id)}/apps/video-editor`;
       const post = async (url: string, body: unknown) => {
-        const response = await fetch(url, {
+        const response = await request(url, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(body),
@@ -149,7 +161,7 @@ void test(
       for (let i = 0; i < 600 && hyperframeExport.state === 'rendering'; i++) {
         await new Promise((done) => setTimeout(done, 500));
         hyperframeExport = (await (
-          await fetch(base + '/exports/' + String(hyperframeExport.id))
+          await request(base + '/exports/' + String(hyperframeExport.id))
         ).json()) as Record<string, unknown>;
       }
       assert.equal(hyperframeExport.state, 'complete', JSON.stringify(hyperframeExport));
@@ -187,7 +199,7 @@ void test(
       const ownership = JSON.parse(await readFile(join(data, 'runtime.json'), 'utf8')) as {
         control: string;
       };
-      const stopWhileExporting = await fetch(origin + '/api/service/stop', {
+      const stopWhileExporting = await request(origin + '/api/service/stop', {
         method: 'POST',
         headers: { 'x-codex-ux-control': ownership.control },
       });
@@ -199,7 +211,7 @@ void test(
       let job = exported;
       for (let i = 0; i < 600 && job.state === 'rendering'; i++) {
         await new Promise((done) => setTimeout(done, 500));
-        job = (await (await fetch(base + '/exports/' + String(exported.id))).json()) as Record<
+        job = (await (await request(base + '/exports/' + String(exported.id))).json()) as Record<
           string,
           unknown
         >;
@@ -225,10 +237,10 @@ void test(
         await readFile(join(data, 'workspaces', String(created.id), 'workspace.json'), 'utf8'),
         identityBefore,
       );
-      assert.equal((await fetch(base)).ok, true);
-      const servedBefore = await (await fetch(origin + '/apps/video-editor/')).text();
+      assert.equal((await request(base)).ok, true);
+      const servedBefore = await (await request(origin + '/apps/video-editor/')).text();
       await writeFile(join(videoSkill, 'dist/index.html'), '<p>Incomplete skill update</p>');
-      assert.equal(await (await fetch(origin + '/apps/video-editor/')).text(), servedBefore);
+      assert.equal(await (await request(origin + '/apps/video-editor/')).text(), servedBefore);
       await writeFile(join(videoSkill, 'app.json'), JSON.stringify(manifest));
       await assert.rejects(
         run('start', '--app', join(videoSkill, 'app.json')),
@@ -243,7 +255,9 @@ void test(
       await browser.close();
       if (pid) {
         try {
-          process.kill(pid, 'SIGTERM');
+          if (process.platform === 'win32')
+            await execute('taskkill', ['/pid', String(pid), '/t', '/f']);
+          else process.kill(pid, 'SIGTERM');
         } catch {
           // The failure may already have stopped the service.
         }
@@ -256,7 +270,7 @@ void test(
           }
         }
       }
-      await rm(directory, { recursive: true, force: true });
+      await rm(directory, { recursive: true, force: true, maxRetries: 10, retryDelay: 250 });
     }
   },
 );
