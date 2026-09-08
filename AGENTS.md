@@ -44,6 +44,12 @@ infrastructure when they solve a concrete problem.
 
 ## Changes and verification
 
+- When opening or updating an issue or PR, agents must put a `## Summary` section first in the body,
+  with brief text and a clear visual explaining the problem and proposed or resulting behavior.
+  Follow [Contributing](CONTRIBUTING.md#visual-summaries-for-issues-and-pull-requests) for visual
+  summary guidance. Use only GitHub-renderable Markdown, including Mermaid, fenced code/diffs or
+  Markdown images; do not use HTML. This includes blank issues and draft PRs; human contributors may
+  use their judgment.
 - Follow existing conventions, keep changes scoped to the task, and preserve unrelated user work.
 - Keep documentation concise and accurate. Record durable decisions rather than temporary project
   status in these instructions.
