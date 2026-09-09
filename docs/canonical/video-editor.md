@@ -47,13 +47,14 @@ not run.
 
 Remotion manifests select a component file and export, with explicit width, height, fps,
 `durationInFrames` and JSON `inputProps`. The server builds an isolated Player bundle and a
-registered `Video` composition for Renderer from the same snapshot. TS/TSX/JS/JSX, CSS imports,
-imported media and `staticFile()` resources under `public/` are supported. This convention does not
-run Remotion Studio, evaluate `remotion.config.ts`, or discover composition metadata dynamically.
-Projects supplying React, React DOM, Remotion or Player versions must match the pinned runtime
-(React/React DOM 19.2.8). Extra dependencies require `package.json` and a frozen `pnpm-lock.yaml`;
-installation uses pnpm 10.34.5 with lifecycle scripts and pnpmfile hooks disabled. Dependency
-installation and bundles are cached outside working source.
+registered `Video` composition for Renderer from the same snapshot. Preview compilation happens when
+the source is opened; the Renderer bundle is compiled separately on first export. TS/TSX/JS/JSX, CSS
+imports, imported media and `staticFile()` resources under `public/` are supported. This convention
+does not run Remotion Studio, evaluate `remotion.config.ts`, or discover composition metadata
+dynamically. Projects supplying React, React DOM, Remotion or Player versions must match the pinned
+runtime (React/React DOM 19.2.8). Extra dependencies require `package.json` and a frozen
+`pnpm-lock.yaml`; installation uses pnpm 10.34.5 with lifecycle scripts and pnpmfile hooks disabled.
+Dependency installation and bundles are cached outside working source.
 
 Direct video accepts H.264 MP4 or browser-decodable VP8/VP9/AV1 WebM. FFprobe reads actual duration,
 dimensions and rotation. Media time is measured in seconds: the app does not infer a frame rate or
@@ -69,11 +70,14 @@ fonts or browser behavior. Imported code executes as trusted local code, not in 
 
 ## Canvas and timeline
 
-The timeline uses rendered scene thumbnails for static Hyperframes scenes and evenly spaced frame
-samples otherwise. Click to seek, drag to select a range, use range edges to adjust it, or drag the
-playhead to scrub. Arrow keys step by a composition frame or 0.1 seconds for media; I/O set range
-boundaries. Empty canvas space can be dragged to select a normalized rectangle on every engine.
-Selections offer **Add note**, also available from the canvas context menu.
+Background thumbnails are optional. **Enable background thumbnails** prepares browser tools with
+visible progress; ordinary thumbnail requests never trigger installation, and failures leave
+playback and editing available. The timeline uses rendered scene thumbnails for static Hyperframes
+scenes and evenly spaced frame samples otherwise. Click to seek, drag to select a range, use range
+edges to adjust it, or drag the playhead to scrub. Arrow keys step by a composition frame or 0.1
+seconds for media; I/O set range boundaries. Empty canvas space can be dragged to select a
+normalized rectangle on every engine. Selections offer **Add note**, also available from the canvas
+context menu.
 
 Hyperframes text editing requires one plain HTML source target matching one rendered element. Stable
 IDs distinguish repeated captions. Click to select, double-click to type, blur or Cmd/Ctrl+Enter to
@@ -158,9 +162,12 @@ asset upload APIs remain available to agents; assets do not automatically become
 Hyperframes fonts incorporated through that API receive local font-face declarations.
 
 Hyperframes and Remotion render the selected saved snapshot to H.264 MP4. Direct media exports its
-original MP4/WebM bytes, preserving audio and encoding. One export runs at a time; errors do not
-change the editing revision. A service restart marks interrupted exports failed. Source versions,
-prepared previews, dependency caches, thumbnails and exports have no automatic garbage collection.
+original MP4/WebM bytes, preserving audio and encoding. Export reports preparation stages before
+rendering and records the browser version when used. Missing engine/browser/encoding capabilities
+are prepared for that export, independently of 3D and other video engines. One export runs at a
+time; errors do not change the editing revision. A service restart marks interrupted exports failed.
+Source versions, prepared previews, dependency caches, thumbnails and exports have no automatic
+garbage collection.
 
 There is no waveform/keyframe editor, stock library, automatic transition compositor or general
 inference of script behavior. The previous structured arrangement format and native-mode aliases

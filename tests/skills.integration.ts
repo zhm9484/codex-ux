@@ -6,12 +6,25 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
+import { createRequire } from 'node:module';
 import { randomUUID } from 'node:crypto';
 import { chromium } from '@playwright/test';
 import type { Connection } from '../packages/protocol/src/index.ts';
 import type { VideoProject } from '../packages/video-domain/src/schema.ts';
 
 const execute = promisify(execFile);
+// Setup/export can leave pooled sockets idle while native tools load on slower CI hosts.
+// A fresh connection keeps transport reuse races out of this installed-runtime test.
+async function request(url: string, options: RequestInit = {}) {
+  try {
+    return await fetch(url, {
+      ...options,
+      headers: { ...options.headers, Connection: 'close' },
+    });
+  } catch (error) {
+    throw new Error(`${options.method ?? 'GET'} ${url} failed`, { cause: error });
+  }
+}
 void test(
   'installed skills run outside the repository, pair a real page and preserve workspace data',
   { timeout: 900_000 },
@@ -72,7 +85,7 @@ void test(
       const created = await run('create', '--name', 'Installed project');
       const base = `${origin}/api/workspaces/${String(created.id)}/apps/video-editor`;
       const post = async (url: string, body: unknown) => {
-        const response = await fetch(url, {
+        const response = await request(url, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(body),
@@ -125,6 +138,34 @@ void test(
             .opacity === '1',
         project.revisionId,
       );
+      // Exercise the separate Hyperframes exporter and encoding environment in the installed runtime.
+      const hyperframes = join(directory, 'hyperframes');
+      await mkdir(hyperframes);
+      await cp(
+        createRequire(new URL('../packages/local-server/package.json', import.meta.url)).resolve(
+          'gsap/dist/gsap.min.js',
+        ),
+        join(hyperframes, 'gsap.js'),
+      );
+      await writeFile(
+        join(hyperframes, 'index.html'),
+        '<!doctype html><html><body style="margin:0"><main data-composition-id="test" data-width="320" data-height="180" data-duration="0.5" style="width:320px;height:180px;background:#16352b;color:white">Installed export</main><script src="gsap.js"></script><script>window.__timelines = {test: gsap.timeline({paused:true}).to({}, {duration:0.5})};</script></body></html>',
+      );
+      const hyperframeProject = (await post(base + '/source', {
+        baseRevision: project.revisionId,
+        path: hyperframes,
+      })) as unknown as VideoProject;
+      let hyperframeExport = await post(base + '/exports', {
+        revisionId: hyperframeProject.revisionId,
+      });
+      for (let i = 0; i < 600 && hyperframeExport.state === 'rendering'; i++) {
+        await new Promise((done) => setTimeout(done, 500));
+        hyperframeExport = (await (
+          await request(base + '/exports/' + String(hyperframeExport.id))
+        ).json()) as Record<string, unknown>;
+      }
+      assert.equal(hyperframeExport.state, 'complete', JSON.stringify(hyperframeExport));
+
       // Import and compile from the installed runtime, with no repository node_modules in its source tree.
       const source = join(directory, 'remotion');
       await mkdir(source);
@@ -144,7 +185,7 @@ void test(
         'import React from "react"; export default function Video(){return <div style={{background:"#16352b",color:"white",width:320,height:180}}>Installed Remotion</div>}',
       );
       const imported = (await post(base + '/source', {
-        baseRevision: project.revisionId,
+        baseRevision: hyperframeProject.revisionId,
         path: source,
       })) as unknown as VideoProject;
       await page.waitForFunction(
@@ -155,10 +196,22 @@ void test(
         { timeout: 30000 },
       );
       const exported = await post(base + '/exports', { revisionId: imported.revisionId });
+      const ownership = JSON.parse(await readFile(join(data, 'runtime.json'), 'utf8')) as {
+        control: string;
+      };
+      const stopWhileExporting = await request(origin + '/api/service/stop', {
+        method: 'POST',
+        headers: { 'x-codex-ux-control': ownership.control },
+      });
+      assert.equal(
+        stopWhileExporting.status,
+        409,
+        'active export must not be interrupted by restart',
+      );
       let job = exported;
-      for (let i = 0; i < 120 && job.state === 'rendering'; i++) {
+      for (let i = 0; i < 600 && job.state === 'rendering'; i++) {
         await new Promise((done) => setTimeout(done, 500));
-        job = (await (await fetch(base + '/exports/' + String(exported.id))).json()) as Record<
+        job = (await (await request(base + '/exports/' + String(exported.id))).json()) as Record<
           string,
           unknown
         >;
@@ -184,19 +237,30 @@ void test(
         await readFile(join(data, 'workspaces', String(created.id), 'workspace.json'), 'utf8'),
         identityBefore,
       );
-      assert.equal((await fetch(base)).ok, true);
-      const servedBefore = await (await fetch(origin + '/apps/video-editor/')).text();
+      assert.equal((await request(base)).ok, true);
+      const servedBefore = await (await request(origin + '/apps/video-editor/')).text();
       await writeFile(join(videoSkill, 'dist/index.html'), '<p>Incomplete skill update</p>');
-      assert.equal(await (await fetch(origin + '/apps/video-editor/')).text(), servedBefore);
+      assert.equal(await (await request(origin + '/apps/video-editor/')).text(), servedBefore);
       await writeFile(join(videoSkill, 'app.json'), JSON.stringify(manifest));
       await assert.rejects(
         run('start', '--app', join(videoSkill, 'app.json')),
         /incomplete or changed/,
       );
+    } catch (error) {
+      console.error(
+        await readFile(join(data, 'service.log'), 'utf8').catch(() => 'No service log'),
+      );
+      throw error;
     } finally {
       await browser.close();
       if (pid) {
-        process.kill(pid, 'SIGTERM');
+        try {
+          if (process.platform === 'win32')
+            await execute('taskkill', ['/pid', String(pid), '/t', '/f']);
+          else process.kill(pid, 'SIGTERM');
+        } catch {
+          // The failure may already have stopped the service.
+        }
         for (let i = 0; i < 100; i++) {
           try {
             process.kill(pid, 0);
@@ -206,7 +270,7 @@ void test(
           }
         }
       }
-      await rm(directory, { recursive: true, force: true });
+      await rm(directory, { recursive: true, force: true, maxRetries: 10, retryDelay: 250 });
     }
   },
 );

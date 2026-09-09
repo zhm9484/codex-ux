@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import { mkdir, readFile, readdir, writeFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { createRequire } from 'node:module';
+import { buildEnvironments } from './build-environments.ts';
 import { appSnapshot } from '../skills/codex-ux-workspace/scripts/artifacts.ts';
 
 const root = resolve(import.meta.dirname, '..');
@@ -30,6 +31,8 @@ for (const name of [
   files[`${path}/package.json`] = await readFile(join(root, path, 'package.json'), 'utf8');
   await collect(`${path}/src`);
 }
+await collect('skills/codex-ux-workspace/scripts');
+files['environments.json'] = JSON.stringify(buildEnvironments(files['pnpm-lock.yaml']!));
 const content = JSON.stringify(files);
 const build = createHash('sha256').update(content).digest('hex');
 const workspace = join(root, 'skills/codex-ux-workspace');

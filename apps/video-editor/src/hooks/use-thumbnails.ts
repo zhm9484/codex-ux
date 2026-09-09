@@ -3,6 +3,21 @@ import type { TimelineItem } from '@codex-ux/video-domain';
 
 /** Keep image generation off the browser's connection slots used for playback and saving. */
 export function useThumbnails(workspaceId: string, revisionId: string, clips: TimelineItem[]) {
+  const [generation, setGeneration] = useState(0);
+  useEffect(() => {
+    let known = '';
+    const timer = setInterval(() => {
+      void fetch('/api/environment')
+        .then((r) => r.json())
+        .then((states: { id: string; state: string }[]) => {
+          const state = states.find((s) => s.id === 'browser')?.state ?? '';
+          if (state === 'ready' && known !== 'ready') setGeneration((value) => value + 1);
+          known = state;
+        })
+        .catch(() => {});
+    }, 2000);
+    return () => clearInterval(timer);
+  }, []);
   const retained = useRef<Record<string, string>>({});
   const [frames, setFrames] = useState<{ revision: string; images: Record<string, string> }>({
     revision: '',
@@ -55,7 +70,7 @@ export function useThumbnails(workspaceId: string, revisionId: string, clips: Ti
     return () => {
       controller.abort();
     };
-  }, [workspaceId, revisionId, requests]);
+  }, [workspaceId, revisionId, requests, generation]);
 
   useEffect(() => {
     const cache = retained.current;

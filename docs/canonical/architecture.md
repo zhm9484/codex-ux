@@ -149,12 +149,12 @@ printed by the service (`http://127.0.0.1:<port>/apps/video-editor/`). The app o
 selection and creation. A selected workspace has URL `/apps/video-editor/w/<workspaceId>`; each page
 selects independently. `/` lists hosted apps, and `GET /api/apps` returns their IDs and names.
 
-The backend embeds Vite in development. `pnpm build` writes the Video Editor frontend to
-`skills/codex-ux-video-editor/dist/` and `skills/codex-ux-3d-space/dist/` and generates the
-Workspace skill's source runtime bundle. `pnpm start` serves that build. These distribution
-artifacts are committed and verified by CI; other build output remains ignored. Installed skills run
-without a repository checkout or frontend build. See [skills](skills.md) for installation, cache
-ownership and release verification.
+The backend loads Vite only in development and loads each app backend only when used. `pnpm build`
+writes the Video Editor frontend to `skills/codex-ux-video-editor/dist/` and
+`skills/codex-ux-3d-space/dist/` and generates the Workspace skill's source runtime bundle.
+`pnpm start` serves that build. These distribution artifacts are committed and verified by CI; other
+build output remains ignored. Installed skills run without a repository checkout or frontend build.
+See [skills](skills.md) for installation, cache ownership and release verification.
 
 `CODEX_UX_APPS_FILE` can point to a JSON array of `{ id, name, distDirectory }` records with unique
 app IDs and absolute build paths, including builds distributed inside installed skills. The
@@ -169,8 +169,9 @@ workspaces share its HTTP port. By default, the OS assigns an available loopback
 origin is atomically saved in `<dataRoot>/runtime.json`; restarts prefer that port and fall back to
 OS assignment if it is occupied. This keeps browser storage at the same origin when possible. An
 explicit nonzero port is strict: occupation causes an error instead of silently changing it. Vite
-HMR, thumbnail capture, agent context URLs and host/origin checks all use the bound port. Chromium
-and FFmpeg subprocesses are still needed for rendering.
+HMR, thumbnail capture, agent context URLs and host/origin checks all use the bound port. Backend
+browser and encoder subprocesses are prepared only when rendering needs them; neither is a
+prerequisite for service startup or 3D.
 
 | Environment variable                                  | Purpose                                                       |
 | ----------------------------------------------------- | ------------------------------------------------------------- |
@@ -184,11 +185,12 @@ and FFmpeg subprocesses are still needed for rendering.
 | `HYPERFRAMES_FFMPEG_PATH`, `HYPERFRAMES_FFPROBE_PATH` | Hyperframes Producer binary overrides                         |
 
 On macOS, Chrome defaults to `/Applications/Google Chrome.app/Contents/MacOS/Google Chrome`.
-Elsewhere, provide Chromium through these settings or Playwright. FFmpeg and FFprobe use pinned
-static dependencies. The workspace permits the `ffmpeg-static` and `esbuild` installation scripts;
-restore skipped dependency builds before exporting. HyperFrames may fetch fonts while compiling;
-fully offline rendering is not guaranteed. Remotion dependencies retain their own Remotion License;
-the repository's MIT license does not relicense third-party packages.
+Background preparation also checks known Chrome/Edge/Chromium paths on supported platforms, then
+uses a managed Playwright browser when necessary. FFmpeg and FFprobe have separate pinned capability
+environments. The workspace permits the `ffmpeg-static` and `esbuild` installation scripts; the
+installed launcher prepares these capabilities only on demand. HyperFrames may fetch fonts while
+compiling; fully offline rendering is not guaranteed. Remotion dependencies retain their own
+Remotion License; the repository's MIT license does not relicense third-party packages.
 
 The service binds to loopback, checks Host and Origin, and validates IDs and paths. It is a trusted
 local application, not a hosted multi-user security boundary: video source and hosted apps execute

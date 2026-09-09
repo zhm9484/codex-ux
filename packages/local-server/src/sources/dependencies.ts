@@ -100,5 +100,5 @@ export async function dependencyDirectory(root: string, id: string, doc: VideoDo
 }
 export async function linkDependencies(directory: string, target: string) {
   await rm(join(directory, 'node_modules'), { recursive: true, force: true });
-  await symlink(target, join(directory, 'node_modules'), 'dir');
+  await symlink(target, join(directory, 'node_modules'), 'junction');
 }

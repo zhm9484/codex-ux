@@ -20,15 +20,18 @@ When asked to open an app, complete startup, pairing, browser opening, and page 
 The user should receive a usable app connected to this conversation, without copying a code or
 opening a URL manually. Follow this order:
 
-1. Prepare the service and select/create the intended Workspace below. The `start` URL is only an
-   unbound app entry point: do not open it before creating the invitation.
-2. Initialize the app's document using its app skill, then run `doctor` and resolve the current task
-   identity as described below.
-3. Run `connect --app APP_ID --workspace WORKSPACE_ID`. Open its returned invitation `url` once in a
-   new, visible browser page. Use the host's in-app browser when available unless the user chooses
-   another browser. Keep the page handle.
-4. Verify the connection receipt and retain that same page for the user before ending the turn.
-   Opening a page alone is not completion.
+1. Start the core service and select/create the intended Workspace below. App and video tools are
+   prepared separately; `start` readiness describes the service, not a completed document.
+2. Resolve the current task identity and inspect `doctor` without sending a message. Create an
+   invitation with `connect --app APP_ID --workspace WORKSPACE_ID` and open its URL immediately in a
+   visible page. Prefer the host's in-app browser unless the user chooses another browser.
+3. Let the page show preparation and initialize its document. Verify the connection receipt and
+   document readiness separately. If browser access is unavailable, `prepare --capability scene` or
+   `video` can prepare the selected app before its initialization API. Do not prepare export tools
+   merely to open the app.
+4. Retain the same page before ending the turn. If delivery is unsupported or identity unavailable,
+   open the unbound app URL and explain the missing connection capability; do not block access or
+   claim the page is connected. Never invent a session identity.
 
 Reuse an explicitly selected page already connected to this conversation. If it needs pairing,
 follow the existing-page flow below using browser tools first. Manual code exchange is a fallback
@@ -39,21 +42,22 @@ opened.
 
 Resolve this installed skill's absolute directory as `WORKSPACE_SKILL`. Its `assets/runtime.json`
 contains the versioned local service. App skills carry their own built web files and `app.json`. Use
-the launcher below with Node.js 24. If that version is unavailable, use
-`npx --yes --package node@24.19.0 node` in place of `node`; npm/npx and network access are required
-for first-time preparation. Do not clone or build the development repository for end users.
+the JavaScript launcher below with `node`. It selects Node 24 once and reuses it, preparing a pinned
+version when necessary. `--help` and `preflight` work before service preparation. A working Node/npm
+installation and network are needed for first setup; Node 18 can run the bootstrap. Do not clone or
+build the development repository for end users.
 
 ```sh
-node "$WORKSPACE_SKILL/scripts/workspace.ts" start --app "$APP_SKILL/app.json"
-node "$WORKSPACE_SKILL/scripts/workspace.ts" workspaces
-node "$WORKSPACE_SKILL/scripts/workspace.ts" create --name "My project"
+node "$WORKSPACE_SKILL/scripts/workspace.mjs" start --app "$APP_SKILL/app.json"
+node "$WORKSPACE_SKILL/scripts/workspace.mjs" workspaces
+node "$WORKSPACE_SKILL/scripts/workspace.mjs" create --name "My project"
 ```
 
-`start` verifies and caches the app's bundled web files, prepares pinned dependencies and Chromium
-when needed, registers the app, and starts or reuses a matching service. It returns JSON with the
-actual origin and app URL. Use that origin throughout the task; never assume a fixed port. Startup
-automatically selects an available port, preferring the last successful one on restart. Use `--port`
-or `CODEX_UX_PORT` only when a fixed port is needed (`0` restores automatic selection). Reuse the
+`start` verifies and caches the app's bundled web files, prepares only pinned core dependencies,
+registers the app, and starts or reuses a matching service. It returns JSON with the actual origin
+and app URL. Use that origin throughout the task; never assume a fixed port. Startup automatically
+selects an available port, preferring the last successful one on restart. Use `--port` or
+`CODEX_UX_PORT` only when a fixed port is needed (`0` restores automatic selection). Reuse the
 user's specified Workspace; create one for a new work item when appropriate. Do not silently choose
 a similarly named Workspace. Creating a Workspace does not initialize any app's document. Read the
 relevant app skill for that step.
@@ -73,7 +77,7 @@ service if needed or reuses a matching live one, then returns verified `origin`,
 To recover the address later without starting anything:
 
 ```sh
-node "$WORKSPACE_SKILL/scripts/workspace.ts" locate
+node "$WORKSPACE_SKILL/scripts/workspace.mjs" locate
 ```
 
 Keep the same `--data-dir` or `CODEX_UX_DATA_DIR` across calls. Success is JSON on stdout with
@@ -82,8 +86,11 @@ exact data root, and recovery instructions/command arguments. For `service_not_s
 `service_unreachable`, `service_record_invalid`, or `service_mismatch`, run `start` once for that
 same root (include the intended app manifest), then use the newly returned address. If the same
 failure persists, report the code and log path; do not guess ports, scan directories, or silently
-switch to another data root. For `runtime_mismatch` or `service_restart_required`, review the live
-service and matching skill versions before restarting; do not automatically kill it.
+switch to another data root. For `runtime_mismatch` or `service_restart_required`, run `inspect`.
+When restart is authorized, run `restart --app APP_JSON`; it prepares core before stopping and
+refuses to interrupt active work. `stop` performs a verified normal shutdown. Only legacy services
+lacking this endpoint require their original terminal. Do not automatically stop active work merely
+to open another app.
 
 If an HTTP operation fails after a restart, run `locate` and refresh the address. Retry a read with
 the new origin; for a mutation, check its recorded result before retrying to avoid duplicates. Never
@@ -94,7 +101,7 @@ reuse an old pairing code after a service restart; request a fresh one.
 First run `doctor` to inspect Codex delivery support without sending a message:
 
 ```sh
-node "$WORKSPACE_SKILL/scripts/workspace.ts" doctor
+node "$WORKSPACE_SKILL/scripts/workspace.mjs" doctor
 ```
 
 Only Codex delivery is implemented. Other agents may edit files and use HTTP, but must not claim
@@ -112,7 +119,7 @@ or use a directory name as a session ID.
 For a new app page:
 
 ```sh
-node "$WORKSPACE_SKILL/scripts/workspace.ts" connect --app video-editor --workspace WORKSPACE_ID
+node "$WORKSPACE_SKILL/scripts/workspace.mjs" connect --app video-editor --workspace WORKSPACE_ID
 ```
 
 Open the returned `url` in a **new browser page** using the host's browser-opening capability. The
@@ -120,7 +127,7 @@ fragment carries a single-page invitation; do not open it in multiple pages. The
 it and reports its instance ID. Query the receipt after opening:
 
 ```sh
-node "$WORKSPACE_SKILL/scripts/workspace.ts" status --code CONNECTION_CODE
+node "$WORKSPACE_SKILL/scripts/workspace.mjs" status --code CONNECTION_CODE
 ```
 
 Only report the page as connected after `state` is `connected` and the returned app, Workspace,

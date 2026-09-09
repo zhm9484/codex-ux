@@ -7,7 +7,7 @@ export function playerPage(doc: VideoDocument, css = '') {
 ${
   source.kind === 'remotion'
     ? '<script>window.remotion_staticBase=new URL("./source/public",location.href).pathname;</script><script type="module" src="./player.js"></script>'
-    : `<script id="video-config" type="application/json">${safeJson({ kind: source.kind, src: './source/' + source.entry.split('/').map(encodeURIComponent).join('/'), width: doc.width, height: doc.height, duration: doc.duration })}</script><script type="module" src="/media/video-editor/engine/preview.js"></script>`
+    : `<script id="video-config" type="application/json">${safeJson({ kind: source.kind, src: './source/' + source.entry.split('/').map(encodeURIComponent).join('/'), width: doc.width, height: doc.height, duration: doc.duration })}</script><script type="module" src="/media/video-editor/engine/preview.js?kind=${source.kind}"></script>`
 }
 </body></html>`;
 }
